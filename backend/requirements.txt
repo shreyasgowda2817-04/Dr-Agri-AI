@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+motor
+pydantic>=2.9.0
+pydantic-settings
+python-dotenv
+python-multipart
+PyJWT
+passlib[bcrypt]
+pymongo
+pytest
+httpx
+pytest-asyncio
+tensorflow
+google-genai
+razorpay
+reportlab
