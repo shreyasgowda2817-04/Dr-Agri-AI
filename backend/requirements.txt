@@ -15,3 +15,12 @@ tensorflow
 google-genai
 razorpay
 reportlab
+pandas
+scikit-learn
+slowapi
+authlib
+cloudinary
+redis
+pillow
+websockets
+itsdangerous
