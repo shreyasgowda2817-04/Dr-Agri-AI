@@ -1,12 +1,14 @@
 fastapi
 uvicorn[standard]
 motor
-pydantic>=2.9.0
+pydantic[email]>=2.9.0
+email-validator>=2.0.0
 pydantic-settings
 python-dotenv
 python-multipart
 PyJWT
 passlib[bcrypt]
+bcrypt
 pymongo
 pytest
 httpx
@@ -24,3 +26,5 @@ redis
 pillow
 websockets
 itsdangerous
+aiofiles
+certifi
