@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /expert-dashboard
+Disallow: /deliveries
+Disallow: /inventory
+Disallow: /b2b
+Disallow: /settings
+
+Sitemap: https://dragri-ai.vercel.app/sitemap.xml
