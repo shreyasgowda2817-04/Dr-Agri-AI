@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,16 +8,21 @@ import { useSelector } from 'react-redux';
 import jsPDF from 'jspdf';
 
 const Finance = () => {
+  const { t } = useTranslation();
+  
+
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ type: 'expense', category: 'Seeds', amount: '', crop_name: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [generatingDossier, setGeneratingDossier] = useState(false);
   const { user } = useSelector(state => state.auth);
 
   const fetchSummary = async () => {
+    
+
     try {
       const res = await api.get('/finance/summary');
       setSummary(res.data);
@@ -32,6 +38,8 @@ const Finance = () => {
   }, []);
 
   const handleSubmit = async (e) => {
+    
+
     e.preventDefault();
     try {
       if (formData.type === 'expense') {
@@ -56,6 +64,8 @@ const Finance = () => {
   };
 
   const handleGenerateDossier = async () => {
+    
+
     setGeneratingDossier(true);
     try {
       // 1. Fetch dossier data
@@ -219,16 +229,18 @@ const Finance = () => {
   };
 
   const generateInvoice = (transaction) => {
-    const doc = new jsPDF();
     
+
+    const doc = new jsPDF();
+
     // Header
     doc.setFontSize(26);
     doc.setTextColor(16, 185, 129); // Emerald 500
     doc.text("COMMERCIAL INVOICE", 105, 25, null, null, "center");
-    
+
     doc.setDrawColor(200);
     doc.line(20, 35, 190, 35);
-    
+
     // Company Info
     doc.setFontSize(11);
     doc.setTextColor(60);
@@ -240,7 +252,7 @@ const Finance = () => {
     doc.setTextColor(100);
     doc.text(`Email: ${user?.email || 'enterprise@dragri.com'}`, 20, 63);
     doc.text(`Role: ${user?.role || 'FARMER'}`, 20, 68);
-    
+
     // Invoice details
     doc.setFontSize(11);
     doc.setTextColor(60);
@@ -250,34 +262,34 @@ const Finance = () => {
     doc.text(`Invoice No: INV-${transaction.id.replace('REV-', '')}`, 130, 57);
     doc.text(`Date: ${new Date(transaction.date).toLocaleDateString()}`, 130, 63);
     doc.text(`Status: PAID`, 130, 68);
-    
+
     // Line Item Table
     doc.setFillColor(245, 247, 250);
     doc.rect(20, 85, 170, 12, 'F');
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text("ITEM DESCRIPTION", 25, 93);
     doc.text("QTY", 120, 93);
     doc.text("TOTAL AMOUNT", 150, 93);
-    
+
     doc.line(20, 97, 190, 97);
-    
+
     doc.setFontSize(11);
     doc.setTextColor(0);
     doc.text(`B2B Commodity Sale: ${transaction.category}`, 25, 107);
     doc.text("1 Bulk", 120, 107);
     doc.text(`Rs. ${parseFloat(transaction.amount).toFixed(2)}`, 150, 107);
-    
+
     doc.line(20, 115, 190, 115);
-    
+
     // Total
     doc.setFontSize(12);
     doc.text("NET TOTAL:", 115, 130);
     doc.setFontSize(16);
     doc.setTextColor(16, 185, 129);
     doc.text(`Rs. ${parseFloat(transaction.amount).toFixed(2)}`, 150, 131);
-    
+
     // Save
     doc.save(`Invoice_${transaction.id}.pdf`);
   };
@@ -309,12 +321,12 @@ const Finance = () => {
 
   return (
     <div className="max-w-7xl mx-auto pb-12">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Financial Ledger</h1>
-          <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 uppercase tracking-widest text-xs">Enterprise B2B Accounting Module</p>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{t("financial_ledger")}</h1>
+          <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 uppercase tracking-widest text-xs">{t("enterprise_b2b_accou")}</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <button 
@@ -326,15 +338,12 @@ const Finance = () => {
               <span className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
             ) : (
               <FileText size={18} />
-            )}
-            Download Report
-          </button>
+            )}{t("download_report")}</button>
           <button 
             onClick={() => setShowModal(true)}
             className="flex-1 md:flex-none bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition shadow-lg shadow-gray-900/20 dark:shadow-white/10"
           >
-            <Plus size={18} /> Transaction
-          </button>
+            <Plus size={18} />{t("transaction")}</button>
         </div>
       </div>
 
@@ -342,19 +351,19 @@ const Finance = () => {
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           icon={<TrendingDown className="w-6 h-6 text-red-500" />} 
-          title="Operating Expenses" 
+          title={t("operating_expenses")} 
           value={`₹${summary?.total_expenses?.toFixed(2) || '0.00'}`} 
           color="red" 
         />
         <StatCard 
           icon={<TrendingUp className="w-6 h-6 text-emerald-500" />} 
-          title="Gross Revenue" 
+          title={t("gross_revenue")} 
           value={`₹${summary?.total_revenue?.toFixed(2) || '0.00'}`} 
           color="emerald" 
         />
         <StatCard 
           icon={<IndianRupee className="w-6 h-6 text-blue-500" />} 
-          title="Net Profit (YTD)" 
+          title={t("net_profit_ytd")} 
           value={`₹${summary?.net_profit?.toFixed(2) || '0.00'}`} 
           color={summary?.net_profit >= 0 ? "blue" : "red"} 
         />
@@ -362,7 +371,7 @@ const Finance = () => {
 
       {/* Chart Row */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800 mb-8">
-        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6">Profitability Trend</h2>
+        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6">{t("profitability_trend")}</h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={profitData}>
@@ -389,8 +398,7 @@ const Finance = () => {
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
         <div className="p-6 md:p-8 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <FileText className="text-emerald-500" /> Transaction Ledger
-          </h2>
+            <FileText className="text-emerald-500" />{t("transaction_ledger")}</h2>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input 
@@ -407,20 +415,18 @@ const Finance = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 dark:bg-gray-950/50 text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
-                <th className="px-6 py-4 font-bold">Date</th>
-                <th className="px-6 py-4 font-bold">Type</th>
-                <th className="px-6 py-4 font-bold">Category</th>
-                <th className="px-6 py-4 font-bold">Description</th>
-                <th className="px-6 py-4 font-bold text-right">Amount</th>
-                <th className="px-6 py-4 font-bold text-center">Action</th>
+                <th className="px-6 py-4 font-bold">{t("date")}</th>
+                <th className="px-6 py-4 font-bold">{t("type")}</th>
+                <th className="px-6 py-4 font-bold">{t("category")}</th>
+                <th className="px-6 py-4 font-bold">{t("description")}</th>
+                <th className="px-6 py-4 font-bold text-right">{t("amount")}</th>
+                <th className="px-6 py-4 font-bold text-center">{t("action")}</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-400 dark:text-gray-600 font-medium">
-                    No transactions found in ledger.
-                  </td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-400 dark:text-gray-600 font-medium">{t("no_transactions_foun")}</td>
                 </tr>
               ) : (
                 filteredTransactions.map((tx, idx) => (
@@ -457,8 +463,7 @@ const Finance = () => {
                           onClick={() => generateInvoice(tx)}
                           className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg transition"
                         >
-                          <Download size={14} /> PDF Invoice
-                        </button>
+                          <Download size={14} />{t("pdf_invoice")}</button>
                       )}
                     </td>
                   </tr>
@@ -479,40 +484,40 @@ const Finance = () => {
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               className="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-800"
             >
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">Log Transaction</h2>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">{t("log_transaction")}</h2>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Entry Type</label>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t("entry_type")}</label>
                   <select 
                     className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     value={formData.type}
                     onChange={(e) => setFormData({...formData, type: e.target.value})}
                   >
-                    <option value="expense">Operating Expense</option>
-                    <option value="revenue">B2B Revenue (Crop Sale)</option>
+                    <option value="expense">{t("operating_expense")}</option>
+                    <option value="revenue">{t("b2b_revenue__crop_sa")}</option>
                   </select>
                 </div>
 
                 {formData.type === 'expense' ? (
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Category</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t("category")}</label>
                     <select 
                       className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       value={formData.category}
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
                     >
-                      <option>Seeds & Saplings</option>
-                      <option>Fertilizer</option>
-                      <option>Pesticide</option>
-                      <option>Labor & Wages</option>
-                      <option>Equipment</option>
-                      <option>Logistics</option>
-                      <option>Other</option>
+                      <option>{t("seeds___saplings")}</option>
+                      <option>{t("fertilizer")}</option>
+                      <option>{t("pesticide")}</option>
+                      <option>{t("labor___wages")}</option>
+                      <option>{t("equipment")}</option>
+                      <option>{t("logistics")}</option>
+                      <option>{t("other")}</option>
                     </select>
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Commodity Sold</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t("commodity_sold")}</label>
                     <input 
                       type="text" 
                       required
@@ -525,7 +530,7 @@ const Finance = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Total Amount (₹)</label>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t("total_amount____")}</label>
                   <input 
                     type="number" 
                     required
@@ -539,7 +544,7 @@ const Finance = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Remarks (Optional)</label>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t("remarks__optional_")}</label>
                   <textarea 
                     className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     value={formData.description}
@@ -554,15 +559,11 @@ const Finance = () => {
                     type="button" 
                     onClick={() => setShowModal(false)}
                     className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                  >
-                    Cancel
-                  </button>
+                  >{t("cancel")}</button>
                   <button 
                     type="submit" 
                     className="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-3 rounded-xl font-bold hover:scale-[1.02] transition shadow-md"
-                  >
-                    Save Entry
-                  </button>
+                  >{t("save_entry")}</button>
                 </div>
               </form>
             </motion.div>

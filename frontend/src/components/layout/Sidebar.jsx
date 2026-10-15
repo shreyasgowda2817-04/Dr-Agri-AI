@@ -1,5 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { logout } from '../../store/slices/authSlice';
 import { 
   Leaf, 
@@ -24,16 +25,21 @@ import {
   Building2,
   Package,
   Newspaper,
-  MessageSquare
+  MessageSquare,
+  Megaphone
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
+  const { t } = useTranslation();
   const location = useLocation();
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
   const handleLogout = (e) => {
+    
+
     e.preventDefault();
     dispatch(logout());
     navigate('/login');
@@ -41,16 +47,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const navItems = [
     // Farmer Panel
-    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'AI Scan', path: '/scan', icon: <Scan size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Finance', path: '/finance', icon: <PieChart size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Farm Plots', path: '/farm', icon: <Map size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'My Crops', path: '/crops', icon: <Sprout size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Price Predictor', path: '/prices', icon: <BarChart3 size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Drone Recovery', path: '/drones', icon: <Camera size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'AI Assistant', path: '/agronomy', icon: <FlaskConical size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Marketplace', path: '/marketplace', icon: <Store size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
-    { name: 'Expert Portal', path: '/expert-dashboard', icon: <FlaskConical size={20} />, roles: ['AGRONOMY_EXPERT', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('dashboard'), path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('ai_scan'), path: '/scan', icon: <Scan size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('finance'), path: '/finance', icon: <PieChart size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('farm_plots'), path: '/farm', icon: <Map size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('my_crops'), path: '/crops', icon: <Sprout size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('price_predictor'), path: '/prices', icon: <BarChart3 size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('drone_recovery'), path: '/drones', icon: <Camera size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('ai_assistant'), path: '/agronomy', icon: <FlaskConical size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('marketplace'), path: '/marketplace', icon: <Store size={20} />, roles: ['FARMER', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('expert_portal'), path: '/expert-dashboard', icon: <FlaskConical size={20} />, roles: ['AGRONOMY_EXPERT', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: t('consult'), path: '/consult', icon: <Video size={20} />, roles: ['FARMER', 'AGRONOMY_EXPERT', 'ADMIN', 'SUPER_ADMIN'] },
+    { name: 'Advertiser Portal', path: '/advertiser', icon: <Megaphone size={20} className="text-emerald-500" />, roles: ['ADVERTISER', 'ADMIN', 'SUPER_ADMIN'] },
   ];
 
   // If we have a user, filter tabs by role. Admin/Super Admin sees almost everything.
@@ -70,7 +78,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <div className="bg-green-100 p-2 rounded-xl flex-shrink-0">
             <Leaf className="w-6 h-6 text-green-600" />
           </div>
-          {isOpen && <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white">Dr Agri AI</span>}
+          {isOpen && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white">{t("dr_agri_ai")}</span>
+              {(user?.is_premium || user?.tier === 'pro') && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm">
+                  PRO
+                </span>
+              )}
+            </div>
+          )}
         </Link>
       </div>
 
@@ -110,7 +127,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             }`}
           >
             <ShieldCheck size={20} className="text-purple-500" />
-            {isOpen && <span>Admin Panel</span>}
+            {isOpen && <span>{t('admin_panel')}</span>}
           </Link>
         )}
         <Link 
@@ -123,7 +140,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           }`}
         >
           <Settings size={20} className="text-gray-400" />
-          {isOpen && <span>Settings</span>}
+          {isOpen && <span>{t('settings')}</span>}
         </Link>
         <button 
           onClick={handleLogout}
@@ -131,7 +148,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           className={`w-full flex items-center space-x-3 py-3 rounded-xl font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 ${isOpen ? 'px-4' : 'justify-center'}`}
         >
           <LogOut size={20} />
-          {isOpen && <span>Logout</span>}
+          {isOpen && <span>{t('logout')}</span>}
         </button>
       </div>
 

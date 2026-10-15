@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     # AI Integration
     GEMINI_API_KEY: str | None = None
+    ML_SERVICE_URL: str | None = None
 
     # Cloud Storage (Cloudinary)
     CLOUDINARY_CLOUD_NAME: str | None = None

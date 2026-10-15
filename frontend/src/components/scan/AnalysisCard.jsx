@@ -1,8 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ShieldAlert, CheckCircle, Clock } from 'lucide-react';
 
 const AnalysisCard = ({ result, ui }) => {
+  const { t } = useTranslation();
+  
+
   if (!result) return null;
 
   const data = [
@@ -13,6 +17,8 @@ const AnalysisCard = ({ result, ui }) => {
   const COLORS = ['#10B981', '#E5E7EB'];
 
   const getSeverityColor = (severity) => {
+    
+
     switch(severity?.toLowerCase()) {
       case 'high': return 'bg-red-100 text-red-700 border-red-200';
       case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200';
@@ -28,17 +34,17 @@ const AnalysisCard = ({ result, ui }) => {
       className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 opacity-50" />
-      
+
       <div className="flex justify-between items-start mb-6">
         <div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 mb-3">
             <CheckCircle size={14} /> {ui.analysisTitle}
           </span>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">
-            {result.disease_name.replace(/___/g, ' ')}
+            {(result.disease_name || 'Unknown').replace(/___/g, ' ')}
           </h2>
           <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">
-            {ui.cropLabel} {result.crop_name}
+            {ui.cropLabel} {result.crop_name || 'Unknown'}
           </p>
         </div>
         
@@ -78,7 +84,7 @@ const AnalysisCard = ({ result, ui }) => {
         
         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{ui.versionLabel}</p>
-          <p className="text-sm font-bold text-gray-900">Dr Agri v2.4</p>
+          <p className="text-sm font-bold text-gray-900">{t("dr_agri_v2_4")}</p>
         </div>
 
         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 col-span-2 flex items-center justify-between">

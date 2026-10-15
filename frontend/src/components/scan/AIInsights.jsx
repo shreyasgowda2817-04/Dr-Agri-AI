@@ -1,8 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { Sparkles, Thermometer, CloudRain, Droplets, CalendarClock, BrainCircuit, ScanLine, Activity, CloudLightning, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AIInsights = ({ result, ui }) => {
+  const { t } = useTranslation();
+  
+
   if (!result) return null;
 
   // Dynamic chart data from backend or fallback to generic
@@ -70,7 +74,7 @@ const AIInsights = ({ result, ui }) => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest text-center mt-2 relative z-10">Projected Risk Reduction with Treatment</p>
+        <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest text-center mt-2 relative z-10">{t("projected_risk_reduc")}</p>
       </div>
 
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">

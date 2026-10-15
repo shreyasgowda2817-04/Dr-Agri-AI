@@ -1,26 +1,68 @@
+import { useTranslation } from "react-i18next";
 import { useState, useRef, useEffect } from 'react';
+import useSpeechRecognition from '../../hooks/useSpeechRecognition';
 import api from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Mic, Send, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Mic, Send, Volume2, VolumeX, Sparkles, MicOff } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 
 const ChatbotWidget = () => {
+  const { t } = useTranslation();
+  
+
   const { user } = useSelector((state) => state.auth);
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    const isActive = sessionStorage.getItem('chat_session_active');
+    if (isActive === 'true') {
+      const saved = sessionStorage.getItem('chatbot_widget_messages');
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (sessionStorage.getItem('chat_session_active') === 'true') {
+      sessionStorage.setItem('chatbot_widget_messages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const [input, setInput] = useState('');
   const [language, setLanguage] = useState('en-US');
   const [isListening, setIsListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [showProactiveBubble, setShowProactiveBubble] = useState(false);
   const [proactiveGreeting, setProactiveGreeting] = useState('');
+  const handleClose = () => {
+    
+
+    setIsOpen(false);
+    setInput('');
+    sessionStorage.setItem('chat_session_active', 'false');
+    sessionStorage.removeItem('chatbot_widget_messages');
+    setTimeout(() => {
+      // Re-initialize with proactive greeting for the NEXT time they open it
+      if (proactiveGreeting) {
+        setMessages([{ text: proactiveGreeting, sender: 'bot' }]);
+      } else {
+        setMessages([]);
+      }
+    }, 300); // Wait for exit animation to finish
+  };
+
   const messagesEndRef = useRef(null);
 
   // Generate proactive insight on mount
   useEffect(() => {
     const generateGreeting = async () => {
+      
+
+      // Don't overwrite if user already has chat history
+      const saved = sessionStorage.getItem('chatbot_widget_messages');
+      if (sessionStorage.getItem('chat_session_active') === 'true' && saved && JSON.parse(saved).length > 0) return;
+
       if (!user) {
         setProactiveGreeting("Hello! I am your AI Agriculture Expert. Ask me anything.");
         setMessages([{ text: "Hello! I am your AI Agriculture Expert. Ask me anything.", sender: 'bot' }]);
@@ -30,7 +72,7 @@ const ChatbotWidget = () => {
 
       try {
         const [telRes, histRes] = await Promise.all([
-          api.get('/iot/telemetry').catch(() => ({ data: null })),
+          Promise.resolve({ data: null }), // IoT telemetry route does not exist on backend
           api.get('/reports/history').catch(() => ({ data: [] }))
         ]);
 
@@ -82,12 +124,14 @@ const ChatbotWidget = () => {
   }, [messages]);
 
   const handleSend = async (text = input) => {
+    
+
     if (!text.trim()) return;
 
     // Add user message to chat
     setMessages(prev => [...prev, { text, sender: 'user' }]);
     setInput('');
-    
+
     // Add typing indicator
     setMessages(prev => [...prev, { text: "...", sender: 'bot', isTyping: true }]);
 
@@ -126,6 +170,8 @@ const ChatbotWidget = () => {
   };
 
   const startListening = () => {
+    
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Your browser does not support voice recognition. Please use Google Chrome.");
@@ -138,34 +184,36 @@ const ChatbotWidget = () => {
     recognition.interimResults = false;
 
     recognition.onstart = () => setIsListening(true);
-    
+
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
       handleSend(transcript); // auto-send voice transcript
     };
-    
+
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
     };
-    
+
     recognition.onend = () => setIsListening(false);
-    
+
     recognition.start();
   };
 
   const speak = (text, lang) => {
+    
+
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // cancel any ongoing speech
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
-    
+
     // Optionally find a specific voice (especially for Hindi/Kannada if available)
     const voices = window.speechSynthesis.getVoices();
     const specificVoice = voices.find(v => v.lang.includes(lang.split('-')[0]));
     if (specificVoice) utterance.voice = specificVoice;
-    
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -187,8 +235,8 @@ const ChatbotWidget = () => {
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-600 to-green-700 p-4 text-white flex justify-between items-center shadow-md">
               <div>
-                <h3 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-yellow-300"/>AgriVersion AI </h3>
-                <p className="text-xs text-green-100 font-medium">Proactive Farm Intelligence</p>
+                <h3 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-yellow-300"/>{t("agriversion_ai")}</h3>
+                <p className="text-xs text-green-100 font-medium">{t("proactive_farm_intel")}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button 
@@ -204,7 +252,7 @@ const ChatbotWidget = () => {
                 >
                   {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                 </button>
-                <button onClick={() => setIsOpen(false)} className="text-green-100 hover:text-white transition">
+                <button onClick={handleClose} className="text-green-100 hover:text-white transition">
                   <X size={20} />
                 </button>
               </div>
@@ -217,11 +265,11 @@ const ChatbotWidget = () => {
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
               >
-                <option value="en-US">English</option>
-                <option value="hi-IN">हिंदी (Hindi)</option>
-                <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
-                <option value="te-IN"> Telugu</option>
-                <option value="ta-IN">Tamil</option>
+                <option value="en-US">{t("english")}</option>
+                <option value="hi-IN">{t("_______hindi_")}</option>
+                <option value="kn-IN">{t("_______kannada_")}</option>
+                <option value="te-IN">{t("telugu")}</option>
+                <option value="ta-IN">{t("tamil")}</option>
               </select>
             </div>
 
@@ -276,7 +324,16 @@ const ChatbotWidget = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="mb-4 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 max-w-xs relative cursor-pointer"
-                onClick={() => { setIsOpen(true); setShowProactiveBubble(false); }}
+                onClick={() => { 
+              if (sessionStorage.getItem('chat_session_active') !== 'true') {
+                // Starting a fresh chat session
+                if (proactiveGreeting) setMessages([{ text: proactiveGreeting, sender: 'bot' }]);
+                else setMessages([]);
+              }
+              sessionStorage.setItem('chat_session_active', 'true');
+              setIsOpen(true); 
+              setShowProactiveBubble(false); 
+            }}
               >
                 <div className="absolute right-2 top-2" onClick={(e) => { e.stopPropagation(); setShowProactiveBubble(false); }}>
                   <X size={14} className="text-gray-400 hover:text-gray-600" />
@@ -287,7 +344,7 @@ const ChatbotWidget = () => {
                   </div>
                   <p className="text-sm font-medium text-gray-800 line-clamp-3">
                     {proactiveGreeting.split('\n')[0]}<br/>
-                    <span className="text-xs text-gray-500">Click to chat...</span>
+                    <span className="text-xs text-gray-500">{t("click_to_chat___")}</span>
                   </p>
                 </div>
               </motion.div>
@@ -297,7 +354,16 @@ const ChatbotWidget = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setIsOpen(true); setShowProactiveBubble(false); }}
+            onClick={() => { 
+              if (sessionStorage.getItem('chat_session_active') !== 'true') {
+                // Starting a fresh chat session
+                if (proactiveGreeting) setMessages([{ text: proactiveGreeting, sender: 'bot' }]);
+                else setMessages([]);
+              }
+              sessionStorage.setItem('chat_session_active', 'true');
+              setIsOpen(true); 
+              setShowProactiveBubble(false); 
+            }}
             className="bg-gradient-to-r from-emerald-600 to-green-600 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/50 transition flex items-center justify-center border-4 border-green-50"
           >
             <MessageCircle size={28} />

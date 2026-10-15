@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,13 +8,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Sprout, ArrowRight, CheckCircle, Leaf, Target, Sparkles, Building2, User } from 'lucide-react';
 
 const Onboarding = () => {
+  const { t } = useTranslation();
+  
+
   const [step, setStep] = useState(1);
   const [location, setLocation] = useState('');
   const [farmType, setFarmType] = useState('');
   const [crops, setCrops] = useState([]);
   const [farmSize, setFarmSize] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -28,6 +32,8 @@ const Onboarding = () => {
   const cropOptions = ['Wheat', 'Rice', 'Corn', 'Tomato', 'Potato', 'Cotton', 'Sugarcane', 'Soybean'];
 
   const toggleCrop = (crop) => {
+    
+
     if (crops.includes(crop)) {
       setCrops(crops.filter(c => c !== crop));
     } else {
@@ -36,6 +42,8 @@ const Onboarding = () => {
   };
 
   const handleComplete = async () => {
+    
+
     setLoading(true);
     try {
       // Send onboarding data to the correct dedicated endpoint
@@ -66,7 +74,7 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex font-sans transition-colors duration-300">
-      
+
       {/* Left Panel: Form Wizard */}
       <div className="w-full lg:w-[55%] flex flex-col justify-center px-8 sm:px-16 lg:px-24 xl:px-32 relative">
         
@@ -75,7 +83,7 @@ const Onboarding = () => {
           <div className="bg-gradient-to-br from-green-400 to-emerald-600 p-2 rounded-xl shadow-lg shadow-green-200 dark:shadow-none">
             <Leaf className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white">Dr Agri</span>
+          <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white">{t("dr_agri")}</span>
         </div>
 
         {/* Step Indicators */}
@@ -103,27 +111,27 @@ const Onboarding = () => {
                 className="space-y-8"
               >
                 <div>
-                  <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Welcome to Dr Agri.</h1>
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">Let's set up your workspace to personalize your AI models.</p>
+                  <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">{t("welcome_to_dr_agri_")}</h1>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t("let_s_set_up_your_wo")}</p>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2">Workspace Type</label>
+                    <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2">{t("workspace_type")}</label>
                     <div className="grid grid-cols-2 gap-3">
                       <button onClick={() => setFarmType('individual')} className={`p-4 rounded-2xl border-2 flex flex-col gap-2 transition-all ${farmType === 'individual' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700'}`}>
                         <User className={farmType === 'individual' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'} size={24} />
-                        <span className={`font-bold ${farmType === 'individual' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>Individual Farm</span>
+                        <span className={`font-bold ${farmType === 'individual' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>{t("individual_farm")}</span>
                       </button>
                       <button onClick={() => setFarmType('enterprise')} className={`p-4 rounded-2xl border-2 flex flex-col gap-2 transition-all ${farmType === 'enterprise' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700'}`}>
                         <Building2 className={farmType === 'enterprise' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'} size={24} />
-                        <span className={`font-bold ${farmType === 'enterprise' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>Enterprise / Co-op</span>
+                        <span className={`font-bold ${farmType === 'enterprise' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>{t("enterprise___co_op")}</span>
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2">Primary Location</label>
+                    <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2">{t("primary_location")}</label>
                     <div className="relative">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                       <input 
@@ -141,8 +149,7 @@ const Onboarding = () => {
                   onClick={() => setStep(2)}
                   disabled={!location || !farmType}
                   className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold hover:scale-[1.02] transition-transform shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 mt-4"
-                >
-                  Continue <ArrowRight size={20} />
+                >{t("continue")}<ArrowRight size={20} />
                 </button>
               </motion.div>
             )}
@@ -156,8 +163,8 @@ const Onboarding = () => {
                 className="space-y-8"
               >
                 <div>
-                  <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Crop Configuration</h1>
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">Select the primary crops you are currently cultivating.</p>
+                  <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">{t("crop_configuration")}</h1>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t("select_the_primary_c")}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -177,7 +184,7 @@ const Onboarding = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2 mt-4">Total Acreage (Optional)</label>
+                  <label className="block text-sm font-bold text-gray-900 dark:text-gray-200 mb-2 mt-4">{t("total_acreage__optio")}</label>
                   <input 
                     type="number" 
                     placeholder="e.g. 50" 
@@ -191,15 +198,12 @@ const Onboarding = () => {
                   <button 
                     onClick={() => setStep(1)}
                     className="w-1/3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-4 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                  >
-                    Back
-                  </button>
+                  >{t("back")}</button>
                   <button 
                     onClick={() => setStep(3)}
                     disabled={crops.length === 0}
                     className="w-2/3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold hover:scale-[1.02] transition-transform shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    Next Step <ArrowRight size={20} />
+                  >{t("next_step")}<ArrowRight size={20} />
                   </button>
                 </div>
               </motion.div>
@@ -219,15 +223,15 @@ const Onboarding = () => {
                     <CheckCircle className="w-12 h-12" />
                   </div>
                 </div>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">Workspace Ready</h2>
-                <p className="text-gray-500 dark:text-gray-400 font-medium mb-12 max-w-sm mx-auto">Your ecosystem is configured and ready for predictive disease detection and marketplace trading.</p>
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">{t("workspace_ready")}</h2>
+                <p className="text-gray-500 dark:text-gray-400 font-medium mb-12 max-w-sm mx-auto">{t("your_ecosystem_is_co")}</p>
                 
                 <button 
                   onClick={handleComplete}
                   disabled={loading}
                   className="w-full bg-emerald-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-600 hover:scale-[1.02] transition-all shadow-xl shadow-emerald-200 dark:shadow-none flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Initializing Core...' : <><Sparkles size={20} /> Enter Command Center</>}
+                  {loading ? 'Initializing Core...' : <><Sparkles size={20} />{t("enter_command_center")}</>}
                 </button>
               </motion.div>
             )}
@@ -246,8 +250,8 @@ const Onboarding = () => {
           <div className="w-24 h-24 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl mx-auto flex items-center justify-center mb-8 shadow-2xl">
             <Target className="w-10 h-10 text-emerald-400" />
           </div>
-          <h2 className="text-3xl font-black text-white mb-4 leading-tight">Data-Driven Agriculture.</h2>
-          <p className="text-gray-400 font-medium leading-relaxed">Join thousands of commercial farms using Dr Agri's PyTorch models to increase yield and automate supply chains.</p>
+          <h2 className="text-3xl font-black text-white mb-4 leading-tight">{t("data_driven_agricult")}</h2>
+          <p className="text-gray-400 font-medium leading-relaxed">{t("join_thousands_of_co")}</p>
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { JitsiMeeting } from '@jitsi/react-sdk';
 import { motion } from 'framer-motion';
@@ -8,29 +9,44 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 
 const Consultation = () => {
+  const { t } = useTranslation();
+  
+
   const [activeCall, setActiveCall] = useState(false);
+  const [callType, setCallType] = useState('video');
   const [roomName, setRoomName] = useState('');
   const [experts, setExperts] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [supplies, setSupplies] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // Review State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewCallId, setReviewCallId] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   const user = useSelector(state => state.auth.user);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    const fetchExperts = async () => {
-      try {
-        const res = await api.get('/consultations/experts');
-        setExperts(res.data);
-      } catch (err) {
-        console.error("Failed to load experts", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchExperts = async () => {
     
+
+    try {
+      const res = await api.get('/consultations/experts');
+      setExperts(res.data);
+    } catch (err) {
+      console.error("Failed to load experts", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const fetchPrescriptions = async () => {
+      
+
       try {
         const res = await api.get('/consultations/prescriptions');
         setPrescriptions(res.data);
@@ -40,6 +56,8 @@ const Consultation = () => {
     };
 
     const fetchSupplies = async () => {
+      
+
       try {
         const res = await api.get('/marketplace/supplies');
         setSupplies(res.data);
@@ -56,6 +74,8 @@ const Consultation = () => {
   }, [user]);
 
   const fulfillPrescription = (prescription) => {
+    
+
     let addedCount = 0;
     prescription.prescribed_products.forEach(prodId => {
       const prod = supplies.find(s => s.id === prodId);
@@ -64,7 +84,7 @@ const Consultation = () => {
         addedCount++;
       }
     });
-    
+
     if (addedCount > 0) {
       dispatch(openCart());
       toast.success(`${addedCount} prescribed items added to your cart!`);
@@ -73,21 +93,55 @@ const Consultation = () => {
     }
   };
 
-  const startCall = async (expertId) => {
+  const [isCalling, setIsCalling] = useState(false);
+
+  const startCall = async (expertId, type = 'video') => {
+    
+
     if (!user) {
       toast.error("Please log in to consult with an expert");
       return;
     }
-    
+
+    setIsCalling(true);
     // Call the backend to initiate a real session!
     try {
-      const res = await api.post('/consultations/call', { expert_id: expertId });
+      const res = await api.post('/consultations/call', { expert_id: expertId, call_type: type });
       setRoomName(res.data.room_name);
+      setReviewCallId(res.data.call_id);
+      setCallType(type);
       setActiveCall(true);
-      toast.success("Ringing the expert...");
+      toast.success(`Ringing the expert for a ${type} call...`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to connect to expert");
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
+  const submitReview = async () => {
+    
+
+    if (!reviewCallId) {
+      setShowReviewModal(false);
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      await api.post(`/consultations/call/${reviewCallId}/review`, {
+        rating: reviewRating,
+        comment: reviewComment
+      });
+      toast.success("Thank you for your genuine feedback!");
+      setShowReviewModal(false);
+      setReviewComment('');
+      setReviewRating(5);
+      fetchExperts(); // Refresh ratings
+    } catch (err) {
+      toast.error("Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -97,10 +151,18 @@ const Consultation = () => {
         <JitsiMeeting
           domain="meet.jit.si"
           roomName={roomName}
+          spinner={() => (
+            <div className="flex flex-col items-center justify-center h-[500px] w-full bg-gray-900 text-white rounded-2xl">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mb-4"></div>
+              <p className="text-lg font-bold">{t("connecting_to_secure")}</p>
+              <p className="text-sm text-gray-400 mt-2 text-center">{t("initializing_end_to_")}<br/>{t("this_may_take_a_few_")}</p>
+            </div>
+          )}
           configOverwrite={{
             startWithAudioMuted: false,
+            startWithVideoMuted: callType === 'audio',
             disableModeratorIndicator: true,
-            startScreenSharing: true,
+            startScreenSharing: false,
             enableEmailInStats: false
           }}
           interfaceConfigOverwrite={{
@@ -112,6 +174,7 @@ const Consultation = () => {
           onApiReady={(externalApi) => {
             externalApi.addListener('videoConferenceLeft', () => {
               setActiveCall(false);
+              setShowReviewModal(true); // Open review modal after call ends
             });
           }}
           getIFrameRef={(iframeRef) => {
@@ -128,19 +191,13 @@ const Consultation = () => {
       <div className="bg-gradient-to-r from-blue-900 to-indigo-800 rounded-3xl p-8 md:p-12 text-white mb-12 shadow-xl flex flex-col md:flex-row items-center justify-between">
         <div className="max-w-2xl">
           <h1 className="text-4xl font-extrabold mb-4 flex items-center gap-3">
-            <Video className="w-10 h-10 text-blue-300" />
-            Live Expert Consultation
-          </h1>
-          <p className="text-xl text-blue-100 mb-6 leading-relaxed">
-            Don't guess. Speak face-to-face with certified agronomists and soil scientists directly from your farm. No downloads required.
-          </p>
+            <Video className="w-10 h-10 text-blue-300" />{t("live_expert_consulta")}</h1>
+          <p className="text-xl text-blue-100 mb-6 leading-relaxed">{t("don_t_guess__speak_f")}</p>
           <div className="flex gap-4">
             <span className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
-              <Clock size={16} /> Available 24/7
-            </span>
+              <Clock size={16} />{t("available_24_7")}</span>
             <span className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
-              <Calendar size={16} /> Book Instantly
-            </span>
+              <Calendar size={16} />{t("book_instantly")}</span>
           </div>
         </div>
         <div className="hidden md:block">
@@ -150,8 +207,8 @@ const Consultation = () => {
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Available Experts Now</h2>
-      
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t("available_experts_no")}</h2>
+
       {loading ? (
         <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>
       ) : (
@@ -175,16 +232,26 @@ const Consultation = () => {
               </div>
               
               <div className="text-sm text-gray-500 mb-6 space-y-2">
-                <p><strong>Speaks:</strong> {expert.lang}</p>
-                <p><strong>Consultation Fee:</strong> ₹{expert.price} / 30 mins</p>
+                <p><strong>{t("speaks_")}</strong> {expert.lang}</p>
+                <p><strong>{t("consultation_fee_")}</strong> <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">{t("free")}</span></p>
               </div>
               
-              <button 
-                onClick={() => startCall(expert.id)}
-                className="mt-auto w-full bg-blue-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md hover:shadow-lg"
-              >
-                <Video size={18} /> Connect Now
-              </button>
+              <div className="mt-auto grid grid-cols-2 gap-3">
+                <button 
+                  disabled={isCalling}
+                  onClick={() => startCall(expert.id, 'audio')}
+                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm hover:shadow-md ${isCalling ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  <PhoneCall size={18} /> {isCalling ? 'Connecting...' : 'Voice'}
+                </button>
+                <button 
+                  disabled={isCalling}
+                  onClick={() => startCall(expert.id, 'video')}
+                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md hover:shadow-lg ${isCalling ? 'bg-blue-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                >
+                  <Video size={18} /> {isCalling ? 'Connecting...' : 'Video'}
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -198,8 +265,8 @@ const Consultation = () => {
               <FileText size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 leading-tight">My e-Prescriptions</h2>
-              <p className="text-gray-500 text-sm">Treatment plans and product recommendations from your experts.</p>
+              <h2 className="text-2xl font-bold text-gray-900 leading-tight">{t("my_e_prescriptions")}</h2>
+              <p className="text-gray-500 text-sm">{t("treatment_plans_and_")}</p>
             </div>
           </div>
 
@@ -207,7 +274,7 @@ const Consultation = () => {
             {prescriptions.map((prescription) => (
               <div key={prescription._id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition flex flex-col">
                 <div className="flex justify-between items-start mb-4">
-                  <span className="bg-blue-50 text-blue-700 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wide">Diagnosis</span>
+                  <span className="bg-blue-50 text-blue-700 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wide">{t("diagnosis")}</span>
                   <span className="text-xs font-bold text-gray-400">{new Date(prescription.created_at).toLocaleDateString()}</span>
                 </div>
                 
@@ -218,7 +285,7 @@ const Consultation = () => {
                 </div>
 
                 <div className="mb-6 flex-1">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Package size={14}/> Recommended Products</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Package size={14}/>{t("recommended_products")}</p>
                   <div className="space-y-2">
                     {prescription.prescribed_products.length > 0 ? (
                       prescription.prescribed_products.map((prodId, idx) => {
@@ -236,13 +303,13 @@ const Consultation = () => {
                             {product.stock_quantity > 0 ? (
                               <CheckCircle size={16} className="text-green-500 mr-2" />
                             ) : (
-                              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded mr-1">OUT</span>
+                              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded mr-1">{t("out")}</span>
                             )}
                           </div>
                         );
                       })
                     ) : (
-                      <p className="text-sm text-gray-400">No products prescribed.</p>
+                      <p className="text-sm text-gray-400">{t("no_products_prescrib")}</p>
                     )}
                   </div>
                 </div>
@@ -252,10 +319,53 @@ const Consultation = () => {
                   disabled={prescription.prescribed_products.length === 0}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ShoppingCart size={18} /> Fulfill Prescription
-                </button>
+                  <ShoppingCart size={18} />{t("fulfill_prescription")}</button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Review Modal ─── */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-300">
+            <h3 className="text-2xl font-black text-gray-900 mb-2">{t("rate_your_expert")}</h3>
+            <p className="text-gray-500 mb-6">{t("how_was_your_consult")}</p>
+            
+            <div className="flex justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button 
+                  key={star} 
+                  onClick={() => setReviewRating(star)}
+                  className="focus:outline-none transition-transform hover:scale-110"
+                >
+                  <Star size={40} className={`${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} transition-colors`} />
+                </button>
+              ))}
+            </div>
+
+            <textarea 
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Leave an optional comment..."
+              className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 mb-6 resize-none h-24"
+            />
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowReviewModal(false)}
+                className="flex-1 py-3.5 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition"
+              >{t("skip")}</button>
+              <button 
+                onClick={submitReview}
+                disabled={submittingReview}
+                className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
+              >
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
           </div>
         </div>
       )}

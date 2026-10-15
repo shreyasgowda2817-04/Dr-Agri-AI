@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Allow manual toggling of dark mode via class */
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-primary: #10B981;
@@ -87,3 +87,87 @@ body {
 body {
   top: 0 !important;
 }
+
+/* ==================================================
+   Dr Agri AI Premium Custom Toasts
+   ================================================== */
+:root {
+  --toastify-color-light: #ffffff;
+  --toastify-color-dark: #1f2937;
+  --toastify-color-info: #3b82f6;
+  --toastify-color-success: #10b981;
+  --toastify-color-warning: #f59e0b;
+  --toastify-color-error: #ef4444;
+  
+  --toastify-toast-width: 380px;
+  --toastify-toast-min-height: 64px;
+  --toastify-toast-max-height: 800px;
+  
+  --toastify-z-index: 9999;
+  --toastify-text-color-light: #111827;
+  --toastify-text-color-dark: #f9fafb;
+}
+
+.Toastify__toast {
+  border-radius: 20px !important;
+  padding: 16px 20px !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05) !important;
+  margin-bottom: 1rem !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.dark .Toastify__toast {
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) !important;
+  background: rgba(17, 24, 39, 0.85) !important;
+  color: #fff !important;
+}
+
+/* Custom indicator line instead of progress bar */
+.Toastify__progress-bar {
+  height: 4px !important;
+  border-radius: 4px !important;
+  bottom: 0 !important;
+  left: 20px !important;
+  width: calc(100% - 40px) !important;
+  margin-bottom: 4px !important;
+  opacity: 0.8 !important;
+}
+
+/* Custom Success style for the farm */
+.Toastify__toast--success {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+.Toastify__toast--success .Toastify__progress-bar {
+  background: linear-gradient(to right, #10b981, #34d399) !important;
+}
+
+/* Custom Error style */
+.Toastify__toast--error {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+.Toastify__toast--error .Toastify__progress-bar {
+  background: linear-gradient(to right, #ef4444, #f87171) !important;
+}
+
+.Toastify__toast-icon {
+  width: 24px !important;
+  height: 24px !important;
+  margin-right: 14px !important;
+}
+
+/* Custom typography inside toast */
+.Toastify__toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  align-items: flex-start !important;
+  font-size: 14.5px !important;
+  line-height: 1.4 !important;
+}
+
+.Toastify__toast-body > div {
+  margin-top: 2px !important;
+}
+

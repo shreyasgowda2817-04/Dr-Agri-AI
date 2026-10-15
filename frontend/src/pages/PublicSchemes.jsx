@@ -1,15 +1,21 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FileText, ChevronRight, Calendar, ArrowRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 const PublicSchemes = () => {
+  const { t } = useTranslation();
+  
+
   const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
     const fetchSchemes = async () => {
+      
+
       try {
         const res = await api.get('/cms/articles');
         // Filter out only schemes
@@ -25,20 +31,19 @@ const PublicSchemes = () => {
   }, []);
 
   const toggleExpand = (id) => {
+    
+
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
-      
+
       {/* Header */}
       <div className="text-center mb-16">
-        <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">
-          Government <span className="text-emerald-600">Schemes</span>
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">{t("government")}<span className="text-emerald-600">{t("schemes")}</span>
         </h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-          Explore the latest agricultural subsidies, insurance programs, and financial support initiatives designed to empower your farming journey.
-        </p>
+        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t("explore_the_latest_a")}</p>
       </div>
 
       {loading ? (
@@ -48,8 +53,8 @@ const PublicSchemes = () => {
       ) : schemes.length === 0 ? (
         <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-3xl p-16 border border-gray-200 dark:border-gray-700">
           <FileText size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Active Schemes Found</h3>
-          <p className="text-gray-500 dark:text-gray-400">Please check back later for updates on new government initiatives.</p>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t("no_active_schemes_fo")}</h3>
+          <p className="text-gray-500 dark:text-gray-400">{t("please_check_back_la")}</p>
         </div>
       ) : (
         <div className="grid gap-8">
@@ -80,7 +85,7 @@ const PublicSchemes = () => {
                 <div>
                   <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium mb-3">
                     <Calendar size={14} />
-                    <span>Published {new Date(scheme.created_at).toLocaleDateString()}</span>
+                    <span>{t("published")}{new Date(scheme.created_at).toLocaleDateString()}</span>
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
                     {scheme.title}
@@ -95,12 +100,9 @@ const PublicSchemes = () => {
                   <button 
                     onClick={() => toggleExpand(scheme.id)}
                     className="text-emerald-600 dark:text-emerald-400 font-bold hover:text-emerald-700 flex items-center gap-2 transition"
-                  >
-                    Read Full Details <ArrowRight size={16} />
+                  >{t("read_full_details")}<ArrowRight size={16} />
                   </button>
-                  <button className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition">
-                    Check Eligibility
-                  </button>
+                  <button className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition">{t("check_eligibility")}</button>
                 </div>
 
                 {/* Expanded Content View (Optional) */}

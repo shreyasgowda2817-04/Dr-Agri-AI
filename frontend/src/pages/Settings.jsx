@@ -1,10 +1,13 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, MapPin, Globe, Camera, Save, CheckCircle, Zap, Shield, Key, AlertTriangle, 
   Trash2, Bell, Smartphone, Moon, Sun, Monitor, Sprout, ChevronRight,
-  LogOut, FileText, Download, CreditCard, Mail, Users, Plus, Ticket
+  LogOut, FileText, Download, CreditCard, Mail, Users, Plus, Ticket,
+  Crown, Sparkles, CheckCircle2, Loader2, ShieldCheck, ArrowUpRight
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
@@ -40,10 +43,18 @@ const TABS = [
 ];
 
 const Settings = () => {
+  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
+
+  // Sync tab with URL if changed
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
 
   // --- State Initialization ---
   const [form, setForm] = useState({
@@ -77,11 +88,136 @@ const Settings = () => {
   const [appearance, setAppearance] = useState(user?.appearance || 'system');
   const [orders, setOrders] = useState([]);
 
+  // --- Unified Dr Agri Premium Subscription State ---
+  const [sub, setSub] = useState(null);
+  const [subPlans, setSubPlans] = useState([]);
+  const [subHistory, setSubHistory] = useState([]);
+  const [subLoading, setSubLoading] = useState(false);
+  const [subProcessingId, setSubProcessingId] = useState(null);
+  const [testModalOrder, setTestModalOrder] = useState(null);
+  const [cancellingSub, setCancellingSub] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const fetchSubscriptionDetails = async () => {
+    try {
+      setSubLoading(true);
+      const [subRes, plansRes, histRes, ordersRes] = await Promise.all([
+        api.get('/subscriptions/me').catch(() => ({ data: null })),
+        api.get('/subscriptions/plans').catch(() => ({ data: [] })),
+        api.get('/subscriptions/history').catch(() => ({ data: [] })),
+        api.get('/payments/orders').catch(() => ({ data: [] }))
+      ]);
+      if (subRes?.data) setSub(subRes.data);
+      if (plansRes?.data) setSubPlans(plansRes.data);
+      if (histRes?.data) setSubHistory(histRes.data);
+      if (ordersRes?.data) setOrders(ordersRes.data);
+    } catch (err) {
+      console.error('Failed to load subscription details:', err);
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'billing') {
-      api.get('/payments/orders').then(res => setOrders(res.data)).catch(console.error);
+      fetchSubscriptionDetails();
     }
   }, [activeTab]);
+
+  const handleSelectSubPlan = async (plan) => {
+    if (plan.id === 'free') {
+      toast.info('You are already on the free community plan!');
+      return;
+    }
+    try {
+      setSubProcessingId(plan.id);
+      const orderRes = await api.post('/subscriptions/create-order', { plan_id: plan.id });
+      const orderData = orderRes.data;
+
+      if (window.Razorpay && !orderData.is_mock && orderData.key_id && orderData.key_id !== 'rzp_test_placeholder') {
+        const options = {
+          key: orderData.key_id,
+          amount: Math.round(orderData.amount * 100),
+          currency: orderData.currency || 'INR',
+          name: 'Dr Agri AI',
+          description: `${orderData.plan_name} Subscription`,
+          order_id: orderData.order_id,
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+            contact: user?.phone || ''
+          },
+          theme: { color: '#059669' },
+          handler: async (response) => {
+            try {
+              await api.post('/subscriptions/verify', {
+                plan_id: plan.id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+              toast.success(`🎉 Welcome to ${plan.name}! Your account is now 100% Ad-Free.`);
+              dispatch(fetchUser());
+              fetchSubscriptionDetails();
+            } catch (vErr) {
+              toast.error(vErr.response?.data?.detail || 'Payment verification failed');
+            } finally {
+              setSubProcessingId(null);
+            }
+          },
+          modal: {
+            ondismiss: () => setSubProcessingId(null)
+          }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (resp) => {
+          toast.error(`Payment failed: ${resp.error.description}`);
+          setSubProcessingId(null);
+        });
+        rzp.open();
+      } else {
+        setTestModalOrder(orderData);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to initiate checkout session');
+      setSubProcessingId(null);
+    }
+  };
+
+  const handleCompleteTestSubPayment = async () => {
+    if (!testModalOrder) return;
+    try {
+      await api.post('/subscriptions/verify', {
+        plan_id: testModalOrder.plan_id,
+        razorpay_order_id: testModalOrder.order_id,
+        razorpay_payment_id: `pay_mock_${Date.now()}`,
+        razorpay_signature: `sig_mock_${Date.now()}`
+      });
+      toast.success(`🎉 Payment Verified! Upgraded to ${testModalOrder.plan_name}.`);
+      setTestModalOrder(null);
+      setSubProcessingId(null);
+      dispatch(fetchUser());
+      fetchSubscriptionDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to complete payment verification');
+    }
+  };
+
+  const handleCancelSubAutoRenewal = async () => {
+    try {
+      setCancellingSub(true);
+      const res = await api.post('/subscriptions/cancel');
+      setSub(res.data);
+      toast.info('Auto-renewal cancelled. Ad-free benefits remain active until the end of your billing cycle.');
+      setShowCancelModal(false);
+      dispatch(fetchUser());
+      fetchSubscriptionDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to cancel subscription');
+    } finally {
+      setCancellingSub(false);
+    }
+  };
 
   // --- Workspace Logic ---
   const [orgs, setOrgs] = useState([]);
@@ -141,6 +277,7 @@ const Settings = () => {
   };
 
   const handleAvatarSelect = (e) => {
+  
     const file = e.target.files[0];
     if (!file) return;
     setAvatarFile(file);
@@ -193,6 +330,7 @@ const Settings = () => {
   };
 
   const handleLogoutAll = () => {
+  
     toast.success("Successfully logged out of all other devices.");
   };
 
@@ -296,7 +434,7 @@ const Settings = () => {
                   {tabs.map(tab => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => handleTabChange(tab.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         activeTab === tab.id 
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 shadow-sm' 
@@ -336,7 +474,7 @@ const Settings = () => {
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                       <div className="relative">
                         {avatarPreview ? (
-                          <img src={avatarPreview.startsWith('http') ? avatarPreview : `http://localhost:8000${avatarPreview}`} alt="Avatar" className="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg" />
+                          <img src={avatarPreview.startsWith('http') || avatarPreview.startsWith('data:') ? avatarPreview : `${import.meta.env.VITE_BACKEND_URL || ''}${avatarPreview}`} alt="Avatar" className="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg" />
                         ) : (
                           <div className="w-28 h-28 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-4xl font-black shadow-lg">
                             {initials}
@@ -673,125 +811,346 @@ const Settings = () => {
                 </div>
               )}
 
-              {/* 6. BILLING */}
+              {/* 6. BILLING & SUBSCRIPTION */}
               {activeTab === 'billing' && (
                 <div className="space-y-6">
-                  {/* Current Plan Card */}
-                  <div className={`rounded-2xl p-6 md:p-8 border-2 shadow-sm relative overflow-hidden ${user?.tier === 'pro' ? 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'}`}>
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                      <CreditCard size={120} />
+                  {subLoading ? (
+                    <div className="flex justify-center items-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+                      <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
                     </div>
-                    <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Current Plan</h2>
-                          <span className={`px-4 py-1 rounded-full text-sm font-black uppercase tracking-widest ${user?.tier === 'pro' ? 'bg-green-500 text-white shadow-md shadow-green-200 dark:shadow-none' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                            {user?.tier === 'pro' ? 'Pro Tier' : 'Free Tier'}
-                          </span>
-                        </div>
-                        {user?.tier === 'pro' ? (
-                          <>
-                            <p className="text-green-800 dark:text-green-400 text-sm mb-6">Active Subscription. Your next billing date is <strong>August 14, 2026</strong> for ₹999.00.</p>
-                            <div className="grid sm:grid-cols-2 gap-3 mb-6">
-                              <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-300"><CheckCircle size={16}/> Unlimited AI Plant Scans</div>
-                              <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-300"><CheckCircle size={16}/> Real-time IoT Weather Sync</div>
-                              <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-300"><CheckCircle size={16}/> Advanced Yield Analytics</div>
-                              <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-300"><CheckCircle size={16}/> Priority Expert Consultation</div>
-                            </div>
-                            <div className="flex gap-3">
-                              <button className="bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 px-5 py-2.5 rounded-xl font-bold hover:bg-green-50 dark:hover:bg-gray-700 transition shadow-sm">
-                                Manage Plan
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  if (window.confirm("Are you sure you want to cancel your Pro subscription?")) {
-                                    try {
-                                      await api.post('/payments/cancel-subscription');
-                                      toast.success("Subscription cancelled successfully.");
-                                      dispatch(fetchUser());
-                                    } catch (err) {
-                                      toast.error("Failed to cancel subscription.");
-                                    }
-                                  }
-                                }}
-                                className="text-gray-500 dark:text-gray-400 px-5 py-2.5 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                                Cancel Subscription
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">You are on the Free plan. <strong>{user?.scan_count || 0}/5</strong> AI scans used this month.</p>
-                            <div className="grid sm:grid-cols-2 gap-3 mb-6">
-                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><CheckCircle size={16} className="text-gray-400"/> 5 AI Plant Scans / month</div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><CheckCircle size={16} className="text-gray-400"/> Basic Marketplace Access</div>
-                              <div className="flex items-center gap-2 text-sm text-gray-400 opacity-50"><CheckCircle size={16}/> No IoT Weather Sync</div>
-                              <div className="flex items-center gap-2 text-sm text-gray-400 opacity-50"><CheckCircle size={16}/> Standard Support</div>
-                            </div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const response = await api.post('/payments/upgrade-to-pro');
-                                  const options = {
-                                    key: response.data.razorpay_key_id,
-                                    amount: response.data.amount * 100,
-                                    currency: response.data.currency,
-                                    name: "Dr Agri AI",
-                                    description: "Pro Tier Upgrade",
-                                    order_id: response.data.razorpay_order_id,
-                                    handler: async function (payment_response) {
-                                      try {
-                                        await api.post('/payments/verify-upgrade', {
-                                          razorpay_payment_id: payment_response.razorpay_payment_id,
-                                          razorpay_order_id: payment_response.razorpay_order_id,
-                                          razorpay_signature: payment_response.razorpay_signature,
-                                          order_ref: "UPG-" + user?.id
-                                        });
-                                        toast.success('🎉 Upgraded to Pro!');
-                                        dispatch(fetchUser());
-                                      } catch (err) { toast.error("Upgrade verification failed."); }
-                                    },
-                                    prefill: { name: user?.name, email: user?.email, contact: "9999999999" },
-                                    theme: { color: "#10B981" }
-                                  };
-                                  const rzp1 = new window.Razorpay(options);
-                                  rzp1.open();
-                                } catch (err) {
-                                  toast.error("Failed to initiate upgrade.");
-                                }
-                              }}
-                              className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-200 dark:shadow-none flex items-center gap-2"
-                            >
-                              <Zap size={18}/> Upgrade to Pro - ₹999/mo
-                            </button>
-                          </>
-                        )}
-                      </div>
-                  </div>
-                </div>
+                  ) : (
+                    <>
+                      {/* Subscription Status Hero Card */}
+                      {(() => {
+                        const isPremium = Boolean(sub?.is_premium || user?.is_premium || user?.tier === 'pro');
+                        const isCancelled = sub?.status === 'cancelled';
 
-                  {user?.tier === 'pro' && (
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                        <h3 className="font-bold text-gray-900 dark:text-white">Invoice History</h3>
-                      </div>
-                      <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {orders.length === 0 ? (
-                          <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-medium">No billing history found.</div>
-                        ) : (
-                          orders.map((inv) => (
-                            <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400"><FileText size={18}/></div>
-                                <div>
-                                  <p className="font-bold text-gray-900 dark:text-white">₹{inv.total_amount.toFixed(2)} <span className="text-xs ml-2 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-bold">{inv.status}</span></p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(inv.created_at).toLocaleDateString()} · {inv.order_ref}</p>
+                        return (
+                          <div className={`rounded-2xl p-6 md:p-8 border shadow-sm relative overflow-hidden transition-all ${
+                            isPremium 
+                              ? 'bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-white dark:from-emerald-950/40 dark:via-gray-800 dark:to-gray-800 border-emerald-400 dark:border-emerald-600/50' 
+                              : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+                          }`}>
+                            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                              {isPremium ? <Crown size={120} /> : <CreditCard size={120} />}
+                            </div>
+
+                            <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-6 pb-6 border-b border-gray-100 dark:border-gray-700">
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                                    isPremium 
+                                      ? isCancelled 
+                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' 
+                                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' 
+                                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                  }`}>
+                                    {isPremium ? (isCancelled ? 'Cancelled (Active Grace Period)' : 'Active Premium') : 'Free Plan'}
+                                  </span>
+                                  {isPremium && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                                      <ShieldCheck size={13} /> 100% Ad-Free
+                                    </span>
+                                  )}
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                  {sub?.plan_name || (isPremium ? 'Dr Agri AI Premium' : 'Free Community Plan')}
+                                </h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xl">
+                                  {isPremium
+                                    ? 'Your account is active with zero sponsored advertisements, full AI diagnosis, and priority agronomy services.'
+                                    : 'Core AI crop diagnosis and farm management tools remain 100% free supported by relevant community ads. Upgrade below for an ad-free experience.'}
+                                </p>
+                              </div>
+
+                              {isPremium && (
+                                <div className="text-left md:text-right">
+                                  <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                                    {sub?.days_remaining ?? 0}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 block font-medium">Days Remaining</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Plan Metadata */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
+                              <div>
+                                <span className="text-xs text-gray-400 font-medium block mb-1">Billing Period</span>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                  {isPremium ? (sub?.plan_id === 'yearly' ? 'Yearly Plan (₹799/yr)' : 'Monthly Plan (₹99/mo)') : 'Free (₹0/mo)'}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-400 font-medium block mb-1">Expiry / Renewal Date</span>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                  {sub?.end_date ? new Date(sub.end_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never'}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-400 font-medium block mb-1">Status</span>
+                                <div className="flex items-center gap-1.5 text-sm font-bold">
+                                  {isPremium ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                      <CheckCircle2 size={16} /> Verified Active
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 dark:text-gray-400">Ad-Supported Free</span>
+                                  )}
                                 </div>
                               </div>
-                              <button onClick={() => handleDownloadInvoice(inv.order_ref)} className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition" title="Download PDF"><Download size={18}/></button>
                             </div>
-                          ))
-                        )}
+
+                            {/* Cancellation if active */}
+                            {isPremium && !isCancelled && (
+                              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex justify-end">
+                                <button
+                                  onClick={() => setShowCancelModal(true)}
+                                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold underline transition"
+                                >
+                                  Cancel Auto-Renewal
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Upgrade Cards if NOT Premium */}
+                      {!Boolean(sub?.is_premium || user?.is_premium || user?.tier === 'pro') && (
+                        <div>
+                          <div className="mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upgrade to Ad-Free Experience</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Select a transparent, non-recurring subscription plan.</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Monthly Plan */}
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-100 dark:border-gray-700 hover:border-emerald-500 transition shadow-sm flex flex-col justify-between">
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Monthly Plan</h4>
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                    Flexible
+                                  </span>
+                                </div>
+                                <div className="flex items-baseline gap-1 mb-4">
+                                  <span className="text-3xl font-black text-gray-900 dark:text-white">₹99</span>
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">/ month</span>
+                                </div>
+                                <ul className="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 mb-6">
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span><strong>100% Ad-Free Experience</strong></span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>Unlimited AI Crop Disease Detection</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>Direct Razorpay Secure Checkout</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>Priority Agronomy Support</span>
+                                  </li>
+                                </ul>
+                              </div>
+                              <button
+                                onClick={() => handleSelectSubPlan({ id: 'monthly', name: 'Premium Monthly' })}
+                                disabled={subProcessingId === 'monthly'}
+                                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                {subProcessingId === 'monthly' ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Zap size={16} /> Upgrade Monthly - ₹99
+                                  </>
+                                )}
+                              </button>
+                            </div>
+
+                            {/* Yearly Plan */}
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border-2 border-emerald-500 relative shadow-md flex flex-col justify-between">
+                              <div className="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-sm tracking-wider">
+                                Best Value · Save 33%
+                              </div>
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Yearly Plan</h4>
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                    Annual
+                                  </span>
+                                </div>
+                                <div className="flex items-baseline gap-1 mb-1">
+                                  <span className="text-3xl font-black text-gray-900 dark:text-white">₹799</span>
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">/ year</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mb-4">Just ₹66.58 / month</p>
+                                <ul className="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 mb-6">
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span><strong>100% Ad-Free for Full 365 Days</strong></span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>Unlimited AI Crop Disease Detection</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>All Core Farming Features Included</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                    <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
+                                    <span>Instant Verified Activation</span>
+                                  </li>
+                                </ul>
+                              </div>
+                              <button
+                                onClick={() => handleSelectSubPlan({ id: 'yearly', name: 'Premium Yearly' })}
+                                disabled={subProcessingId === 'yearly'}
+                                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                {subProcessingId === 'yearly' ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Crown size={16} /> Upgrade Yearly - ₹799
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payment History & Invoices */}
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                          <h3 className="font-bold text-gray-900 dark:text-white">Payment & Billing History</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {subHistory.length === 0 && orders.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-medium text-sm">
+                              No payment transactions recorded yet.
+                            </div>
+                          ) : (
+                            <>
+                              {/* Subscription Transactions */}
+                              {subHistory.map((item) => (
+                                <div key={item.id || item.payment_id} className="p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                      <Crown size={18} />
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                        ₹{item.amount?.toFixed(2)}
+                                        <span className="text-xs ml-2 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                                          {item.status || 'Verified'}
+                                        </span>
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        {item.plan_name || 'Dr Agri Premium'} · {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Recent'} · Ref: {item.razorpay_payment_id || item.order_id}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Marketplace Orders */}
+                              {orders.map((inv) => (
+                                <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                      <FileText size={18} />
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                        ₹{inv.total_amount?.toFixed(2)}
+                                        <span className="text-xs ml-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-bold">
+                                          {inv.status}
+                                        </span>
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Marketplace Order · {new Date(inv.created_at).toLocaleDateString()} · {inv.order_ref}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDownloadInvoice(inv.order_ref)}
+                                    className="p-2 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition"
+                                    title="Download PDF Invoice"
+                                  >
+                                    <Download size={18} />
+                                  </button>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Cancel Subscription Modal */}
+                  {showCancelModal && (
+                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-white dark:bg-gray-800 max-w-md w-full rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-2xl">
+                        <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center mb-4">
+                          <AlertTriangle size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Cancel Auto-Renewal?</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                          Your ad-free status will remain fully active until the end of your billing cycle. You will not be billed again.
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowCancelModal(false)}
+                            disabled={cancellingSub}
+                            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                          >
+                            Keep Plan
+                          </button>
+                          <button
+                            onClick={handleCancelSubAutoRenewal}
+                            disabled={cancellingSub}
+                            className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow transition flex items-center justify-center gap-2"
+                          >
+                            {cancellingSub ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Payment Sandbox Modal */}
+                  {testModalOrder && (
+                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-white dark:bg-gray-800 max-w-md w-full rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-2xl">
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center mb-4">
+                          <CreditCard size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Simulate Test Payment</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                          Plan: <strong>{testModalOrder.plan_name}</strong> · Amount: <strong>₹{testModalOrder.amount}</strong>
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setTestModalOrder(null)}
+                            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 transition"
+                          >
+                            Dismiss
+                          </button>
+                          <button
+                            onClick={handleCompleteTestSubPayment}
+                            className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition"
+                          >
+                            Verify Payment
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

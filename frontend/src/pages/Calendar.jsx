@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { CalendarDays, CloudRain, Droplets, Leaf, Activity, CheckCircle, Zap } from 'lucide-react';
 import api from '../services/api';
@@ -5,6 +6,9 @@ import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
 const Calendar = () => {
+  const { t } = useTranslation();
+  
+
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [predicting, setPredicting] = useState(false);
@@ -14,6 +18,8 @@ const Calendar = () => {
   }, []);
 
   const fetchTasks = async () => {
+    
+
     try {
       const res = await api.get('/calendar/tasks');
       setTasks(res.data);
@@ -25,6 +31,8 @@ const Calendar = () => {
   };
 
   const handlePredict = async () => {
+    
+
     setPredicting(true);
     try {
       const res = await api.post('/calendar/predict');
@@ -42,6 +50,8 @@ const Calendar = () => {
   };
 
   const handleComplete = async (taskId) => {
+    
+
     try {
       await api.put(`/calendar/tasks/${taskId}/complete`);
       toast.success('Task marked as complete!');
@@ -52,6 +62,8 @@ const Calendar = () => {
   };
 
   const getTaskIcon = (type) => {
+    
+
     switch(type) {
       case 'Water': return <Droplets className="text-blue-500" />;
       case 'Fertilize': return <Leaf className="text-green-500" />;
@@ -69,10 +81,8 @@ const Calendar = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <CalendarDays className="w-8 h-8 text-indigo-600" />
-            AI Crop Calendar
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium">Predictive timeline adjusted dynamically by hyper-local weather.</p>
+            <CalendarDays className="w-8 h-8 text-indigo-600" />{t("ai_crop_calendar")}</h1>
+          <p className="text-gray-500 mt-1 font-medium">{t("predictive_timeline_")}</p>
         </div>
         <button 
           onClick={handlePredict}
@@ -86,16 +96,14 @@ const Calendar = () => {
 
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            Upcoming Tasks
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">{t("upcoming_tasks")}</h2>
         </div>
         
         {tasks.length === 0 ? (
           <div className="text-center py-20">
             <CalendarDays className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-600 mb-2">No tasks scheduled</h3>
-            <p className="text-gray-400 mb-6">Click "Run AI Prediction" to generate your baseline calendar.</p>
+            <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_tasks_scheduled")}</h3>
+            <p className="text-gray-400 mb-6">{t("click__run_ai_predic")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -121,8 +129,7 @@ const Calendar = () => {
                       {task.title}
                       {task.ai_adjusted && (
                         <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CloudRain size={12} /> AI Shifted
-                        </span>
+                          <CloudRain size={12} />{t("ai_shifted")}</span>
                       )}
                     </h3>
                     {task.ai_adjusted ? (
@@ -130,7 +137,7 @@ const Calendar = () => {
                         ↳ {task.reason}
                       </p>
                     ) : (
-                      <p className="text-gray-500 font-medium text-sm mt-1">Scheduled automatically</p>
+                      <p className="text-gray-500 font-medium text-sm mt-1">{t("scheduled_automatica")}</p>
                     )}
                   </div>
                 </div>
@@ -145,8 +152,7 @@ const Calendar = () => {
                 )}
                 {task.is_completed && (
                   <div className="text-green-500 flex items-center gap-2 font-bold">
-                    <CheckCircle className="fill-current" /> Done
-                  </div>
+                    <CheckCircle className="fill-current" />{t("done")}</div>
                 )}
               </motion.div>
             ))}

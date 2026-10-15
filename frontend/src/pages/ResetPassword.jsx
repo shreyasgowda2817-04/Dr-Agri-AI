@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
@@ -5,6 +6,9 @@ import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Loader2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const ResetPassword = () => {
+  const { t } = useTranslation();
+  
+
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
@@ -24,6 +28,8 @@ const ResetPassword = () => {
   }, [token]);
 
   const getPasswordStrength = (pass) => {
+    
+
     if (pass.length === 0) return 0;
     let strength = 0;
     if (pass.length >= 8) strength += 25;
@@ -36,6 +42,8 @@ const ResetPassword = () => {
   const strength = getPasswordStrength(password);
 
   const handleSubmit = async (e) => {
+    
+
     e.preventDefault();
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -67,9 +75,9 @@ const ResetPassword = () => {
   if (!token) {
     return (
       <div className="w-full text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Invalid Link</h2>
-        <p className="text-gray-500 mb-6">This password reset link is missing or invalid.</p>
-        <Link to="/forgot-password" className="text-green-600 font-bold hover:underline">Request a new link</Link>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">{t("invalid_link")}</h2>
+        <p className="text-gray-500 mb-6">{t("this_password_reset_")}</p>
+        <Link to="/forgot-password" className="text-green-600 font-bold hover:underline">{t("request_a_new_link")}</Link>
       </div>
     );
   }
@@ -82,8 +90,8 @@ const ResetPassword = () => {
       transition={{ duration: 0.4 }}
     >
       <div className="mb-10 text-center lg:text-left">
-        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">Create New Password</h2>
-        <p className="text-gray-500 text-lg">Your new password must be unique and secure.</p>
+        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">{t("create_new_password")}</h2>
+        <p className="text-gray-500 text-lg">{t("your_new_password_mu")}</p>
       </div>
 
       {error && (
@@ -106,15 +114,13 @@ const ResetPassword = () => {
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={24} />
           </div>
-          <h3 className="text-lg font-bold mb-2">Password Updated!</h3>
-          <p className="text-green-700 text-sm mb-6">
-            Your password has been successfully reset. Redirecting you to login...
-          </p>
+          <h3 className="text-lg font-bold mb-2">{t("password_updated_")}</h3>
+          <p className="text-green-700 text-sm mb-6">{t("your_password_has_be")}</p>
         </motion.div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">New Password</label>
+            <label className="block text-gray-700 text-sm font-bold mb-2">{t("new_password")}</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                 <Lock size={20} />
@@ -139,7 +145,7 @@ const ResetPassword = () => {
             {password && (
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-1 text-xs font-bold text-gray-500">
-                  <span>Password Strength</span>
+                  <span>{t("password_strength")}</span>
                   <span className={strength < 50 ? 'text-red-500' : strength < 75 ? 'text-yellow-500' : 'text-green-600'}>
                     {strength < 50 ? 'Weak' : strength < 75 ? 'Good' : 'Strong'}
                   </span>
@@ -152,7 +158,7 @@ const ResetPassword = () => {
           </div>
           
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Confirm Password</label>
+            <label className="block text-gray-700 text-sm font-bold mb-2">{t("confirm_password")}</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                 <Lock size={20} />
@@ -175,9 +181,7 @@ const ResetPassword = () => {
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
-                <ShieldCheck size={20} />
-                Reset Password
-              </>
+                <ShieldCheck size={20} />{t("reset_password")}</>
             )}
           </button>
         </form>

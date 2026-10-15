@@ -1,9 +1,13 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 
 const HistorySidebar = ({ isOpen, onClose, onSelectHistory }) => {
+  const { t } = useTranslation();
+  
+
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,6 +19,8 @@ const HistorySidebar = ({ isOpen, onClose, onSelectHistory }) => {
   }, [isOpen]);
 
   const fetchHistory = async () => {
+    
+
     setLoading(true);
     setError('');
     try {
@@ -50,9 +56,7 @@ const HistorySidebar = ({ isOpen, onClose, onSelectHistory }) => {
           >
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
               <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <Clock className="text-indigo-500" size={24} />
-                Scan History
-              </h2>
+                <Clock className="text-indigo-500" size={24} />{t("scan_history")}</h2>
               <button 
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
@@ -65,7 +69,7 @@ const HistorySidebar = ({ isOpen, onClose, onSelectHistory }) => {
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
                   <Loader2 className="animate-spin text-indigo-500" size={32} />
-                  <p className="text-sm font-bold">Loading past scans...</p>
+                  <p className="text-sm font-bold">{t("loading_past_scans__")}</p>
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center h-full text-rose-500 space-y-2">
@@ -75,7 +79,7 @@ const HistorySidebar = ({ isOpen, onClose, onSelectHistory }) => {
               ) : history.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
                   <Clock size={32} className="opacity-20" />
-                  <p className="text-sm font-bold">No previous scans found</p>
+                  <p className="text-sm font-bold">{t("no_previous_scans_fo")}</p>
                 </div>
               ) : (
                 history.map((item, idx) => (

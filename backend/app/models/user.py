@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     district: Optional[str] = None
     village: Optional[str] = None
     preferred_language: str = "en-US"
+    languages: Optional[str] = None
     avatar_url: Optional[str] = None
     farm_details: Optional[dict] = None
     notifications: Optional[dict] = None
@@ -32,9 +33,11 @@ class UserInDB(UserBase):
 
 class UserResponse(UserBase):
     id: str
-    created_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     tier: str = "basic"
     scan_count: int = 0
+    subscription: Optional[dict] = None
+    is_premium: bool = False
     
     model_config = {
         "from_attributes": True

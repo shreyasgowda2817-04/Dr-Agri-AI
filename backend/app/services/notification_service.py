@@ -33,12 +33,19 @@ class NotificationService:
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
             
-            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+            if settings.SMTP_PORT == 465:
+                server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT)
+            else:
+                server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT)
                 server.starttls()
+                
+            with server:
                 server.login(settings.EMAIL_USER, settings.EMAIL_PASS)
                 server.send_message(msg)
                 
             logger.info(f"✅ [EMAIL SENT] to {user_email}")
+        except smtplib.SMTPAuthenticationError:
+            logger.error(f"❌ [EMAIL FAILED] to {user_email}: SMTP Authentication Error. If using Gmail, you MUST use a 16-character 'App Password'. Standard passwords will be rejected.")
         except Exception as e:
             logger.error(f"❌ [EMAIL FAILED] to {user_email}: {str(e)}")
 

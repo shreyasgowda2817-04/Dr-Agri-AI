@@ -39,11 +39,20 @@ def send_reset_password_email(to_email: str, reset_link: str):
     message.attach(part)
 
     try:
-        # Create a secure SSL context and connect to Gmail's SMTP server
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        # Use settings for server and port instead of hardcoding
+        if settings.SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT)
+        else:
+            server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT)
+            server.starttls()
+            
+        with server:
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, to_email, message.as_string())
         return True
+    except smtplib.SMTPAuthenticationError:
+        print("❌ SMTP Authentication Error: If using Gmail, Google requires an 'App Password'. You cannot use your standard account password. Please generate a 16-character App Password in your Google Account Security settings.")
+        return False
     except Exception as e:
         print(f"Error sending email: {e}")
         return False

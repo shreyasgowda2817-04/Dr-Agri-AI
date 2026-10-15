@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { Camera, UploadCloud, TrendingUp, AlertTriangle, Play, Pause, Activity, Plane, CheckCircle, Server, Terminal, X, Wifi } from 'lucide-react';
 import api from '../services/api';
@@ -6,6 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const DroneRecovery = () => {
+  const { t } = useTranslation();
+  
+
   const [farms, setFarms] = useState([]);
   const [selectedFarm, setSelectedFarm] = useState('');
   const [scans, setScans] = useState([]);
@@ -13,7 +17,7 @@ const DroneRecovery = () => {
   const [uploading, setUploading] = useState(false);
   const [activeScanIndex, setActiveScanIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+
   // Drone Deployment Simulation State
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [deployStep, setDeployStep] = useState(0);
@@ -42,6 +46,8 @@ const DroneRecovery = () => {
   }, [isPlaying, scans.length]);
 
   const fetchFarms = async () => {
+    
+
     try {
       const res = await api.get('/farms');
       setFarms(res.data);
@@ -56,6 +62,8 @@ const DroneRecovery = () => {
   };
 
   const fetchTimeline = async (farmId) => {
+    
+
     try {
       const res = await api.get(`/drones/timeline/${farmId}`);
       setScans(res.data);
@@ -68,6 +76,8 @@ const DroneRecovery = () => {
   };
 
   const handleUploadAndDeploy = async (e) => {
+    
+
     const file = e.target.files[0];
     if (!file) return;
     if (!selectedFarm) {
@@ -78,14 +88,17 @@ const DroneRecovery = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('farm_id', selectedFarm);
-    
+
     setShowDeployModal(true);
     setDeployStep(0);
     setTerminalLogs(["> Connecting to Drone Telemetry Socket..."]);
-    
-    const wsUrl = `ws://localhost:8000/api/v1/drones/stream/${selectedFarm}`;
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const defaultWsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    const wsHost = import.meta.env.VITE_WS_HOST || defaultWsHost;
+    const wsUrl = `${wsProtocol}//${wsHost}/api/v1/drones/stream/${selectedFarm}`;
     const ws = new WebSocket(wsUrl);
-    
+
     ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
       if (data.step !== undefined) {
@@ -121,7 +134,7 @@ const DroneRecovery = () => {
       setTerminalLogs(prev => [...prev, "> ERROR: Socket connection failed."]);
       setTimeout(() => setShowDeployModal(false), 2000);
     };
-    
+
     // Reset file input
     e.target.value = null;
   };
@@ -130,6 +143,8 @@ const DroneRecovery = () => {
 
   // Helper to color code the NDVI score
   const getHealthColor = (score) => {
+    
+
     if (score >= 80) return '#22c55e'; // Green
     if (score >= 50) return '#eab308'; // Yellow
     return '#ef4444'; // Red
@@ -150,10 +165,8 @@ const DroneRecovery = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <Camera className="w-8 h-8 text-teal-600" />
-            Drone Recovery Monitoring
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium">Track field health and treatment effectiveness via NDVI Time-lapse.</p>
+            <Camera className="w-8 h-8 text-teal-600" />{t("drone_recovery_monit")}</h1>
+          <p className="text-gray-500 mt-1 font-medium">{t("track_field_health_a")}</p>
         </div>
         
         <div className="flex gap-4 items-center">
@@ -162,16 +175,14 @@ const DroneRecovery = () => {
             onChange={(e) => setSelectedFarm(e.target.value)}
             className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-gray-700 shadow-sm focus:ring-2 focus:ring-teal-500 outline-none"
           >
-            <option value="">Select Farm...</option>
+            <option value="">{t("select_farm___")}</option>
             {farms.map(f => (
               <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </select>
           
           <label className="bg-teal-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-teal-700 transition shadow-lg shadow-teal-200 cursor-pointer">
-            <Plane size={20} />
-            Deploy Drone
-            <input type="file" className="hidden" accept="image/*" onChange={handleUploadAndDeploy} />
+            <Plane size={20} />{t("deploy_drone")}<input type="file" className="hidden" accept="image/*" onChange={handleUploadAndDeploy} />
           </label>
         </div>
       </div>
@@ -179,29 +190,27 @@ const DroneRecovery = () => {
       {!selectedFarm ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
           <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-600 mb-2">No Farm Selected</h3>
-          <p className="text-gray-400">Please select a farm from the dropdown to view its recovery timeline.</p>
+          <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_farm_selected")}</h3>
+          <p className="text-gray-400">{t("please_select_a_farm")}</p>
         </div>
       ) : scans.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
           <Camera className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-600 mb-2">No Scans Found</h3>
-          <p className="text-gray-400 mb-6">Upload your first drone or field image to start the recovery timeline.</p>
+          <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_scans_found")}</h3>
+          <p className="text-gray-400 mb-6">{t("upload_your_first_dr")}</p>
         </div>
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Visualizer */}
           <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-              <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                NDVI Heatmap Viewer
-              </h2>
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">{t("ndvi_heatmap_viewer")}</h2>
               <div className="flex gap-2">
                 <button 
                   onClick={() => setIsPlaying(!isPlaying)}
                   className="bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm font-bold shadow-sm hover:bg-gray-50 transition"
                 >
-                  {isPlaying ? <><Pause size={16}/> Pause</> : <><Play size={16}/> Play Time-Lapse</>}
+                  {isPlaying ? <><Pause size={16}/>{t("pause")}</> : <><Play size={16}/>{t("play_time_lapse")}</>}
                 </button>
               </div>
             </div>
@@ -216,7 +225,7 @@ const DroneRecovery = () => {
                   className="relative w-full h-full"
                 >
                   <img 
-                    src={activeScan.image_url.startsWith('http') ? activeScan.image_url : `http://localhost:8000${activeScan.image_url}`} 
+                    src={activeScan.image_url.startsWith('http') || activeScan.image_url.startsWith('data:') ? activeScan.image_url : `${import.meta.env.VITE_BACKEND_URL || ''}${activeScan.image_url}`} 
                     alt="Farm Scan" 
                     className="w-full h-full object-cover"
                   />
@@ -234,12 +243,11 @@ const DroneRecovery = () => {
                       {new Date(activeScan.created_at).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-2 font-black text-2xl mb-1">
-                      <Activity size={24} style={{ color: getHealthColor(activeScan.health_score) }} />
-                      NDVI: {activeScan.health_score.toFixed(1)}
+                      <Activity size={24} style={{ color: getHealthColor(activeScan.health_score) }} />{t("ndvi_")}{activeScan.health_score.toFixed(1)}
                     </div>
                     {activeScan.detected_disease && (
                       <div className="mt-2 pt-2 border-t border-gray-700">
-                        <div className="text-xs text-gray-400 font-bold uppercase">AI Analysis</div>
+                        <div className="text-xs text-gray-400 font-bold uppercase">{t("ai_analysis")}</div>
                         <div className="text-sm font-semibold text-white mt-1">
                           {activeScan.detected_disease.replace(/___/g, ' - ').replace(/_/g, ' ')}
                         </div>
@@ -247,8 +255,7 @@ const DroneRecovery = () => {
                           <div className={`text-xs font-bold mt-1 uppercase ${
                             activeScan.severity === 'high' ? 'text-red-400' :
                             activeScan.severity === 'medium' ? 'text-yellow-400' : 'text-green-400'
-                          }`}>
-                            Severity: {activeScan.severity}
+                          }`}>{t("severity_")}{activeScan.severity}
                           </div>
                         )}
                       </div>
@@ -272,8 +279,8 @@ const DroneRecovery = () => {
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
               />
               <div className="flex justify-between mt-2 text-xs font-bold text-gray-400">
-                <span>First Scan</span>
-                <span>Latest Scan</span>
+                <span>{t("first_scan")}</span>
+                <span>{t("latest_scan")}</span>
               </div>
             </div>
           </div>
@@ -282,13 +289,12 @@ const DroneRecovery = () => {
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-100 bg-gray-50/50">
               <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="text-teal-500" /> Recovery Trajectory
-              </h2>
+                <TrendingUp className="text-teal-500" />{t("recovery_trajectory")}</h2>
             </div>
             
             <div className="p-6 flex-1 flex flex-col">
               <div className="mb-6">
-                <p className="text-sm font-bold text-gray-500 mb-1">Current Health Score</p>
+                <p className="text-sm font-bold text-gray-500 mb-1">{t("current_health_score")}</p>
                 <div className="flex items-end gap-3">
                   <h3 className="text-4xl font-black text-gray-900">
                     {scans[scans.length - 1]?.health_score.toFixed(1)}
@@ -323,9 +329,7 @@ const DroneRecovery = () => {
                 </ResponsiveContainer>
               </div>
               
-              <div className="mt-6 bg-teal-50 border border-teal-100 rounded-xl p-4 text-sm text-teal-800 font-medium">
-                The NDVI Health Index measures the density of green on a patch of land. A rising score indicates successful disease recovery.
-              </div>
+              <div className="mt-6 bg-teal-50 border border-teal-100 rounded-xl p-4 text-sm text-teal-800 font-medium">{t("the_ndvi_health_inde")}</div>
             </div>
           </div>
         </div>
@@ -350,8 +354,8 @@ const DroneRecovery = () => {
                     <Plane className="text-teal-400 w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold tracking-wide">UAV FLIGHT COMMAND</h3>
-                    <p className="text-gray-500 text-xs font-mono uppercase">Target: Farm ID {selectedFarm}</p>
+                    <h3 className="text-white font-bold tracking-wide">{t("uav_flight_command")}</h3>
+                    <p className="text-gray-500 text-xs font-mono uppercase">{t("target__farm_id")}{selectedFarm}</p>
                   </div>
                 </div>
                 {deployStep === 5 && (
@@ -399,8 +403,7 @@ const DroneRecovery = () => {
               {/* Terminal View */}
               <div className="p-6 bg-gray-900 font-mono text-sm h-64 overflow-y-auto">
                 <div className="flex items-center gap-2 text-teal-500 mb-4 font-bold text-xs">
-                  <Terminal size={14} /> LIVE TERMINAL OUTPUT
-                </div>
+                  <Terminal size={14} />{t("live_terminal_output")}</div>
                 <div className="space-y-2">
                   {terminalLogs.map((log, i) => (
                     <motion.div 

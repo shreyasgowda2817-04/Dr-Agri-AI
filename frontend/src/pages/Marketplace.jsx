@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addItem, openCart } from '../store/slices/cartSlice';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Search, Star, Heart, X, Package,
@@ -10,6 +11,7 @@ import {
   Leaf, Zap, Truck, ShieldCheck, ClipboardList, Navigation, FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import SponsoredAds from '../components/ads/SponsoredAds';
 
 // ─── Category config ────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -37,6 +39,9 @@ const SORT_OPTIONS = [
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 const Marketplace = () => {
+  const { t } = useTranslation();
+  
+
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'supplies');
   const [supplies, setSupplies] = useState([]);
@@ -78,6 +83,8 @@ const Marketplace = () => {
   }, [selectedProduct, showListingModal, showBidModal]);
 
   const fetchData = async () => {
+    
+
     setLoading(true);
     try {
       if (activeTab === 'supplies') {
@@ -102,6 +109,8 @@ const Marketplace = () => {
   };
 
   const toggleWishlist = (id) => {
+    
+
     const next = wishlist.includes(id) ? wishlist.filter(w => w !== id) : [...wishlist, id];
     setWishlist(next);
     localStorage.setItem('agrivision_wishlist', JSON.stringify(next));
@@ -109,39 +118,58 @@ const Marketplace = () => {
   };
 
   const handleAddToCart = (item, quantity = 1) => {
+    
+
     dispatch(addItem({ ...item, quantity }));
     dispatch(openCart());
     toast.success(`${item.name} added to cart!`);
     setSelectedProduct(null);
   };
-  
+
   const fetchReviews = async (productId) => {
+    
+
     try {
       const res = await api.get(`/marketplace/products/${productId}/reviews`);
       setReviews(res.data);
     } catch { toast.error("Failed to fetch reviews"); }
   };
-  
+
   const handleOpenProduct = (item) => {
+    
+
     setSelectedProduct(item);
     setQty(1);
     setActiveModalTab('overview');
     setPurchaseMode('onetime');
     fetchReviews(item.id);
   };
-  
+
   const submitReview = async (e) => {
+    
+
     e.preventDefault();
     try {
-      await api.post(`/marketplace/products/${selectedProduct.id}/reviews`, newReview);
+      const res = await api.post(`/marketplace/products/${selectedProduct.id}/reviews`, newReview);
       toast.success("Review submitted!");
       setNewReview({ rating: 5, comment: '' });
-      fetchReviews(selectedProduct.id);
-      fetchData(); // Refresh overall product ratings
+      setReviews(prev => [res.data, ...prev]);
+      
+      const updatedProduct = {
+        ...selectedProduct,
+        review_count: (selectedProduct.review_count || 0) + 1,
+        average_rating: selectedProduct.average_rating 
+          ? ((selectedProduct.average_rating * selectedProduct.review_count) + res.data.rating) / ((selectedProduct.review_count || 0) + 1)
+          : res.data.rating
+      };
+      setSelectedProduct(updatedProduct);
+      setSupplies(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
     } catch { toast.error("Failed to submit review"); }
   };
 
   const applyCoupon = () => {
+    
+
     const valid = ['AGRI10', 'KISAN20', 'FIRST15'];
     if (valid.includes(couponCode.toUpperCase())) {
       setCouponApplied(true);
@@ -169,20 +197,24 @@ const Marketplace = () => {
   }, [supplies, category, search, sort]);
 
   const handleCreateListing = async (e) => {
+    
+
     e.preventDefault();
     try {
-      await api.post('/marketplace/listings', {
+      const res = await api.post('/marketplace/listings', {
         ...listingForm,
         quantity_tons: parseFloat(listingForm.quantity_tons),
         asking_price_per_ton: parseFloat(listingForm.asking_price_per_ton)
       });
       setShowListingModal(false);
+      setListings(prev => [res.data, ...prev]);
       toast.success('Harvest listed for sale!');
-      fetchData();
     } catch { toast.error('Failed to create listing'); }
   };
 
   const handleBid = async (e) => {
+    
+
     e.preventDefault();
     try {
       await api.post('/marketplace/bids', { listing_id: activeListingId, bid_amount_per_ton: parseFloat(bidAmount) });
@@ -193,6 +225,8 @@ const Marketplace = () => {
   };
 
   const fetchBids = async (listingId) => {
+    
+
     setActiveListingId(listingId);
     try {
       const res = await api.get(`/marketplace/listings/${listingId}/bids`);
@@ -202,11 +236,13 @@ const Marketplace = () => {
   };
 
   const handleAcceptBid = async (bidId) => {
+    
+
     try {
       await api.post(`/marketplace/bids/${bidId}/accept`);
       toast.success("Bid accepted successfully!");
       setShowBidsModal(false);
-      fetchData(); // refresh listings to show as Sold
+      setListings(prev => prev.map(l => l.id === activeListingId ? { ...l, status: 'Sold' } : l));
     } catch { toast.error("Failed to accept bid"); }
   };
 
@@ -218,28 +254,25 @@ const Marketplace = () => {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
         <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold mb-1">Dr Agri Marketplace</h1>
-            <p className="text-green-100">Buy certified agri supplies or sell your harvest directly to wholesale buyers.</p>
+            <h1 className="text-3xl font-extrabold mb-1">{t("dr_agri_marketplace")}</h1>
+            <p className="text-green-100">{t("buy_certified_agri_s")}</p>
             <div className="flex gap-4 mt-4 text-sm">
-              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><Truck size={14} /> Free delivery over ₹2000</span>
-              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><ShieldCheck size={14} /> Certified products</span>
-              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><Tag size={14} /> Use code AGRI10</span>
+              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><Truck size={14} />{t("free_delivery_over__")}</span>
+              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><ShieldCheck size={14} />{t("certified_products")}</span>
+              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full"><Tag size={14} />{t("use_code_agri10")}</span>
             </div>
           </div>
           {/* Tabs */}
           <div className="flex bg-white/10 rounded-2xl p-1 gap-1 backdrop-blur-sm">
             <button onClick={() => setActiveTab('supplies')}
               className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${activeTab === 'supplies' ? 'bg-white text-green-700 shadow' : 'text-white/80 hover:text-white'}`}>
-              <ShoppingCart size={16} /> Buy Supplies
-            </button>
+              <ShoppingCart size={16} />{t("buy_supplies")}</button>
             <button onClick={() => setActiveTab('wholesale')}
               className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${activeTab === 'wholesale' ? 'bg-white text-blue-700 shadow' : 'text-white/80 hover:text-white'}`}>
-              <Handshake size={16} /> Sell Wholesale
-            </button>
+              <Handshake size={16} />{t("sell_wholesale")}</button>
             <button onClick={() => setActiveTab('orders')}
               className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${activeTab === 'orders' ? 'bg-white text-gray-900 shadow' : 'text-white/80 hover:text-white'}`}>
-              <ClipboardList size={16} /> My Orders
-            </button>
+              <ClipboardList size={16} />{t("my_orders")}</button>
           </div>
         </div>
       </div>
@@ -247,6 +280,9 @@ const Marketplace = () => {
       {/* ─── Supplies Tab ─── */}
       {activeTab === 'supplies' && (
         <div>
+          {/* Sponsored Agricultural Innovations Banner */}
+          <SponsoredAds placement="marketplace" layout="banner" className="mb-6" />
+
           {/* Search + Sort bar */}
           <div className="flex flex-col md:flex-row gap-3 mb-6">
             <div className="relative flex-1">
@@ -314,12 +350,10 @@ const Marketplace = () => {
 
           {/* Results count */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">
-              Showing <strong>{filtered.length}</strong> products
-              {category !== 'all' && <> in <strong>{category}</strong></>}
-              {search && <> for "<strong>{search}</strong>"</>}
+            <p className="text-sm text-gray-500">{t("showing")}<strong>{filtered.length}</strong>{t("products")}{category !== 'all' && <>{t("in")}<strong>{category}</strong></>}
+              {search && <>{t("for__")}<strong>{search}</strong>"</>}
             </p>
-            <p className="text-sm text-gray-400">{wishlist.length} items in wishlist ❤️</p>
+            <p className="text-sm text-gray-400">{wishlist.length}{t("items_in_wishlist___")}</p>
           </div>
 
           {loading ? (
@@ -336,8 +370,8 @@ const Marketplace = () => {
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-600 mb-2">No products found</h3>
-              <p className="text-gray-400">Try a different search term or category</p>
+              <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_products_found")}</h3>
+              <p className="text-gray-400">{t("try_a_different_sear")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -427,19 +461,18 @@ const Marketplace = () => {
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Wholesale Harvest Market</h2>
-              <p className="text-sm text-gray-500">Connect directly with bulk buyers. No middlemen.</p>
+              <h2 className="text-xl font-bold text-gray-900">{t("wholesale_harvest_ma")}</h2>
+              <p className="text-sm text-gray-500">{t("connect_directly_wit")}</p>
             </div>
             
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="bg-gray-100 p-1 rounded-xl flex shrink-0">
-                <button onClick={() => setWholesaleView('market')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${wholesaleView === 'market' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Market</button>
-                <button onClick={() => setWholesaleView('mine')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${wholesaleView === 'mine' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>My Harvests</button>
+                <button onClick={() => setWholesaleView('market')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${wholesaleView === 'market' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>{t("market")}</button>
+                <button onClick={() => setWholesaleView('mine')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${wholesaleView === 'mine' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>{t("my_harvests")}</button>
               </div>
               <button onClick={() => setShowListingModal(true)}
                 className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition shadow-sm whitespace-nowrap">
-                <Plus size={18} /> Post Harvest
-              </button>
+                <Plus size={18} />{t("post_harvest")}</button>
             </div>
           </div>
 
@@ -447,12 +480,12 @@ const Marketplace = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="p-4 font-semibold">Crop</th>
-                  <th className="p-4 font-semibold">Location</th>
-                  <th className="p-4 font-semibold">Quantity</th>
-                  <th className="p-4 font-semibold">Asking Price</th>
-                  <th className="p-4 font-semibold">Status</th>
-                  <th className="p-4 font-semibold text-right">Action</th>
+                  <th className="p-4 font-semibold">{t("crop")}</th>
+                  <th className="p-4 font-semibold">{t("location")}</th>
+                  <th className="p-4 font-semibold">{t("quantity")}</th>
+                  <th className="p-4 font-semibold">{t("asking_price")}</th>
+                  <th className="p-4 font-semibold">{t("status")}</th>
+                  <th className="p-4 font-semibold text-right">{t("action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,7 +495,7 @@ const Marketplace = () => {
                     : listings.filter(l => l.farmer_id !== user?.id && l.status === 'Active');
                     
                   if (displayListings.length === 0) {
-                    return <tr><td colSpan="6" className="p-12 text-center text-gray-400">No listings found in this view.</td></tr>;
+                    return <tr><td colSpan="6" className="p-12 text-center text-gray-400">{t("no_listings_found_in")}</td></tr>;
                   }
                   
                   return displayListings.map(list => (
@@ -474,22 +507,18 @@ const Marketplace = () => {
                         </div>
                       </td>
                       <td className="p-4 text-gray-500 text-sm">{list.location}</td>
-                      <td className="p-4"><span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">{list.quantity_tons} Tons</span></td>
-                      <td className="p-4 font-bold text-green-700">₹{list.asking_price_per_ton?.toLocaleString()} / Ton</td>
+                      <td className="p-4"><span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">{list.quantity_tons}{t("tons")}</span></td>
+                      <td className="p-4 font-bold text-green-700">₹{list.asking_price_per_ton?.toLocaleString()}{t("__ton")}</td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${list.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>{list.status}</span>
                       </td>
                       <td className="p-4 text-right">
                         {wholesaleView === 'mine' ? (
                           <button onClick={() => fetchBids(list._id)}
-                            className="bg-gray-100 text-gray-900 border border-gray-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition shadow-sm">
-                            View Bids
-                          </button>
+                            className="bg-gray-100 text-gray-900 border border-gray-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition shadow-sm">{t("view_bids")}</button>
                         ) : (
                           <button onClick={() => { setActiveListingId(list._id); setShowBidModal(true); }}
-                            className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition shadow-sm">
-                            Place Bid
-                          </button>
+                            className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition shadow-sm">{t("place_bid")}</button>
                         )}
                       </td>
                     </tr>
@@ -506,9 +535,8 @@ const Marketplace = () => {
         <div className="space-y-6">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <ClipboardList className="text-gray-600" /> Order History
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">Track your pending deliveries and view past purchases.</p>
+              <ClipboardList className="text-gray-600" />{t("order_history")}</h2>
+            <p className="text-sm text-gray-500 mt-1">{t("track_your_pending_d")}</p>
           </div>
 
           {loading ? (
@@ -516,8 +544,8 @@ const Marketplace = () => {
           ) : orders.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-600 mb-2">No orders found</h3>
-              <p className="text-gray-400">You haven't placed any orders yet.</p>
+              <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_orders_found")}</h3>
+              <p className="text-gray-400">{t("you_haven_t_placed_a")}</p>
             </div>
           ) : (
             <div className="grid gap-6">
@@ -526,11 +554,11 @@ const Marketplace = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-50">
                       <div>
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Order Reference</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("order_reference")}</span>
                         <h3 className="text-lg font-bold text-gray-900">{order.order_ref}</h3>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Order Date</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("order_date")}</span>
                         <p className="text-sm font-semibold text-gray-700">{new Date(order.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -550,7 +578,7 @@ const Marketplace = () => {
                               </div>
                               <div>
                                 <h4 className="font-bold text-gray-900 line-clamp-1 text-sm md:text-base">{item.name}</h4>
-                                <p className="text-sm text-gray-500 font-medium">Qty: {item.quantity} × ₹{item.price.toFixed(2)}</p>
+                                <p className="text-sm text-gray-500 font-medium">{t("qty_")}{item.quantity} × ₹{item.price.toFixed(2)}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-4 shrink-0">
@@ -559,8 +587,7 @@ const Marketplace = () => {
                                 onClick={() => handleAddToCart(product, 1)}
                                 className="hidden md:flex bg-gray-100 hover:bg-green-100 text-gray-600 hover:text-green-700 px-4 py-2 rounded-lg text-sm font-bold items-center gap-2 transition"
                               >
-                                <ShoppingCart size={14} /> Buy Again
-                              </button>
+                                <ShoppingCart size={14} />{t("buy_again")}</button>
                             </div>
                           </div>
                         );
@@ -570,10 +597,10 @@ const Marketplace = () => {
                   
                   <div className="w-full md:w-64 flex flex-col justify-between bg-gray-50 p-5 rounded-2xl border border-gray-100">
                     <div>
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Amount</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("total_amount")}</span>
                       <p className="text-2xl font-black text-gray-900 mb-4">₹{order.total_amount?.toFixed(2)}</p>
                       
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">Status</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">{t("status")}</span>
                       <div className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold uppercase mb-6">
                         <CheckCircle size={14} /> {order.status}
                       </div>
@@ -581,14 +608,12 @@ const Marketplace = () => {
                     
                     <div className="space-y-2">
                       <Link to={`/tracking/${order.order_ref}`} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20">
-                        <Navigation size={18} /> Track Package
-                      </Link>
+                        <Navigation size={18} />{t("track_package")}</Link>
                       <button 
-                        onClick={() => window.open(`http://localhost:8000/api/v1/invoices/download/${order.order_ref}`, '_blank')}
+                        onClick={() => window.open(`${import.meta.env.VITE_API_URL || '/api/v1'}/invoices/download/${order.order_ref}`, '_blank')}
                         className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm"
                       >
-                        <FileText size={18} /> Download Invoice
-                      </button>
+                        <FileText size={18} />{t("download_invoice")}</button>
                     </div>
                   </div>
                 </div>
@@ -626,8 +651,7 @@ const Marketplace = () => {
                     <span className="text-8xl">{CATEGORIES.find(c => c.value === selectedProduct.category)?.icon || '📦'}</span>
                   )}
                   <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 border border-gray-100">
-                    <Search size={12} /> Hover to zoom
-                  </div>
+                    <Search size={12} />{t("hover_to_zoom")}</div>
                 </div>
 
                 {selectedProduct.image_url && (
@@ -644,7 +668,7 @@ const Marketplace = () => {
                   
                   <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 px-3 py-1.5 rounded-full mb-4">
                     <span className="text-emerald-600">✨</span>
-                    <span className="text-xs font-bold text-emerald-800">AI Recommended: High Compatibility</span>
+                    <span className="text-xs font-bold text-emerald-800">{t("ai_recommended__high")}</span>
                   </div>
 
                   <div className="flex justify-between items-start mb-2">
@@ -663,8 +687,7 @@ const Marketplace = () => {
                       <span className="text-sm font-bold text-amber-700">{(selectedProduct.average_rating || 0).toFixed(1)}</span>
                     </div>
                     <button onClick={() => setActiveModalTab('reviews')} className="text-sm font-medium text-gray-500 hover:text-green-600 transition underline decoration-gray-300 underline-offset-4 cursor-pointer">
-                      {selectedProduct.review_count || 0} Verified Reviews
-                    </button>
+                      {selectedProduct.review_count || 0}{t("verified_reviews")}</button>
                   </div>
 
                   {/* ─── Premium Tabs ─── */}
@@ -716,7 +739,7 @@ const Marketplace = () => {
 
                           <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                             <div className="flex justify-between items-center mb-4">
-                              <span className="font-bold text-sm text-gray-900">Select Quantity</span>
+                              <span className="font-bold text-sm text-gray-900">{t("select_quantity")}</span>
                               <span className="text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
                                 {selectedProduct.stock_quantity > 0 ? `${selectedProduct.stock_quantity} Available` : 'Out of Stock'}
                               </span>
@@ -733,8 +756,8 @@ const Marketplace = () => {
                                 <div className="flex-1 bg-white border border-blue-100 rounded-xl p-3 flex items-center gap-3 shadow-sm">
                                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">📐</div>
                                   <div>
-                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Coverage Area</p>
-                                    <p className="text-sm font-extrabold text-blue-900">Approx. {(qty * 0.5).toFixed(1)} Acres</p>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">{t("coverage_area")}</p>
+                                    <p className="text-sm font-extrabold text-blue-900">{t("approx_")}{(qty * 0.5).toFixed(1)}{t("acres")}</p>
                                   </div>
                                 </div>
                               )}
@@ -747,22 +770,20 @@ const Marketplace = () => {
                       {activeModalTab === 'ai_analysis' && (
                         <div className="space-y-6">
                           <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
-                            <h3 className="font-bold text-emerald-900 mb-2 flex items-center gap-2"><Zap size={18} className="text-emerald-500"/> Dr Agri Core Engine</h3>
-                            <p className="text-sm text-emerald-800 leading-relaxed mb-6">
-                              Based on recent satellite scans of your registered farm plots and local soil composition data, this product is exceptionally well-suited for your environment.
-                            </p>
+                            <h3 className="font-bold text-emerald-900 mb-2 flex items-center gap-2"><Zap size={18} className="text-emerald-500"/>{t("dr_agri_core_engine")}</h3>
+                            <p className="text-sm text-emerald-800 leading-relaxed mb-6">{t("based_on_recent_sate")}</p>
                             
                             <div className="space-y-5">
                               <div>
-                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">Soil Compatibility</span><span className="text-emerald-600">96%</span></div>
+                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">{t("soil_compatibility")}</span><span className="text-emerald-600">96%</span></div>
                                 <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: '96%' }} transition={{ duration: 1, ease: 'easeOut' }} className="h-full bg-emerald-500 rounded-full"/></div>
                               </div>
                               <div>
-                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">Weather Resilience</span><span className="text-blue-600">Optimal</span></div>
+                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">{t("weather_resilience")}</span><span className="text-blue-600">{t("optimal")}</span></div>
                                 <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: '88%' }} transition={{ duration: 1, ease: 'easeOut' }} className="h-full bg-blue-500 rounded-full"/></div>
                               </div>
                               <div>
-                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">Expected Yield Impact</span><span className="text-amber-600">+14%</span></div>
+                                <div className="flex justify-between text-sm font-bold mb-1"><span className="text-gray-700">{t("expected_yield_impac")}</span><span className="text-amber-600">+14%</span></div>
                                 <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: '75%' }} transition={{ duration: 1, ease: 'easeOut' }} className="h-full bg-amber-500 rounded-full"/></div>
                               </div>
                             </div>
@@ -794,7 +815,7 @@ const Marketplace = () => {
                         <div>
                           <form onSubmit={submitReview} className="bg-white border border-gray-200 p-5 rounded-2xl mb-8 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
-                              <span className="font-bold text-sm text-gray-900">Rate this product</span>
+                              <span className="font-bold text-sm text-gray-900">{t("rate_this_product")}</span>
                               <div className="flex gap-1">
                                 {[1,2,3,4,5].map(s => (
                                   <Star key={s} size={24} onClick={() => setNewReview({ ...newReview, rating: s })} className={`cursor-pointer transition-transform hover:scale-110 ${s <= newReview.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
@@ -802,20 +823,20 @@ const Marketplace = () => {
                               </div>
                             </div>
                             <textarea required value={newReview.comment} onChange={e => setNewReview({ ...newReview, comment: e.target.value })} placeholder="What did you like or dislike?" className="w-full text-sm border-gray-200 rounded-xl p-4 outline-none focus:ring-2 focus:ring-green-500 mb-3 border bg-gray-50 focus:bg-white transition-colors" rows="3"></textarea>
-                            <button type="submit" className="bg-gray-900 text-white font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-gray-800 transition float-right">Post Review</button>
+                            <button type="submit" className="bg-gray-900 text-white font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-gray-800 transition float-right">{t("post_review")}</button>
                             <div className="clear-both"></div>
                           </form>
 
                           <div className="space-y-5">
                             {reviews.length === 0 ? (
-                              <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl">Be the first to review!</div>
+                              <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl">{t("be_the_first_to_revi")}</div>
                             ) : reviews.map((r, i) => (
                               <div key={i} className="border-b border-gray-100 pb-5 last:border-0">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">{r.user_name.charAt(0)}</div>
                                     <span className="font-bold text-sm text-gray-900">{r.user_name}</span>
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full"><CheckCircle size={10}/> Verified</span>
+                                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full"><CheckCircle size={10}/>{t("verified")}</span>
                                   </div>
                                   <div className="flex">
                                     {[1,2,3,4,5].map(s => <Star key={s} size={12} className={s <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'} />)}
@@ -836,10 +857,9 @@ const Marketplace = () => {
                   
                   {/* Dynamic Pricing Toggles */}
                   <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full">
-                    <button onClick={() => setPurchaseMode('onetime')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${purchaseMode === 'onetime' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>One-time purchase</button>
+                    <button onClick={() => setPurchaseMode('onetime')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${purchaseMode === 'onetime' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>{t("one_time_purchase")}</button>
                     <button onClick={() => setPurchaseMode('subscribe')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${purchaseMode === 'subscribe' ? 'bg-green-100 text-green-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                      <Leaf size={12} className={purchaseMode === 'subscribe' ? 'text-green-600' : 'text-gray-400'}/> Subscribe & Save 10%
-                    </button>
+                      <Leaf size={12} className={purchaseMode === 'subscribe' ? 'text-green-600' : 'text-gray-400'}/>{t("subscribe___save_10_")}</button>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -849,12 +869,12 @@ const Marketplace = () => {
                           ₹{(selectedProduct.price * qty * (purchaseMode === 'subscribe' ? 0.9 : 1)).toFixed(2)}
                         </p>
                         {purchaseMode === 'subscribe' ? (
-                          <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">10% SUB SAVINGS</span>
+                          <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">{t("10__sub_savings")}</span>
                         ) : selectedProduct.discount_percentage > 0 && (
-                          <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">{selectedProduct.discount_percentage}% OFF</span>
+                          <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">{selectedProduct.discount_percentage}{t("__off")}</span>
                         )}
                       </div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-0.5">Total Price {purchaseMode === 'subscribe' && '(Auto-Renews)'}</p>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-0.5">{t("total_price")}{purchaseMode === 'subscribe' && '(Auto-Renews)'}</p>
                     </div>
                     
                     <button
@@ -883,8 +903,8 @@ const Marketplace = () => {
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center">
               <button onClick={() => setShowBidModal(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-xl"><X size={18} /></button>
               <Handshake className="text-blue-600 w-16 h-16 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2 text-gray-900">Place a Bid</h2>
-              <p className="text-sm text-gray-500 mb-6">Enter your offering price per Ton (₹).</p>
+              <h2 className="text-2xl font-bold mb-2 text-gray-900">{t("place_a_bid")}</h2>
+              <p className="text-sm text-gray-500 mb-6">{t("enter_your_offering_")}</p>
               <form onSubmit={handleBid}>
                 <input 
                   type="number" 
@@ -896,9 +916,7 @@ const Marketplace = () => {
                   value={bidAmount} 
                   onChange={e => setBidAmount(e.target.value)} 
                 />
-                <button type="submit" className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 text-lg">
-                  Submit Bid
-                </button>
+                <button type="submit" className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 text-lg">{t("submit_bid")}</button>
               </form>
             </motion.div>
           </motion.div>
@@ -913,23 +931,21 @@ const Marketplace = () => {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 max-h-[80vh] flex flex-col">
               <button onClick={() => setShowBidsModal(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-xl"><X size={18} /></button>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900">Bids Received</h2>
+              <h2 className="text-2xl font-bold mb-6 text-gray-900">{t("bids_received")}</h2>
               
               <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
                 {activeBids.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400">No bids placed on this harvest yet.</div>
+                  <div className="text-center py-10 text-gray-400">{t("no_bids_placed_on_th")}</div>
                 ) : activeBids.map(bid => (
                   <div key={bid._id} className="bg-gray-50 border border-gray-100 p-5 rounded-2xl flex justify-between items-center">
                     <div>
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Bid Amount</span>
-                      <p className="text-2xl font-black text-green-600 mb-1">₹{bid.bid_amount_per_ton.toLocaleString()} <span className="text-sm font-medium text-gray-500">/ Ton</span></p>
-                      <p className="text-sm font-bold text-gray-700">Status: <span className={bid.status === 'Pending' ? 'text-yellow-600' : bid.status === 'Accepted' ? 'text-green-600' : 'text-red-600'}>{bid.status}</span></p>
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("bid_amount")}</span>
+                      <p className="text-2xl font-black text-green-600 mb-1">₹{bid.bid_amount_per_ton.toLocaleString()} <span className="text-sm font-medium text-gray-500">{t("__ton")}</span></p>
+                      <p className="text-sm font-bold text-gray-700">{t("status_")}<span className={bid.status === 'Pending' ? 'text-yellow-600' : bid.status === 'Accepted' ? 'text-green-600' : 'text-red-600'}>{bid.status}</span></p>
                     </div>
                     {bid.status === 'Pending' && (
                       <button onClick={() => handleAcceptBid(bid._id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition shadow-md hover:shadow-lg">
-                        Accept Bid
-                      </button>
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition shadow-md hover:shadow-lg">{t("accept_bid")}</button>
                     )}
                   </div>
                 ))}
@@ -948,36 +964,35 @@ const Marketplace = () => {
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
               <button onClick={() => setShowListingModal(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-xl"><X size={18} /></button>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <TrendingUp className="text-blue-600" /> Post Harvest for Sale
-              </h2>
+                <TrendingUp className="text-blue-600" />{t("post_harvest_for_sal")}</h2>
               <form onSubmit={handleCreateListing} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Crop Type</label>
+                  <label className="block text-sm font-medium mb-1.5">{t("crop_type")}</label>
                   <input type="text" required placeholder="e.g. Tomato, Wheat" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     value={listingForm.crop_name} onChange={e => setListingForm({ ...listingForm, crop_name: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Quantity (Tons)</label>
+                    <label className="block text-sm font-medium mb-1.5">{t("quantity__tons_")}</label>
                     <input type="number" required min="1" step="0.5" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       value={listingForm.quantity_tons} onChange={e => setListingForm({ ...listingForm, quantity_tons: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Price / Ton (₹)</label>
+                    <label className="block text-sm font-medium mb-1.5">{t("price___ton____")}</label>
                     <input type="number" required min="100" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       value={listingForm.asking_price_per_ton} onChange={e => setListingForm({ ...listingForm, asking_price_per_ton: e.target.value })} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Farm Location</label>
+                  <label className="block text-sm font-medium mb-1.5">{t("farm_location")}</label>
                   <input type="text" required placeholder="e.g. Punjab, India" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     value={listingForm.location} onChange={e => setListingForm({ ...listingForm, location: e.target.value })} />
                 </div>
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                   <button type="button" onClick={() => setShowListingModal(false)}
-                    className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+                    className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition">{t("cancel")}</button>
                   <button type="submit"
-                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">List to Buyers</button>
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">{t("list_to_buyers")}</button>
                 </div>
               </form>
             </motion.div>

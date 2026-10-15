@@ -17,10 +17,20 @@ async def get_all_users(
     Fetch all users. Only accessible by Admins.
     """
     users = await db["users"].find().to_list(length=1000)
+    for u in users:
+        u["_id"] = str(u["_id"])
+        if "id" not in u:
+            u["id"] = u["_id"]
     return users
 
 class RoleUpdate(BaseModel):
     role: str
+
+class UserAdminUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    languages: Optional[str] = None
+    is_active: Optional[bool] = None
 
 @router.put("/users/{user_id}/role")
 async def update_user_role(
@@ -40,6 +50,55 @@ async def update_user_role(
     )
 
     return {"message": "User role updated successfully", "new_role": role_update.role}
+
+@router.put("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    update_data: UserAdminUpdate,
+    current_admin: UserResponse = Depends(get_current_admin),
+    db = Depends(get_mongo_db)
+):
+    """Admin updates a user's details."""
+    update_dict = update_data.model_dump(exclude_unset=True)
+    if not update_dict:
+        return {"message": "Nothing to update"}
+        
+    from bson import ObjectId
+    
+    # Try by id field
+    result = await db["users"].update_one({"id": user_id}, {"$set": update_dict})
+    if result.matched_count == 0:
+        # Try by _id field
+        try:
+            result = await db["users"].update_one({"_id": ObjectId(user_id)}, {"$set": update_dict})
+        except:
+            pass
+            
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User updated"}
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_admin: UserResponse = Depends(get_current_admin),
+    db = Depends(get_mongo_db)
+):
+    """Admin deletes a user entirely."""
+    from bson import ObjectId
+    
+    # Try by id field
+    result = await db["users"].delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        # Try by _id field
+        try:
+            result = await db["users"].delete_one({"_id": ObjectId(user_id)})
+        except:
+            pass
+            
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted"}
 
 # --- PRODUCT SCHEMAS ---
 class ProductCreate(BaseModel):
@@ -80,6 +139,7 @@ async def create_product(
     new_product = MongoProduct(**product.model_dump())
     prod_dict = new_product.model_dump()
     await db["products"].insert_one(prod_dict)
+    prod_dict["_id"] = str(prod_dict["_id"])
     return prod_dict
 
 @router.put("/products/{product_id}")
@@ -102,6 +162,8 @@ async def update_product(
         )
 
     updated_product = await db["products"].find_one({"id": product_id})
+    if updated_product:
+        updated_product["_id"] = str(updated_product["_id"])
     return updated_product
 
 @router.delete("/products/{product_id}")

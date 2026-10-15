@@ -12,7 +12,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 from app.core.config import settings
 from app.core.database import connect_to_databases, close_database_connections
-from app.api.routes import auth, predict, reports, finance, chat, agronomy, marketplace, schemes, payments, admin, farms, invoices, shipping, consultations, delivery, organizations, b2b, calendar, drones, mlops, commodity, search, inventory, cms, support, notifications, weather
+from app.api.routes import auth, predict, reports, finance, chat, agronomy, marketplace, schemes, payments, admin, farms, invoices, shipping, consultations, delivery, organizations, b2b, calendar, drones, mlops, commodity, search, inventory, cms, support, notifications, weather, subscriptions, ads
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,7 +51,7 @@ from starlette.middleware.sessions import SessionMiddleware
 # Set up CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5175", "http://127.0.0.1:5175"], 
+    allow_origin_regex=r"https?://localhost:.*|https?://127\.0\.0\.1:.*|https://.*\.vercel\.app", 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +73,8 @@ app.include_router(agronomy.router, prefix=f"{settings.API_V1_STR}/agronomy", ta
 app.include_router(marketplace.router, prefix=f"{settings.API_V1_STR}/marketplace", tags=["Marketplace"])
 app.include_router(schemes.router, prefix=f"{settings.API_V1_STR}/schemes", tags=["Govt Schemes"])
 app.include_router(payments.router, prefix=f"{settings.API_V1_STR}/payments", tags=["Payments"])
+app.include_router(subscriptions.router, prefix=f"{settings.API_V1_STR}/subscriptions", tags=["Subscriptions"])
+app.include_router(ads.router, prefix=f"{settings.API_V1_STR}/ads", tags=["Sponsored Ads"])
 app.include_router(farms.router, prefix=f"{settings.API_V1_STR}", tags=["Farms"])
 app.include_router(invoices.router, prefix=f"{settings.API_V1_STR}/invoices", tags=["Invoices"])
 app.include_router(shipping.router, prefix=f"{settings.API_V1_STR}/shipping", tags=["Shipping"])

@@ -20,10 +20,11 @@ async def connect_to_databases():
     # Mongo
     print(f"Connecting to MongoDB at {settings.MONGODB_URL}...")
     import certifi
+    # Added serverSelectionTimeoutMS to prevent infinite hanging if network drops
     if "mongodb+srv" in settings.MONGODB_URL:
-        db_instance.client = AsyncIOMotorClient(settings.MONGODB_URL, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+        db_instance.client = AsyncIOMotorClient(settings.MONGODB_URL, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
     else:
-        db_instance.client = AsyncIOMotorClient(settings.MONGODB_URL, tlsAllowInvalidCertificates=True)
+        db_instance.client = AsyncIOMotorClient(settings.MONGODB_URL, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
     db_instance.db = db_instance.client[settings.DATABASE_NAME]
     
     # Ensure indexes for unique fields
@@ -33,6 +34,12 @@ async def connect_to_databases():
         await db_instance.db["farm_plots"].create_index("id", unique=True)
         await db_instance.db["crops"].create_index("id", unique=True)
         await db_instance.db["orders"].create_index("id", unique=True)
+        
+        # Indexes for market predictions
+        await db_instance.db["market_prices"].create_index(
+            [("state", 1), ("district", 1), ("market", 1), ("commodity", 1), ("date", -1)],
+            unique=True
+        )
     except Exception as e:
         print(f"Error creating MongoDB indexes: {e}")
         

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Droplets, Leaf, Activity, Sprout, Wind, Package, Ticket, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,6 +7,9 @@ import api from '../../services/api';
 import { toast } from 'react-toastify';
 
 const NotificationDropdown = () => {
+  const { t } = useTranslation();
+  
+
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,6 +19,8 @@ const NotificationDropdown = () => {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      
+
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
@@ -24,6 +30,8 @@ const NotificationDropdown = () => {
   }, []);
 
   const fetchNotifications = async () => {
+    
+
     try {
       setLoading(true);
       const res = await api.get('/notifications/hub');
@@ -51,8 +59,10 @@ const NotificationDropdown = () => {
   }, []);
 
   const handleAction = async (notif, e) => {
-    e.stopPropagation();
     
+
+    e.stopPropagation();
+
     // If it's a calendar task, we can quick-complete it
     if (notif.type === 'CALENDAR') {
       try {
@@ -72,6 +82,8 @@ const NotificationDropdown = () => {
   };
 
   const handleClearAll = (e) => {
+    
+
     e.stopPropagation();
     setNotifications([]);
     localStorage.setItem('notificationsClearedAt', new Date().toISOString());
@@ -79,6 +91,8 @@ const NotificationDropdown = () => {
   };
 
   const getIcon = (type, title) => {
+    
+
     switch (type) {
       case 'CALENDAR':
         const t = title.toUpperCase();
@@ -99,6 +113,8 @@ const NotificationDropdown = () => {
   };
 
   const getIconBg = (type) => {
+    
+
     switch (type) {
       case 'CALENDAR': return 'bg-blue-50 text-blue-500';
       case 'ORDER': return 'bg-indigo-50 text-indigo-500';
@@ -109,11 +125,13 @@ const NotificationDropdown = () => {
   };
 
   const formatTimeAgo = (dateString) => {
+    
+
     const d = new Date(dateString);
     const now = new Date();
     const diffMs = now - d;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 60) return `${diffMins || 1}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
@@ -152,33 +170,30 @@ const NotificationDropdown = () => {
           >
             <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <h3 className="font-black text-gray-900 dark:text-white">Notification Hub</h3>
+                <h3 className="font-black text-gray-900 dark:text-white">{t("notification_hub")}</h3>
                 {notifications.length > 0 && (
                   <span className="bg-rose-100 text-rose-600 text-xs font-bold px-2.5 py-1 rounded-full">
-                    {notifications.length} Alerts
-                  </span>
+                    {notifications.length}{t("alerts")}</span>
                 )}
               </div>
               {notifications.length > 0 && (
                 <button 
                   onClick={handleClearAll}
                   className="text-xs font-bold text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 transition"
-                >
-                  Clear All
-                </button>
+                >{t("clear_all")}</button>
               )}
             </div>
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               {loading && notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 font-medium animate-pulse">Loading alerts...</div>
+                <div className="p-8 text-center text-gray-400 font-medium animate-pulse">{t("loading_alerts___")}</div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <div className="bg-emerald-50 text-emerald-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
                     <Check size={24} />
                   </div>
-                  <p className="font-bold text-gray-900 dark:text-white">You're all caught up!</p>
-                  <p className="text-sm text-gray-500 mt-1">No alerts or tasks require your attention.</p>
+                  <p className="font-bold text-gray-900 dark:text-white">{t("you_re_all_caught_up")}</p>
+                  <p className="text-sm text-gray-500 mt-1">{t("no_alerts_or_tasks_r")}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -217,8 +232,7 @@ const NotificationDropdown = () => {
                               onClick={(e) => handleAction(notif, e)}
                               className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm"
                             >
-                              <Check size={14} /> Mark Complete
-                            </button>
+                              <Check size={14} />{t("mark_complete")}</button>
                           )}
                         </div>
                       </div>

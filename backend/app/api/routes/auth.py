@@ -65,14 +65,16 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     """
     user_dict = await db["users"].find_one({"email": form_data.username})
     
-    if not user_dict or not verify_password(form_data.password, user_dict["password_hash"]):
+    if not user_dict or not verify_password(form_data.password, user_dict.get("password_hash") or user_dict.get("hashed_password")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token = create_access_token(subject=str(user_dict["id"]))
+    # Safely get the user ID, falling back to MongoDB's _id if the UUID 'id' field is missing
+    user_id = user_dict.get("id") or str(user_dict.get("_id"))
+    access_token = create_access_token(subject=str(user_id))
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=UserResponse)
@@ -97,16 +99,26 @@ async def complete_onboarding(
     """
     Complete user onboarding and update profile.
     """
+    from bson import ObjectId
     user_dict = await db["users"].find_one({"id": current_user.id})
+    if not user_dict:
+        try:
+            user_dict = await db["users"].find_one({"_id": ObjectId(current_user.id)})
+        except:
+            pass
+            
     if not user_dict:
         raise HTTPException(status_code=404, detail="User not found")
         
     await db["users"].update_one(
-        {"id": current_user.id},
+        {"_id": user_dict["_id"]},
         {"$set": {"location": data.location, "is_onboarded": True}}
     )
     
-    updated_user = await db["users"].find_one({"id": current_user.id})
+    updated_user = await db["users"].find_one({"_id": user_dict["_id"]})
+    updated_user["_id"] = str(updated_user["_id"])
+    if "id" not in updated_user:
+        updated_user["id"] = updated_user["_id"]
     return UserResponse.model_validate(updated_user)
 
 
@@ -135,12 +147,26 @@ async def update_profile(
     if not update_data:
         return current_user
 
+    from bson import ObjectId
+    user_dict = await db["users"].find_one({"id": current_user.id})
+    if not user_dict:
+        try:
+            user_dict = await db["users"].find_one({"_id": ObjectId(current_user.id)})
+        except:
+            pass
+            
+    if not user_dict:
+        raise HTTPException(status_code=404, detail="User not found")
+        
     await db["users"].update_one(
-        {"id": current_user.id},
+        {"_id": user_dict["_id"]},
         {"$set": update_data}
     )
 
-    updated_user = await db["users"].find_one({"id": current_user.id})
+    updated_user = await db["users"].find_one({"_id": user_dict["_id"]})
+    updated_user["_id"] = str(updated_user["_id"])
+    if "id" not in updated_user:
+        updated_user["id"] = updated_user["_id"]
     return UserResponse.model_validate(updated_user)
 
 

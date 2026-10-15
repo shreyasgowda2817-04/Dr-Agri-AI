@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import { toast } from 'react-toastify';
-import { translateResultObject, translateUIStrings } from '../utils/translator';
 import { defaultUIStrings } from '../utils/uiStrings';
 
 // Import new modular components
@@ -17,8 +17,12 @@ import PreventionAndSafety from '../components/scan/PreventionAndSafety';
 import AIInsights from '../components/scan/AIInsights';
 import ActionPanel from '../components/scan/ActionPanel';
 import HistorySidebar from '../components/scan/HistorySidebar';
+import RecommendedProducts from '../components/scan/RecommendedProducts';
 
 const Scan = () => {
+  const { t, i18n } = useTranslation();
+  
+  const { user } = useSelector((state) => state.auth);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,6 +33,8 @@ const Scan = () => {
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
+    
+
     const selected = e.target.files[0];
     if (selected) {
       setFile(selected);
@@ -38,6 +44,8 @@ const Scan = () => {
   };
 
   const handleScan = async () => {
+    
+
     if (!file) return;
     setLoading(true);
     setResult(null);
@@ -46,9 +54,12 @@ const Scan = () => {
     formData.append('file', file);
 
     const executeScan = async (latitude = null, longitude = null) => {
+      
+
       if (latitude) formData.append('latitude', latitude);
       if (longitude) formData.append('longitude', longitude);
-      
+      formData.append('language', i18n.language || user?.preferred_language || 'en');
+
       try {
         const res = await api.post('/ml/predict', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -59,6 +70,8 @@ const Scan = () => {
       } catch (err) {
         if (err.response?.data?.detail) {
           toast.error(typeof err.response.data.detail === 'string' ? err.response.data.detail : err.response.data.detail.message || 'Scan failed.');
+        } else if (err.message && err.message !== 'Network Error') {
+          toast.error(err.message);
         } else {
           toast.error('Network Error: Make sure your backend server is running!');
         }
@@ -79,11 +92,15 @@ const Scan = () => {
   };
 
   const handleDownloadPDF = () => {
+    
+
     if (!result) return;
     const doc = new jsPDF();
-    
+
     // Helper for wrapping text
     const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
+      
+
       const lines = doc.splitTextToSize(text, maxWidth);
       doc.text(lines, x, y);
       return y + (lines.length * lineHeight);
@@ -95,7 +112,7 @@ const Scan = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.text("Dr Agri AI - Enterprise Report", 15, 20);
-    
+
     // Basic Details
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
@@ -106,12 +123,12 @@ const Scan = () => {
     doc.text(`Confidence: ${result.confidence_score}%`, 15, 65);
     doc.text(`${uiStrings.severityLabel}: ${result.severity || 'High'}`, 15, 75);
     doc.text(`${uiStrings.timestampLabel}: ${new Date().toLocaleString()}`, 15, 85);
-    
+
     doc.setDrawColor(200, 200, 200);
     doc.line(15, 90, 195, 90);
 
     let y = 105;
-    
+
     // Disease Overview
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
@@ -121,9 +138,9 @@ const Scan = () => {
     doc.setFont('helvetica', 'normal');
     const overview = `${result.disease_name.replace(/___/g, ' ')} ${uiStrings.overviewDescPart1} ${result.crop_name}. ${uiStrings.overviewDescPart2}`;
     y = addWrappedText(overview, 15, y, 180, 7);
-    
+
     y += 10;
-    
+
     // Treatment Options
     if (result.recommended_treatment) {
       doc.setFont('helvetica', 'bold');
@@ -152,26 +169,27 @@ const Scan = () => {
         doc.setFont('helvetica', 'normal');
         result.recommended_treatment.pesticides.forEach(pest => {
           if (y > 270) { doc.addPage(); y = 20; }
-          y = addWrappedText(`• ${pest} (${uiStrings.sprayMethod}, ${uiStrings.dosage})`, 15, y, 180, 7);
+          const pestName = typeof pest === 'object' ? `${pest.name} (${pest.method || uiStrings.sprayMethod}, ${pest.dosage || uiStrings.dosage})` : `${pest} (${uiStrings.sprayMethod}, ${uiStrings.dosage})`;
+          y = addWrappedText(`• ${pestName}`, 15, y, 180, 7);
         });
         y += 5;
       }
     }
 
     if (y > 220) { doc.addPage(); y = 20; }
-    
+
     // Prevention & Safety
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.text(uiStrings.safetyTitle, 15, y);
     y += 10;
     doc.setFontSize(12);
-    
+
     doc.setFont('helvetica', 'bold');
     doc.text(`${uiStrings.preventionTitle}:`, 15, y);
     y += 8;
     doc.setFont('helvetica', 'normal');
-    
+
     uiStrings.tips.forEach(tip => {
       if (y > 270) { doc.addPage(); y = 20; }
       y = addWrappedText(`• ${tip}`, 15, y, 180, 7);
@@ -191,13 +209,15 @@ const Scan = () => {
   };
 
   const handleShare = async () => {
+    
+
     if (!result || !result._id) {
       toast.error('Cannot share an unsaved report.');
       return;
     }
     const publicUrl = `${window.location.origin}/report/${result._id}`;
     const text = `Dr Agri AI Scan Result:\nCrop: ${result.crop_name}\nDisease: ${result.disease_name.replace(/___/g, ' ')}\nSeverity: ${result.severity || 'High'}`;
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -215,6 +235,8 @@ const Scan = () => {
   };
 
   const handleListen = (onEnd) => {
+    
+
     if (!result || !window.speechSynthesis) {
       toast.error('Text-to-speech not supported in this browser.');
       onEnd();
@@ -230,29 +252,16 @@ const Scan = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleTranslate = async (langCode) => {
-    if (!originalResult) return;
-    
-    const translationPromise = Promise.all([
-      translateResultObject(originalResult, langCode),
-      translateUIStrings(defaultUIStrings, langCode)
-    ]).then(([translatedResult, translatedUI]) => {
-      setResult(translatedResult);
-      setUiStrings(translatedUI);
-    });
-
-    toast.promise(translationPromise, {
-      pending: `Translating dashboard to ${langCode.toUpperCase()}...`,
-      success: 'Translation complete! ✨',
-      error: 'Failed to translate dashboard.'
-    });
-  };
 
   const handleSaveHistory = () => {
+    
+
     setIsHistoryOpen(true);
   };
 
   const handleAskAI = () => {
+    
+
     // Navigate to the Agronomy assistant, passing the context so the AI knows what we are talking about
     navigate('/agronomy', { state: { scanContext: result } });
   };
@@ -269,7 +278,7 @@ const Scan = () => {
           setPreview(null);
         }}
       />
-      
+
       <div className="max-w-[1400px] mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -277,20 +286,15 @@ const Scan = () => {
           className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4"
         >
           <div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-              Crop Disease <span className="text-indigo-600">Intelligence</span>
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">{t("crop_disease")}<span className="text-indigo-600">{t("intelligence")}</span>
             </h1>
-            <p className="mt-3 text-lg text-gray-500 max-w-2xl font-medium">
-              Upload an image of a diseased plant leaf. Our enterprise AI will analyze the pathogen, assess severity, and instantly generate a comprehensive treatment protocol.
-            </p>
+            <p className="mt-3 text-lg text-gray-500 max-w-2xl font-medium">{t("upload_an_image_of_a")}</p>
           </div>
           <button
             onClick={() => setIsHistoryOpen(true)}
             className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm hover:border-indigo-300 hover:text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-gray-700 transition-colors shrink-0"
           >
-            <Menu size={20} />
-            Scan History
-          </button>
+            <Menu size={20} />{t("scan_history")}</button>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -298,8 +302,7 @@ const Scan = () => {
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Camera size={16} /> Input Media
-              </h3>
+                <Camera size={16} />{t("input_media")}</h3>
               
               <label 
                 className={`relative flex flex-col items-center justify-center w-full h-80 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
@@ -311,8 +314,7 @@ const Scan = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                       <span className="bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                        <ImageIcon size={14} /> Change Image
-                      </span>
+                        <ImageIcon size={14} />{t("change_image")}</span>
                     </div>
                   </>
                 ) : (
@@ -320,8 +322,8 @@ const Scan = () => {
                     <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-indigo-500 group-hover:scale-110 transition-transform">
                       <UploadCloud size={32} />
                     </div>
-                    <p className="mb-2 text-sm font-bold text-gray-700">Click to upload or drag and drop</p>
-                    <p className="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 10MB)</p>
+                    <p className="mb-2 text-sm font-bold text-gray-700">{t("click_to_upload_or_d")}</p>
+                    <p className="text-xs text-gray-500">{t("svg__png__jpg_or_gif")}</p>
                   </div>
                 )}
                 <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -335,9 +337,7 @@ const Scan = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="animate-spin" size={20} />
-                    Processing AI Models...
-                  </>
+                    <Loader2 className="animate-spin" size={20} />{t("processing_ai_models")}</>
                 ) : (
                   'Initialize AI Analysis'
                 )}
@@ -348,8 +348,7 @@ const Scan = () => {
             {!result && !loading && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100">
                 <p className="text-indigo-800 text-sm font-medium leading-relaxed">
-                  <strong>System Status: Ready.</strong> Our computer vision models achieve 98.4% accuracy across 32 major crop diseases. Upload a clear, well-lit image of the affected leaf for optimal results.
-                </p>
+                  <strong>{t("system_status__ready")}</strong>{t("our_computer_vision_")}</p>
               </motion.div>
             )}
           </div>
@@ -369,8 +368,8 @@ const Scan = () => {
                     <div className="absolute inset-0 border-4 border-indigo-100 rounded-full" />
                     <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Analyzing Biomarkers</h3>
-                  <p className="text-gray-500">Cross-referencing global pathology database...</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{t("analyzing_biomarkers")}</h3>
+                  <p className="text-gray-500">{t("cross_referencing_gl")}</p>
                 </motion.div>
               )}
 
@@ -386,11 +385,11 @@ const Scan = () => {
                   <AIInsights result={result} ui={uiStrings} />
                   <TreatmentTable result={result} ui={uiStrings} />
                   <PreventionAndSafety ui={uiStrings} />
+                  <RecommendedProducts result={result} />
                   <ActionPanel 
                     onDownloadPDF={handleDownloadPDF} 
                     onShare={handleShare}
                     onListen={handleListen}
-                    onTranslate={handleTranslate}
                     onSaveHistory={handleSaveHistory}
                     onAskAI={handleAskAI}
                   />

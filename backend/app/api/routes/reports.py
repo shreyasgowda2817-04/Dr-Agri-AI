@@ -16,10 +16,16 @@ async def get_user_reports(current_user: UserResponse = Depends(get_current_user
     cursor = db["disease_reports"].find({"user_id": current_user.id}).sort("created_at", -1)
     
     reports = await cursor.to_list(length=100) # Limit to 100 recent scans for performance
+    valid_reports = []
     for report in reports:
         report["_id"] = str(report["_id"])
-    
-    return [DiseaseReportResponse(**report) for report in reports]
+        try:
+            valid_reports.append(DiseaseReportResponse(**report))
+        except Exception as e:
+            print(f"Skipping corrupted report {report['_id']}: {e}")
+            pass
+            
+    return valid_reports
 
 @router.get("/{report_id}", response_model=DiseaseReportResponse)
 async def get_report_by_id(report_id: str, current_user: UserResponse = Depends(get_current_user)):

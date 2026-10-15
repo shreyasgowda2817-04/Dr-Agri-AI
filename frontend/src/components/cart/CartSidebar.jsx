@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +9,9 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
 const CartSidebar = () => {
+  const { t } = useTranslation();
+  
+
   const { items, totalAmount, isOpen } = useSelector((state) => state.cart);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -19,6 +23,8 @@ const CartSidebar = () => {
   const { user } = useSelector((state) => state.auth);
 
   const handleCheckout = async () => {
+    
+
     if (items.length === 0) return;
     setLoading(true);
 
@@ -26,6 +32,8 @@ const CartSidebar = () => {
     let baseLng = 73.7898 + (Math.random() * 0.05);
 
     const processPayment = async (finalLat, finalLng) => {
+      
+
       try {
         const response = await api.post('/payments/create-checkout-session', { 
           items,
@@ -154,9 +162,7 @@ const CartSidebar = () => {
             {/* Header */}
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <ShoppingCart className="text-green-600" /> 
-                Your Cart
-              </h2>
+                <ShoppingCart className="text-green-600" />{t("your_cart")}</h2>
               <button 
                 onClick={() => dispatch(closeCart())}
                 className="p-2 hover:bg-gray-100 rounded-full transition"
@@ -170,7 +176,7 @@ const CartSidebar = () => {
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
                   <ShoppingCart size={48} className="mb-4 opacity-20" />
-                  <p>Your cart is empty.</p>
+                  <p>{t("your_cart_is_empty_")}</p>
                 </div>
               ) : (
                 items.map((item) => (
@@ -222,23 +228,20 @@ const CartSidebar = () => {
 
                 {/* Payment Methods */}
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Payment Method</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{t("payment_method")}</p>
                   <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-xs font-semibold transition ${paymentMethod === 'card' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300'}`}>
-                      <CreditCard size={18} /> Card
-                    </button>
+                      <CreditCard size={18} />{t("card")}</button>
                     <button onClick={() => setPaymentMethod('upi')} className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-xs font-semibold transition ${paymentMethod === 'upi' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300'}`}>
-                      <QrCode size={18} /> UPI
-                    </button>
+                      <QrCode size={18} />{t("upi")}</button>
                     <button onClick={() => setPaymentMethod('cod')} className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-xs font-semibold transition ${paymentMethod === 'cod' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300'}`}>
-                      <Banknote size={18} /> COD
-                    </button>
+                      <Banknote size={18} />{t("cod")}</button>
                   </div>
                 </div>
 
                 {/* Subtotal */}
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-gray-500 font-medium">Subtotal</span>
+                  <span className="text-gray-500 font-medium">{t("subtotal")}</span>
                   <span className="text-2xl font-black text-gray-900">₹{totalAmount.toFixed(2)}</span>
                 </div>
                 

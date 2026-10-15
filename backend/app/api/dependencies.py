@@ -34,7 +34,18 @@ async def get_current_user(
         
     user_dict = await db["users"].find_one({"id": user_id})
     if user_dict is None:
+        try:
+            from bson import ObjectId
+            user_dict = await db["users"].find_one({"_id": ObjectId(user_id)})
+        except:
+            pass
+            
+    if user_dict is None:
         raise credentials_exception
+        
+    # Ensure id field is set for the response model
+    if "id" not in user_dict:
+        user_dict["id"] = str(user_dict["_id"])
         
     return UserResponse.model_validate(user_dict)
 

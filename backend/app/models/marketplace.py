@@ -53,7 +53,7 @@ class Bid(BaseModel):
 
 class ProductReview(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    product_id: str
+    product_id: Optional[str] = None
     user_id: Optional[str] = None
     user_name: Optional[str] = None
     rating: int = Field(..., ge=1, le=5)

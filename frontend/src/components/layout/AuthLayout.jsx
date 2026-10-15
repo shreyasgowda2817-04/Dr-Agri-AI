@@ -1,11 +1,15 @@
+import { useTranslation } from "react-i18next";
 import { Outlet, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Leaf } from 'lucide-react';
 
 const AuthLayout = () => {
+  const { t } = useTranslation();
+  
+
   return (
     <div className="min-h-screen flex bg-gray-50 text-gray-900 font-sans">
-      
+
       {/* Left side: Branding / Image */}
       <div className="hidden lg:flex w-1/2 bg-green-900 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 opacity-20">
@@ -22,7 +26,7 @@ const AuthLayout = () => {
             <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
               <Leaf className="w-8 h-8 text-green-300" />
             </div>
-            <span className="text-3xl font-extrabold tracking-tight">Dr Agri AI</span>
+            <span className="text-3xl font-extrabold tracking-tight">{t("dr_agri_ai")}</span>
           </Link>
           
           <motion.h1 
@@ -30,17 +34,13 @@ const AuthLayout = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="text-5xl font-bold mb-6 leading-tight"
-          >
-            Empowering modern farmers with Artificial Intelligence.
-          </motion.h1>
+          >{t("empowering_modern_fa")}</motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="text-green-100 text-lg text-opacity-90 leading-relaxed"
-          >
-            Join thousands of smart farmers who use our AI ecosystem to diagnose diseases instantly, source authentic wholesale supplies, and manage farm operations from one platform.
-          </motion.p>
+          >{t("join_thousands_of_sm")}</motion.p>
         </div>
       </div>
 
@@ -48,15 +48,13 @@ const AuthLayout = () => {
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-24 bg-white relative">
         <div className="absolute top-8 left-8 lg:hidden">
           <Link to="/" className="flex items-center gap-2 text-green-700 font-bold">
-            <Leaf className="w-6 h-6" />
-            Dr Agri
-          </Link>
+            <Leaf className="w-6 h-6" />{t("dr_agri")}</Link>
         </div>
         <div className="w-full max-w-md">
           <Outlet />
         </div>
       </div>
-      
+
     </div>
   );
 };

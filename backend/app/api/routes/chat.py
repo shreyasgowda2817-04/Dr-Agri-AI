@@ -7,6 +7,7 @@ from typing import Optional
 from app.core.database import get_mongo_db
 from app.api.dependencies import get_optional_current_user
 from app.models.user import UserResponse
+from app.api.routes.weather import get_weather_for_user_internal
 
 try:
     from google import genai
@@ -55,6 +56,20 @@ async def chat_with_agri_bot(
             context_str += "Currently Growing Crops:\n"
             for c in crops:
                 context_str += f"- {c.get('crop_name')} (Variety: {c.get('variety')}, Stage: {c.get('crop_stage')}, {c.get('area_acres')} acres)\n"
+                
+        # Fetch weather
+        weather = await get_weather_for_user_internal(current_user, db)
+        if weather:
+            context_str += f"\nReal-Time Weather Information for Farm:\n"
+            context_str += f"- Temperature: {weather.temperature}°C (Feels like {weather.feels_like}°C)\n"
+            context_str += f"- Humidity: {weather.humidity}%\n"
+            context_str += f"- Rainfall: {weather.rainfall}mm/hr\n"
+            context_str += f"- Wind Speed: {weather.wind_speed} m/s\n"
+            context_str += f"- Rain Probability: {weather.rain_probability}%\n"
+            context_str += f"- Condition: {weather.weather_condition}\n"
+            context_str += f"- Forecast: {weather.forecast}\n"
+        else:
+            context_str += "\nReal-Time Weather: Temporarily unavailable. Do NOT mention you have live weather access.\n"
     else:
         context_str += "User is an anonymous visitor to the platform."
 
@@ -74,13 +89,63 @@ USER QUERY:
 
 INSTRUCTIONS:
 1. Respond in the requested language code: '{lang}'.
-2. If the user has crops/farms listed in the context, personalize your advice directly to their situation (e.g. mention their specific soil type or crop stage).
-3. Provide actionable, scientifically sound agricultural advice.
-4. Keep your response concise (under 4 paragraphs), professional, warm, and highly helpful. Do not use markdown that would break simple chat UIs, stick to plain text or simple bullets.
+
+IMPORTANT RESPONSE STYLE:
+Do NOT generate long report-style answers unless the user explicitly asks for a detailed explanation.
+
+Your normal responses must be:
+* Short, Conversational, Easy for farmers to understand, Action-oriented, Visually scannable.
+* Specific to the farmer's crop, farm, soil, growth stage, and available weather data.
+
+RESPONSE STRUCTURE:
+Start with the direct answer in 1-2 sentences.
+Then provide only the most important recommendations using short bullet points.
+Use this structure when appropriate:
+
+🌱 **Quick Recommendation**
+[1-2 sentence answer]
+
+**What to do now**
+• Action 1
+• Action 2
+
+**Watch for**
+• Important warning/sign
+
+**Next step**
+[One concise recommendation]
+
+Do not automatically include generic sections like "Current Weather & Impact", "Recommended Actions", etc., unless directly relevant.
+
+LENGTH RULES:
+* Normal question: 60-120 words (max ~150).
+* Simple question: 20-60 words.
+Only provide detailed answers if the farmer explicitly asks for a step-by-step guide or if it's a high-risk situation.
+
+AVOID REPETITION:
+Do not repeat information that the user already knows (name, location, crop, weather) unless it materially affects the recommendation. Do not dump raw weather API data.
+
+FARMER-FRIENDLY LANGUAGE:
+Avoid unnecessarily technical explanations. Use simple, clear language.
+
+FERTILIZER SAFETY:
+Never invent an exact fertilizer dose when important information is missing. Ask for the missing information or recommend following local guidelines.
+
+FOLLOW-UP QUESTIONS:
+When important information is missing, ask ONE or TWO useful follow-up questions instead of generating a long generic explanation.
+
+RESPONSE PRIORITY:
+1. Direct answer
+2. Immediate action
+3. Important warning
+4. Follow-up question
+5. Optional explanation
+
+The goal is to make every response feel like a helpful conversation with an agricultural expert sitting beside the farmer — concise, personalized, practical, and easy to act on.
 """
             
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash-lite',
                 contents=prompt,
             )
             return ChatResponse(reply=response.text)

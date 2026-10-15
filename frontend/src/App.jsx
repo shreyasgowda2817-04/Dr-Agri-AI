@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -8,29 +8,43 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import AuthLayout from './components/layout/AuthLayout';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import RoleRoute from './components/layout/RoleRoute';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import TrackOrder from './pages/TrackOrder';
-import Onboarding from './pages/Onboarding';
-import Dashboard from './pages/Dashboard';
-import Scan from './pages/Scan';
-import Finance from './pages/Finance';
-import FarmManager from './pages/FarmManager';
-import Agronomy from './pages/Agronomy';
-import Marketplace from './pages/Marketplace';
-import Consultation from './pages/Consultation';
-import Settings from './pages/Settings';
-import Admin from './pages/Admin';
+import { lazy, Suspense } from 'react';
 import ChatbotWidget from './components/chat/ChatbotWidget';
-import OrderTracking from './pages/OrderTracking';
-import CropManager from './pages/CropManager';
-import OrderSuccess from './pages/OrderSuccess';
-import Support from './pages/Support';
-import ExpertDashboard from './pages/ExpertDashboard';
-import Deliveries from './pages/Deliveries';
+
+
+// Lazy loaded pages for performance
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Scan = lazy(() => import('./pages/Scan'));
+const Finance = lazy(() => import('./pages/Finance'));
+const FarmManager = lazy(() => import('./pages/FarmManager'));
+const Agronomy = lazy(() => import('./pages/Agronomy'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const Consultation = lazy(() => import('./pages/Consultation'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Admin = lazy(() => import('./pages/Admin'));
+const OrderTracking = lazy(() => import('./pages/OrderTracking'));
+const CropManager = lazy(() => import('./pages/CropManager'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const Support = lazy(() => import('./pages/Support'));
+const ExpertDashboard = lazy(() => import('./pages/ExpertDashboard'));
+const Deliveries = lazy(() => import('./pages/Deliveries'));
+const SubscriptionPlans = lazy(() => import('./pages/SubscriptionPlans'));
+const ManageSubscription = lazy(() => import('./pages/ManageSubscription'));
+const AdvertiserDashboard = lazy(() => import('./pages/AdvertiserDashboard'));
+
+const PageLoader = () => (
+  <div className="flex h-[80vh] items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+  </div>
+);
 
 import Inventory from './pages/Inventory';
 import Calendar from './pages/Calendar';
@@ -41,7 +55,7 @@ import EnterpriseB2B from './pages/EnterpriseB2B';
 import CMS from './pages/CMS';
 import PublicSchemes from './pages/PublicSchemes';
 import PublicReport from './pages/PublicReport';
-import { initGoogleTranslate, triggerTranslation } from './utils/googleTranslate';
+
 
 function App() {
   const dispatch = useDispatch();
@@ -58,7 +72,8 @@ function App() {
     }
 
     dispatch(fetchUser());
-    initGoogleTranslate();
+
+
 
     // Listen for global 401 unauth events from api.js
     const handleUnauthorized = () => {
@@ -71,36 +86,33 @@ function App() {
     };
   }, [dispatch]);
 
-  // Apply Language Preferences
-  useEffect(() => {
-    if (user?.preferred_language) {
-      const langCode = user.preferred_language.split('-')[0];
-      // Slight delay to ensure the Google Translate widget has fully initialized in the DOM
-      const timer = setTimeout(() => {
-        triggerTranslation(langCode);
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [user?.preferred_language]);
+
 
   // Apply theme class to HTML root
   useEffect(() => {
     const root = document.documentElement;
-    const theme = user?.appearance || 'system';
+    // Prefer user setting from DB -> then LocalStorage -> then System
+    const theme = user?.appearance || localStorage.getItem('theme') || 'system';
     
     root.classList.remove('dark');
     
     if (theme === 'dark') {
       root.classList.add('dark');
-    } else if (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      root.classList.add('dark');
+      if (!user) localStorage.setItem('theme', 'dark');
+    } else if (theme === 'light') {
+      if (!user) localStorage.setItem('theme', 'light');
+    } else if (theme === 'system') {
+      if (!user) localStorage.removeItem('theme'); // Clean up guest theme
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark');
+      }
     }
   }, [user?.appearance]);
 
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
-      <Routes>
+      <Suspense fallback={<PageLoader />}><Routes>
         {/* Public Marketing Route */}
         <Route path="/" element={<Home />} />
         <Route path="/track" element={<TrackOrder />} />
@@ -119,6 +131,7 @@ function App() {
           <Route path="onboarding" element={<Onboarding />} />
           <Route element={<DashboardLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="notifications" element={<Notifications />} />
             <Route path="scan" element={<Scan />} />
             <Route path="finance" element={<Finance />} />
             <Route path="farm" element={<FarmManager />} />
@@ -156,6 +169,13 @@ function App() {
               </RoleRoute>
             } />
             <Route path="settings" element={<Settings />} />
+            <Route path="subscription/plans" element={<Navigate to="/settings?tab=billing" replace />} />
+            <Route path="subscription/manage" element={<Navigate to="/settings?tab=billing" replace />} />
+            <Route path="advertiser" element={
+              <RoleRoute allowedRoles={['ADVERTISER', 'ADMIN', 'SUPER_ADMIN']}>
+                <AdvertiserDashboard />
+              </RoleRoute>
+            } />
             <Route path="admin" element={
               <RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                 <Admin />
@@ -177,7 +197,7 @@ function App() {
             <div className="min-h-screen bg-gray-50 pt-20 pb-12"><PublicSchemes /></div>
           } />
         </Route>
-      </Routes>
+      </Routes></Suspense>
       <ChatbotWidget />
     </>
   );

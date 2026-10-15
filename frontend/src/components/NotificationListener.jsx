@@ -1,8 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
 const NotificationListener = () => {
+  const { t } = useTranslation();
   const { user, token } = useSelector((state) => state.auth);
   const ws = useRef(null);
 
@@ -10,7 +12,10 @@ const NotificationListener = () => {
     if (!user || !token) return;
 
     // Connect to WebSocket server for notifications
-    const wsUrl = `ws://localhost:8000/api/v1/notifications/ws/${user.id}?token=${token}`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const defaultWsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    const wsHost = import.meta.env.VITE_WS_HOST || defaultWsHost;
+    const wsUrl = `${wsProtocol}//${wsHost}/api/v1/notifications/ws/${user.id}?token=${token}`;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {

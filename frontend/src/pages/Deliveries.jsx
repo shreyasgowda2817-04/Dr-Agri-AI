@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -9,6 +10,9 @@ import api from '../services/api';
 
 // Professional Custom Markers
 const createCustomIcon = (color) => {
+  
+  
+
   return L.divIcon({
     className: 'custom-icon',
     html: `
@@ -29,6 +33,9 @@ const driverIcon = L.divIcon({
 });
 
 const MapUpdater = ({ points }) => {
+  const { t } = useTranslation();
+  
+
   const map = useMap();
   useEffect(() => {
     if (points && points.length > 0) {
@@ -40,11 +47,14 @@ const MapUpdater = ({ points }) => {
 };
 
 const Deliveries = () => {
+  const { t } = useTranslation();
+  
+
   const [routePoints, setRoutePoints] = useState([]);
   const [isOffline, setIsOffline] = useState(false);
   const [syncQueue, setSyncQueue] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // POD (Proof of Delivery) Modal State
   const [podModal, setPodModal] = useState({ isOpen: false, order: null });
   const [signatureMode, setSignatureMode] = useState(true);
@@ -54,7 +64,7 @@ const Deliveries = () => {
   const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-  
+
   const [driverLocation, setDriverLocation] = useState(null);
 
   // Nashik coordinates roughly
@@ -77,6 +87,8 @@ const Deliveries = () => {
   }, []);
 
   const fetchRoutes = async () => {
+    
+
     setLoading(true);
     try {
       const res = await api.get('/delivery/routes/optimized');
@@ -93,12 +105,16 @@ const Deliveries = () => {
   };
 
   const toggleOfflineMode = () => {
+    
+
     if (isOffline) syncOfflineData();
     else toast.info("Switched to Offline Mode. Routes cached locally.");
     setIsOffline(!isOffline);
   };
 
   const syncOfflineData = async () => {
+    
+
     if (syncQueue.length === 0) {
       setIsOffline(false);
       toast.success("Online. Everything is up to date.");
@@ -119,6 +135,8 @@ const Deliveries = () => {
   };
 
   const openPODModal = (order) => {
+    
+
     setPodModal({ isOpen: true, order });
     setSignatureMode(true);
     setPodImage(null);
@@ -126,12 +144,16 @@ const Deliveries = () => {
   };
 
   const closePODModal = () => {
+    
+
     setPodModal({ isOpen: false, order: null });
     stopCamera();
   };
 
   // ─── Camera Logic ───
   const startCamera = async () => {
+    
+
     setSignatureMode(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -145,12 +167,16 @@ const Deliveries = () => {
   };
 
   const stopCamera = () => {
+    
+
     if (videoRef.current && videoRef.current.srcObject) {
       videoRef.current.srcObject.getTracks().forEach(t => t.stop());
     }
   };
 
   const capturePhoto = () => {
+    
+
     if (!videoRef.current || !canvasRef.current) return;
     const context = canvasRef.current.getContext('2d');
     context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -160,6 +186,8 @@ const Deliveries = () => {
 
   // ─── Signature Logic ───
   const startDrawing = ({ nativeEvent }) => {
+    
+
     const { offsetX, offsetY } = nativeEvent;
     const ctx = sigCanvasRef.current.getContext('2d');
     ctx.beginPath();
@@ -168,6 +196,8 @@ const Deliveries = () => {
   };
 
   const draw = ({ nativeEvent }) => {
+    
+
     if (!isDrawing) return;
     const { offsetX, offsetY } = nativeEvent;
     const ctx = sigCanvasRef.current.getContext('2d');
@@ -177,12 +207,16 @@ const Deliveries = () => {
   };
 
   const stopDrawing = () => {
+    
+
     const ctx = sigCanvasRef.current.getContext('2d');
     ctx.closePath();
     setIsDrawing(false);
   };
 
   const clearSignature = () => {
+    
+
     const ctx = sigCanvasRef.current.getContext('2d');
     ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height);
     setHasSignature(false);
@@ -190,12 +224,14 @@ const Deliveries = () => {
 
   // ─── Submit POD ───
   const submitPOD = () => {
+    
+
     const order = podModal.order;
     setRoutePoints(prev => prev.map(p => p.order_id === order.order_id ? { ...p, status: 'Delivered' } : p));
-    
+
     // Use canvas signature or captured photo
     const sigData = hasSignature ? sigCanvasRef.current.toDataURL('image/jpeg') : podImage;
-    
+
     const updatePayload = {
       order_id: order.order_id,
       status: "Delivered",
@@ -226,7 +262,7 @@ const Deliveries = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto py-8 px-4 h-[90vh] flex flex-col">
-      
+
       {/* ─── Premium Header ─── */}
       <div className="bg-gray-900 rounded-3xl p-6 md:p-8 mb-6 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 transform translate-x-1/3 -translate-y-1/2"></div>
@@ -234,21 +270,19 @@ const Deliveries = () => {
         
         <div className="relative z-10">
           <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
-            <Truck className="w-8 h-8 text-blue-400" />
-            Logistics Command Center
-          </h1>
-          <p className="text-gray-400 mt-2 font-medium">AI-Optimized Farm-Gate Routing & Offline Sync</p>
+            <Truck className="w-8 h-8 text-blue-400" />{t("logistics_command_ce")}</h1>
+          <p className="text-gray-400 mt-2 font-medium">{t("ai_optimized_farm_ga")}</p>
         </div>
         
         <div className="relative z-10 mt-6 md:mt-0 flex gap-4">
           <div className="bg-gray-800/50 backdrop-blur border border-gray-700 px-4 py-2 rounded-xl flex items-center gap-3">
             <div className="text-right">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Pending</p>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t("pending")}</p>
               <p className="text-xl font-black text-white">{activePoints.length}</p>
             </div>
             <div className="w-px h-8 bg-gray-700"></div>
             <div className="text-left">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Delivered</p>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t("delivered")}</p>
               <p className="text-xl font-black text-emerald-400">{routePoints.length - activePoints.length}</p>
             </div>
           </div>
@@ -272,12 +306,9 @@ const Deliveries = () => {
           className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3 font-bold text-orange-600">
             <AlertCircle size={20} />
-            {syncQueue.length} Offline Deliveries Pending Sync
-          </div>
+            {syncQueue.length}{t("offline_deliveries_p")}</div>
           {!isOffline && (
-            <button onClick={syncOfflineData} className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl font-bold transition shadow-md shadow-orange-600/20">
-              Sync to Cloud Now
-            </button>
+            <button onClick={syncOfflineData} className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl font-bold transition shadow-md shadow-orange-600/20">{t("sync_to_cloud_now")}</button>
           )}
         </motion.div>
       )}
@@ -288,17 +319,15 @@ const Deliveries = () => {
         <div className="lg:col-span-4 flex flex-col h-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h3 className="font-extrabold text-gray-900 flex items-center gap-2">
-              <Navigation size={20} className="text-blue-600" />
-              Optimal Sequence
-            </h3>
-            <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">AI Sorted</span>
+              <Navigation size={20} className="text-blue-600" />{t("optimal_sequence")}</h3>
+            <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">{t("ai_sorted")}</span>
           </div>
           
           <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
             {loading ? (
                <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>
             ) : routePoints.length === 0 ? (
-               <div className="text-center text-gray-400 py-10 font-medium">No pending deliveries.</div>
+               <div className="text-center text-gray-400 py-10 font-medium">{t("no_pending_deliverie")}</div>
             ) : (
               routePoints.map((point, index) => (
                 <motion.div 
@@ -314,7 +343,7 @@ const Deliveries = () => {
                         {index + 1}
                       </span>
                       {point.status === 'Delivered' ? (
-                        <span className="text-emerald-600 font-bold flex items-center gap-1 text-sm"><CheckCircle size={16}/> Delivered</span>
+                        <span className="text-emerald-600 font-bold flex items-center gap-1 text-sm"><CheckCircle size={16}/>{t("delivered")}</span>
                       ) : (
                         <span className="text-blue-600 font-bold text-sm tracking-wide">{point.order_ref}</span>
                       )}
@@ -332,8 +361,7 @@ const Deliveries = () => {
                       onClick={() => openPODModal(point)}
                       className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3.5 rounded-xl text-sm font-bold transition shadow-xl shadow-gray-900/20 flex items-center justify-center gap-2"
                     >
-                      <Check size={18} strokeWidth={3} /> Record Proof of Delivery
-                    </button>
+                      <Check size={18} strokeWidth={3} />{t("record_proof_of_deli")}</button>
                   )}
                 </motion.div>
               ))
@@ -360,7 +388,7 @@ const Deliveries = () => {
             
             {driverLocation && (
               <Marker position={driverLocation} icon={driverIcon} zIndexOffset={2000}>
-                <Popup><strong>You are here</strong></Popup>
+                <Popup><strong>{t("you_are_here")}</strong></Popup>
               </Marker>
             )}
             
@@ -378,10 +406,9 @@ const Deliveries = () => {
                 <Popup className="custom-popup min-w-[200px]">
                   <div className="p-2">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        Stop {index + 1}
+                      <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{t("stop")}{index + 1}
                       </span>
-                      {point.status === 'Delivered' && <span className="text-[10px] font-bold text-green-600 uppercase">Delivered</span>}
+                      {point.status === 'Delivered' && <span className="text-[10px] font-bold text-green-600 uppercase">{t("delivered")}</span>}
                     </div>
                     <strong className="text-base text-gray-900 block mb-1">{point.farmer_name}</strong>
                     <span className="text-xs text-gray-500 block mb-3 leading-relaxed">{point.address}</span>
@@ -393,8 +420,7 @@ const Deliveries = () => {
                         rel="noreferrer"
                         className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg flex justify-center items-center gap-1 transition"
                       >
-                        <Navigation size={14} /> Get Directions
-                      </a>
+                        <Navigation size={14} />{t("get_directions")}</a>
                     )}
                   </div>
                 </Popup>
@@ -404,9 +430,7 @@ const Deliveries = () => {
           
           {isOffline && (
             <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-              Working from Cached Map Data
-            </div>
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>{t("working_from_cached_")}</div>
           )}
         </div>
 
@@ -423,7 +447,7 @@ const Deliveries = () => {
             >
               <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-extrabold text-gray-900">Proof of Delivery</h2>
+                  <h2 className="text-xl font-extrabold text-gray-900">{t("proof_of_delivery")}</h2>
                   <p className="text-sm text-gray-500 font-medium">{podModal.order?.farmer_name} • {podModal.order?.order_ref}</p>
                 </div>
                 <button onClick={closePODModal} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200 hover:bg-gray-50 transition text-gray-500"><X size={18}/></button>
@@ -432,11 +456,9 @@ const Deliveries = () => {
               <div className="p-6">
                 <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
                   <button onClick={() => { setSignatureMode(true); stopCamera(); }} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex justify-center items-center gap-2 ${signatureMode ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-                    <PenTool size={16}/> E-Signature
-                  </button>
+                    <PenTool size={16}/>{t("e_signature")}</button>
                   <button onClick={() => { setSignatureMode(false); startCamera(); }} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex justify-center items-center gap-2 ${!signatureMode ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-                    <Camera size={16}/> Capture Photo
-                  </button>
+                    <Camera size={16}/>{t("capture_photo")}</button>
                 </div>
 
                 {signatureMode ? (
@@ -454,13 +476,11 @@ const Deliveries = () => {
                         style={{ touchAction: 'none' }}
                       />
                       {!hasSignature && (
-                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-gray-400 font-medium">
-                           Sign here...
-                         </div>
+                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-gray-400 font-medium">{t("sign_here___")}</div>
                       )}
                     </div>
                     {hasSignature && (
-                      <button onClick={clearSignature} className="text-xs font-bold text-red-500 mt-2 hover:underline">Clear Signature</button>
+                      <button onClick={clearSignature} className="text-xs font-bold text-red-500 mt-2 hover:underline">{t("clear_signature")}</button>
                     )}
                   </div>
                 ) : (
@@ -476,9 +496,7 @@ const Deliveries = () => {
                     ) : (
                       <div className="relative rounded-2xl overflow-hidden shadow-inner border border-gray-200">
                         <img src={podImage} className="w-full object-cover" />
-                        <button onClick={() => { setPodImage(null); startCamera(); }} className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 shadow-sm">
-                          Retake
-                        </button>
+                        <button onClick={() => { setPodImage(null); startCamera(); }} className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 shadow-sm">{t("retake")}</button>
                       </div>
                     )}
                   </div>
@@ -491,9 +509,7 @@ const Deliveries = () => {
                   disabled={signatureMode ? !hasSignature : !podImage}
                   className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <CheckCircle size={20} />
-                  Confirm & Sync Delivery
-                </button>
+                  <CheckCircle size={20} />{t("confirm___sync_deliv")}</button>
               </div>
             </motion.div>
           </motion.div>

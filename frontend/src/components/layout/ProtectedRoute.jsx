@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { useSelector } from 'react-redux';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 const ProtectedRoute = () => {
+  const { t } = useTranslation();
   const { user, loading } = useSelector((state) => state.auth);
   const location = useLocation();
 

@@ -55,9 +55,12 @@ self.addEventListener('fetch', event => {
           // return the cached index.html so React Router can handle it.
           if (event.request.mode === 'navigate') {
             const cache = await caches.open(CACHE_NAME);
-            return cache.match('/index.html');
+            const cachedResponse = await cache.match('/index.html');
+            if (cachedResponse) {
+              return cachedResponse;
+            }
           }
-          return new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+          return new Response('Network error occurred. Please check your internet connection.', { status: 408, headers: { 'Content-Type': 'text/plain' } });
         });
       })
   );

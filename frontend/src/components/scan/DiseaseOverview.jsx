@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { Info, Leaf, Bug, Wind, Sprout } from 'lucide-react';
 
 const DiseaseOverview = ({ result, ui }) => {
+  const { t } = useTranslation();
   if (!result || !result.recommended_treatment) return null;
 
   return (
@@ -19,7 +21,7 @@ const DiseaseOverview = ({ result, ui }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            {result.disease_name.replace(/___/g, ' ')} {ui.overviewDescPart1} {result.crop_name}. {ui.overviewDescPart2}
+            {result.disease_overview?.description || `${(result.disease_name || 'Unknown').replace(/___/g, ' ')} ${ui.overviewDescPart1} ${result.crop_name || 'Unknown'}. ${ui.overviewDescPart2}`}
           </p>
           
           <div className="mt-6 space-y-4">
@@ -29,7 +31,9 @@ const DiseaseOverview = ({ result, ui }) => {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-900">{ui.primaryCauseTitle}</h4>
-                <p className="text-xs text-gray-500 mt-1">{ui.primaryCauseDesc}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {result.disease_overview?.cause_pathogen || ui.primaryCauseDesc}
+                </p>
               </div>
             </div>
 
@@ -39,7 +43,9 @@ const DiseaseOverview = ({ result, ui }) => {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-900">{ui.spreadMethodTitle}</h4>
-                <p className="text-xs text-gray-500 mt-1">{ui.spreadMethodDesc}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {result.disease_overview?.spread || ui.spreadMethodDesc}
+                </p>
               </div>
             </div>
 
@@ -49,7 +55,11 @@ const DiseaseOverview = ({ result, ui }) => {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-900">{ui.affectedPartsTitle}</h4>
-                <p className="text-xs text-gray-500 mt-1">{ui.affectedPartsDesc}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {Array.isArray(result.disease_overview?.plant_affected_parts) 
+                    ? result.disease_overview.plant_affected_parts.join(', ')
+                    : (result.disease_overview?.plant_affected_parts || ui.affectedPartsDesc)}
+                </p>
               </div>
             </div>
           </div>
@@ -60,7 +70,7 @@ const DiseaseOverview = ({ result, ui }) => {
             <Leaf className="text-emerald-500" size={16} /> {ui.organicRemediesTitle}
           </h4>
           <ul className="space-y-3">
-            {result.recommended_treatment.organic_remedies ? (
+            {result.recommended_treatment.organic_remedies && result.recommended_treatment.organic_remedies.length > 0 ? (
               result.recommended_treatment.organic_remedies.map((remedy, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
@@ -68,7 +78,7 @@ const DiseaseOverview = ({ result, ui }) => {
                 </li>
               ))
             ) : (
-              <li className="text-sm text-gray-500 italic">{ui.noRemedies}</li>
+              <li className="text-sm text-gray-500 italic">{ui.noRemedies || "No specific organic remedies required."}</li>
             )}
           </ul>
         </div>

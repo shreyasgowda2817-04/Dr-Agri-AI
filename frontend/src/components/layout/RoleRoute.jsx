@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 
 const RoleRoute = ({ allowedRoles, children }) => {
+  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
 
   if (!user) {

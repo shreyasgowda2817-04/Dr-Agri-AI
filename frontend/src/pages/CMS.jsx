@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import api from '../services/api';
@@ -12,6 +14,9 @@ import { toast } from 'react-toastify';
 const ARTICLE_TYPES = ['News', 'Scheme', 'Guide', 'Blog'];
 
 const CMS = () => {
+  const { t } = useTranslation();
+  
+
   const { user } = useSelector(state => state.auth);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +26,8 @@ const CMS = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
   const [saving, setSaving] = useState(false);
-  
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+
   const [form, setForm] = useState({
     title: '',
     content: '',
@@ -36,6 +42,8 @@ const CMS = () => {
   }, []);
 
   const fetchArticles = async () => {
+    
+
     setLoading(true);
     setError('');
     try {
@@ -50,6 +58,8 @@ const CMS = () => {
   };
 
   const openAddModal = () => {
+    
+
     setEditingArticle(null);
     setForm({
       title: '',
@@ -63,6 +73,8 @@ const CMS = () => {
   };
 
   const openEditModal = (article) => {
+    
+
     setEditingArticle(article);
     setForm({
       title: article.title || '',
@@ -76,6 +88,8 @@ const CMS = () => {
   };
 
   const handleSave = async (e) => {
+    
+
     e.preventDefault();
     setSaving(true);
     try {
@@ -100,10 +114,17 @@ const CMS = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this article?")) return;
+  const handleDeleteClick = (id) => {
+    
+
+    setConfirmModal({ isOpen: true, id });
+  };
+
+  const performDelete = async () => {
+    
+
     try {
-      await api.delete(`/cms/articles/${id}`);
+      await api.delete(`/cms/articles/${confirmModal.id}`);
       toast.success('Article deleted');
       fetchArticles();
     } catch (err) {
@@ -117,18 +138,25 @@ const CMS = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8">
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        onConfirm={performDelete}
+        title="Delete Article"
+        message="Are you sure you want to permanently delete this article? This action cannot be undone."
+        confirmText="Delete"
+        isDanger={true}
+      />
+
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-8 text-white mb-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-extrabold flex items-center gap-3 mb-2">
-            <FileText className="w-8 h-8 text-blue-400" />
-            Content Management System
-          </h1>
-          <p className="text-blue-200">Publish News, Government Schemes & Crop Guides</p>
+            <FileText className="w-8 h-8 text-blue-400" />{t("content_management_s")}</h1>
+          <p className="text-blue-200">{t("publish_news__govern")}</p>
         </div>
         <button onClick={openAddModal} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-sm">
-          <Plus size={18} /> Write Article
-        </button>
+          <Plus size={18} />{t("write_article")}</button>
       </div>
 
       {error && (
@@ -142,29 +170,28 @@ const CMS = () => {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText size={20} className="text-indigo-600" /> Published Content
-          </h2>
+            <FileText size={20} className="text-indigo-600" />{t("published_content")}</h2>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
-                <th className="px-6 py-4">Title</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4">{t("title")}</th>
+                <th className="px-6 py-4">{t("type")}</th>
+                <th className="px-6 py-4">{t("status")}</th>
+                <th className="px-6 py-4">{t("date")}</th>
+                <th className="px-6 py-4 text-right">{t("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-500">Loading articles...</td></tr>
+                <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-500">{t("loading_articles___")}</td></tr>
               ) : articles.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-16 text-center">
                     <FileText size={48} className="mx-auto text-gray-300 mb-4" />
-                    <p className="text-gray-500 font-medium">No articles written yet.</p>
+                    <p className="text-gray-500 font-medium">{t("no_articles_written_")}</p>
                   </td>
                 </tr>
               ) : (
@@ -195,12 +222,10 @@ const CMS = () => {
                     <td className="px-6 py-4">
                       {article.is_published ? (
                         <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100">
-                          <CheckCircle size={14} /> Published
-                        </span>
+                          <CheckCircle size={14} />{t("published")}</span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md text-xs font-bold border border-amber-100">
-                          <Clock size={14} /> Draft
-                        </span>
+                          <Clock size={14} />{t("draft")}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-600">
@@ -210,7 +235,7 @@ const CMS = () => {
                       <div className="flex justify-end gap-2">
                         <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Preview"><Eye size={18} /></button>
                         <button onClick={() => openEditModal(article)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit"><Edit3 size={18} /></button>
-                        <button onClick={() => handleDelete(article.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18} /></button>
+                        <button onClick={() => handleDeleteClick(article.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
@@ -238,35 +263,35 @@ const CMS = () => {
 
               <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-6">
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-700">Headline Title *</label>
+                  <label className="block text-sm font-bold mb-2 text-gray-700">{t("headline_title__")}</label>
                   <input required type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="e.g., New Solar Pump Subsidy Available"
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 font-medium" />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">Article Type *</label>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">{t("article_type__")}</label>
                     <select required value={form.article_type} onChange={e => setForm({...form, article_type: e.target.value})} 
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 font-medium">
                       {ARTICLE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">Cover Image URL (Optional)</label>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">{t("cover_image_url__opt")}</label>
                     <input type="url" value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} placeholder="https://..."
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-700">Content (Markdown supported) *</label>
+                  <label className="block text-sm font-bold mb-2 text-gray-700">{t("content__markdown_su")}</label>
                   <textarea required rows={10} value={form.content} onChange={e => setForm({...form, content: e.target.value})} placeholder="Write your article content here..."
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-gray-900 font-medium leading-relaxed font-mono text-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">Tags (comma separated)</label>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">{t("tags__comma_separate")}</label>
                     <input type="text" value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} placeholder="e.g., subsidy, solar, 2026"
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                   </div>
@@ -275,17 +300,17 @@ const CMS = () => {
                       <input type="checkbox" checked={form.is_published} onChange={e => setForm({...form, is_published: e.target.checked})} 
                         className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
                       <div>
-                        <span className="block text-sm font-bold text-gray-900">Publish Immediately</span>
-                        <span className="block text-xs text-gray-500 mt-0.5">If unchecked, it will save as a Draft.</span>
+                        <span className="block text-sm font-bold text-gray-900">{t("publish_immediately")}</span>
+                        <span className="block text-xs text-gray-500 mt-0.5">{t("if_unchecked__it_wil")}</span>
                       </div>
                     </label>
                   </div>
                 </div>
 
                 <div className="pt-6 mt-2 border-t border-gray-100 flex gap-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">Cancel</button>
+                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">{t("cancel")}</button>
                   <button type="submit" disabled={saving} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-md disabled:opacity-70 flex items-center justify-center gap-2">
-                    {saving ? 'Saving...' : editingArticle ? <><Edit3 size={18}/> Update Article</> : <><Plus size={18}/> Save Article</>}
+                    {saving ? 'Saving...' : editingArticle ? <><Edit3 size={18}/>{t("update_article")}</> : <><Plus size={18}/>{t("save_article")}</>}
                   </button>
                 </div>
               </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, Sparkles, Navigation, Info, ArrowRight, Zap, Target, CreditCard, LayoutDashboard, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -5,6 +6,9 @@ import api from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GlobalSearch = () => {
+  const { t } = useTranslation();
+  
+
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,6 +19,8 @@ const GlobalSearch = () => {
   // Handle Cmd+K / Ctrl+K shortcut
   useEffect(() => {
     const handleKeyDown = (e) => {
+      
+
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsOpen((prev) => !prev);
@@ -40,6 +46,8 @@ const GlobalSearch = () => {
   // Fetch search suggestions
   useEffect(() => {
     const fetchSuggestions = async () => {
+      
+
       if (!query.trim()) {
         setSuggestions([]);
         return;
@@ -65,6 +73,8 @@ const GlobalSearch = () => {
   }, [query]);
 
   const handleAction = (suggestion) => {
+    
+
     setIsOpen(false);
     setQuery('');
     if (suggestion.url && suggestion.url !== '#') {
@@ -87,10 +97,9 @@ const GlobalSearch = () => {
         className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2 px-4 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition w-64 shadow-sm"
       >
         <Search size={16} />
-        <span className="flex-1 text-left">Search Dr Agri...</span>
+        <span className="flex-1 text-left">{t("search_dr_agri___")}</span>
         <kbd className="hidden sm:inline-flex items-center gap-1 font-sans text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 shadow-sm font-bold">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+          <span className="text-xs">⌘</span>{t("k")}</kbd>
       </button>
 
       {/* Command K Modal Overlay */}
@@ -128,9 +137,7 @@ const GlobalSearch = () => {
                   className="w-full bg-transparent border-none py-5 text-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0 focus:outline-none"
                 />
                 {loading && <Loader2 className="text-emerald-500 w-5 h-5 animate-spin ml-3" />}
-                <kbd className="hidden sm:inline-block ml-3 font-sans text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 uppercase font-bold">
-                  ESC
-                </kbd>
+                <kbd className="hidden sm:inline-block ml-3 font-sans text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 uppercase font-bold">{t("esc")}</kbd>
               </div>
 
               {/* Scrollable Results Area */}
@@ -139,7 +146,7 @@ const GlobalSearch = () => {
                 {/* Default State: Quick Actions */}
                 {!query.trim() && (
                   <div className="p-2">
-                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-3">Quick Actions</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-3">{t("quick_actions")}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {quickActions.map((action, idx) => (
                         <button
@@ -152,7 +159,7 @@ const GlobalSearch = () => {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-gray-900 dark:text-white">{action.label}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Go to {action.url}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t("go_to")}{action.url}</p>
                           </div>
                         </button>
                       ))}
@@ -164,16 +171,15 @@ const GlobalSearch = () => {
                 {query.trim() && (
                   <div className="p-2">
                     <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-3 flex items-center gap-2">
-                      <Sparkles size={14} className="text-emerald-500" /> AI Results
-                    </h3>
+                      <Sparkles size={14} className="text-emerald-500" />{t("ai_results")}</h3>
                     
                     {suggestions.length === 0 && !loading ? (
                       <div className="py-12 text-center">
                         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Search className="text-gray-400 w-8 h-8" />
                         </div>
-                        <p className="text-gray-900 dark:text-white font-bold">No results found for "{query}"</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Try searching for "disease", "prices", or "settings".</p>
+                        <p className="text-gray-900 dark:text-white font-bold">{t("no_results_found_for")}{query}"</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("try_searching_for__d")}</p>
                       </div>
                     ) : (
                       <div className="space-y-1">
@@ -193,7 +199,7 @@ const GlobalSearch = () => {
                                 {item.label}
                               </p>
                               {item.type !== 'info' && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Jump to {item.url}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t("jump_to")}{item.url}</p>
                               )}
                             </div>
                             {item.type !== 'info' && (
@@ -210,12 +216,11 @@ const GlobalSearch = () => {
               {/* Footer */}
               <div className="bg-gray-50 dark:bg-gray-950/50 border-t border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center gap-1"><kbd className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-sans">↑↓</kbd> to navigate</span>
-                  <span className="flex items-center gap-1"><kbd className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-sans">Enter</kbd> to select</span>
+                  <span className="flex items-center gap-1"><kbd className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-sans">↑↓</kbd>{t("to_navigate")}</span>
+                  <span className="flex items-center gap-1"><kbd className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-sans">{t("enter")}</kbd>{t("to_select")}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-bold text-gray-400">
-                  <Sparkles size={12} className="text-emerald-500" /> Powered by Gemini
-                </div>
+                  <Sparkles size={12} className="text-emerald-500" />{t("powered_by_gemini")}</div>
               </div>
             </motion.div>
           </div>

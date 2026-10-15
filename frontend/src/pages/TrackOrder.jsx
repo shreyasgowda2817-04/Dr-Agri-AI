@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Package, Truck, Sprout, Factory, CheckCircle, Search, ShieldCheck } from 'lucide-react';
@@ -6,6 +7,9 @@ import { motion } from 'framer-motion';
 import Footer from '../components/layout/Footer';
 
 const TrackOrder = () => {
+  const { t } = useTranslation();
+  
+
   const { orderRef } = useParams();
   const [trackingId, setTrackingId] = useState(orderRef || '');
   const [data, setData] = useState(null);
@@ -19,6 +23,8 @@ const TrackOrder = () => {
   }, [orderRef]);
 
   const handleSearch = async (ref = trackingId) => {
+    
+
     if (!ref.trim()) return;
     setLoading(true);
     setError('');
@@ -34,6 +40,8 @@ const TrackOrder = () => {
   };
 
   const getIcon = (iconStr) => {
+    
+
     switch (iconStr) {
       case 'Order': return <Package size={24} className="text-blue-500" />;
       case 'Farm': return <Sprout size={24} className="text-emerald-500" />;
@@ -50,8 +58,8 @@ const TrackOrder = () => {
           <div className="inline-flex items-center justify-center p-3 bg-emerald-100 rounded-full mb-4 shadow-sm text-emerald-600">
             <ShieldCheck size={32} />
           </div>
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Food Provenance Tracker</h1>
-          <p className="mt-3 text-lg text-gray-500">Track your order's journey from our farms directly to your table, verified on the blockchain.</p>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{t("food_provenance_trac")}</h1>
+          <p className="mt-3 text-lg text-gray-500">{t("track_your_order_s_j")}</p>
         </div>
 
         {/* Search Box */}
@@ -68,12 +76,10 @@ const TrackOrder = () => {
           <button 
             onClick={() => handleSearch()}
             className="bg-gray-900 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-gray-800 transition"
-          >
-            Track
-          </button>
+          >{t("track")}</button>
         </div>
 
-        {loading && <div className="text-center text-emerald-600 font-bold animate-pulse">Scanning immutable ledger...</div>}
+        {loading && <div className="text-center text-emerald-600 font-bold animate-pulse">{t("scanning_immutable_l")}</div>}
         {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center font-medium border border-red-100">{error}</div>}
 
         {data && (
@@ -82,12 +88,12 @@ const TrackOrder = () => {
             <div className="bg-gradient-to-r from-emerald-600 to-green-700 p-8 text-white">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-emerald-100 font-bold uppercase tracking-widest text-sm mb-1">Order Details</p>
+                  <p className="text-emerald-100 font-bold uppercase tracking-widest text-sm mb-1">{t("order_details")}</p>
                   <h2 className="text-3xl font-black">{data.order_ref}</h2>
                 </div>
                 {data.estimated_delivery && (
                   <div className="text-right">
-                    <p className="text-emerald-100 font-bold uppercase tracking-widest text-sm mb-1">Est. Delivery</p>
+                    <p className="text-emerald-100 font-bold uppercase tracking-widest text-sm mb-1">{t("est__delivery")}</p>
                     <p className="text-xl font-bold">{new Date(data.estimated_delivery).toLocaleDateString()}</p>
                   </div>
                 )}
@@ -96,12 +102,12 @@ const TrackOrder = () => {
 
             {/* Items */}
             <div className="p-8 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-sm">Verified Contents</h3>
+              <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-sm">{t("verified_contents")}</h3>
               <div className="grid sm:grid-cols-2 gap-4">
                 {data.items.map((item, idx) => (
                   <div key={idx} className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <div className="bg-emerald-100 text-emerald-700 w-10 h-10 rounded-lg flex items-center justify-center font-black">{item.quantity}x</div>
+                      <div className="bg-emerald-100 text-emerald-700 w-10 h-10 rounded-lg flex items-center justify-center font-black">{item.quantity}{t("x")}</div>
                       <p className="font-bold text-gray-900">{item.name}</p>
                     </div>
                   </div>
@@ -111,7 +117,7 @@ const TrackOrder = () => {
 
             {/* Timeline */}
             <div className="p-8">
-              <h3 className="font-bold text-gray-900 mb-8 uppercase tracking-widest text-sm">Provenance Timeline</h3>
+              <h3 className="font-bold text-gray-900 mb-8 uppercase tracking-widest text-sm">{t("provenance_timeline")}</h3>
               <div className="relative border-l-2 border-emerald-100 ml-5 space-y-10">
                 {data.timeline.map((step, idx) => (
                   <div key={idx} className="relative pl-8">
@@ -128,9 +134,7 @@ const TrackOrder = () => {
               </div>
             </div>
             
-            <div className="bg-gray-900 text-gray-400 p-4 text-center text-xs font-medium">
-              Secured by Dr Agri AI Blockchain Ledger
-            </div>
+            <div className="bg-gray-900 text-gray-400 p-4 text-center text-xs font-medium">{t("secured_by_dr_agri_a")}</div>
           </motion.div>
         )}
       </div>

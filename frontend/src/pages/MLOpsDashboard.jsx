@@ -1,20 +1,28 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { Activity, AlertOctagon, TrendingDown, RefreshCw, Cpu, Database, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MLOpsDashboard = () => {
+  const { t } = useTranslation();
+  
+
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [retraining, setRetraining] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [confirmModal, setConfirmModal] = useState(false);
 
   useEffect(() => {
     fetchMetrics();
   }, []);
 
   const fetchMetrics = async () => {
+    
+
     try {
       const res = await api.get('/mlops/drift-metrics');
       setMetrics(res.data);
@@ -25,12 +33,18 @@ const MLOpsDashboard = () => {
     }
   };
 
-  const handleRetrain = async () => {
-    if (!window.confirm("WARNING: Initiating model retraining will provision GPU instances and cost approximately $450 in AWS credits. Proceed?")) return;
+  const handleRetrainClick = () => {
     
+
+    setConfirmModal(true);
+  };
+
+  const executeRetrain = async () => {
+    
+
     setRetraining(true);
     setProgress(0);
-    
+
     // Simulate a progress bar
     const interval = setInterval(() => {
       setProgress(p => {
@@ -66,17 +80,25 @@ const MLOpsDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-8">
+      <ConfirmModal
+        isOpen={confirmModal}
+        onClose={() => setConfirmModal(false)}
+        onConfirm={executeRetrain}
+        title="Provision GPU Training Cluster"
+        message="WARNING: Initiating model retraining will provision A100 GPU instances and cost approximately $450 in AWS credits. Are you sure you want to proceed?"
+        confirmText="Yes, Retrain Model"
+        isDanger={true}
+      />
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <Cpu className="w-8 h-8 text-red-600" />
-            Enterprise MLOps & Model Drift
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium">Monitor AI inference accuracy and concept drift in production.</p>
+            <Cpu className="w-8 h-8 text-red-600" />{t("enterprise_mlops___m")}</h1>
+          <p className="text-gray-500 mt-1 font-medium">{t("monitor_ai_inference")}</p>
         </div>
         
         <button 
-          onClick={handleRetrain}
+          onClick={handleRetrainClick}
           disabled={retraining}
           className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-red-700 transition shadow-lg shadow-red-200 disabled:opacity-70 relative overflow-hidden"
         >
@@ -97,11 +119,8 @@ const MLOpsDashboard = () => {
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl mb-8 flex items-start gap-4">
           <AlertOctagon className="text-red-500 w-6 h-6 mt-0.5 shrink-0" />
           <div>
-            <h3 className="text-red-800 font-bold">Critical Concept Drift Detected</h3>
-            <p className="text-red-600 text-sm mt-1">
-              Global inference accuracy has dropped to <strong>{metrics.current_accuracy}%</strong> over the last 30 days. 
-              The threshold is 90.0%. Retraining is highly recommended.
-            </p>
+            <h3 className="text-red-800 font-bold">{t("critical_concept_dri")}</h3>
+            <p className="text-red-600 text-sm mt-1">{t("global_inference_acc")}<strong>{metrics.current_accuracy}%</strong>{t("over_the_last_30_day")}</p>
           </div>
         </div>
       )}
@@ -110,8 +129,7 @@ const MLOpsDashboard = () => {
         {/* Accuracy Chart */}
         <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
           <h2 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Activity className="text-blue-500" /> Model Accuracy (6 Months)
-          </h2>
+            <Activity className="text-blue-500" />{t("model_accuracy__6_mo")}</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={metrics.accuracy_history}>
@@ -138,8 +156,7 @@ const MLOpsDashboard = () => {
         {/* Regional Drift Bar Chart */}
         <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
           <h2 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Database className="text-purple-500" /> Data Drift by Region
-          </h2>
+            <Database className="text-purple-500" />{t("data_drift_by_region")}</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={metrics.regional_drift} layout="vertical" margin={{ left: 20 }}>
@@ -164,20 +181,18 @@ const MLOpsDashboard = () => {
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
           <h2 className="font-bold text-gray-900 flex items-center gap-2">
-            <AlertTriangle className="text-amber-500" /> Specific Class Failures (Concept Drift)
-          </h2>
+            <AlertTriangle className="text-amber-500" />{t("specific_class_failu")}</h2>
         </div>
         <div className="divide-y divide-gray-100">
           {metrics.class_failures.map((failure, idx) => (
             <div key={idx} className="p-6 flex items-center justify-between hover:bg-gray-50 transition">
               <div>
                 <h3 className="font-bold text-gray-900">{failure.disease}</h3>
-                <p className="text-sm text-gray-500">Confidence score moving average has dropped significantly.</p>
+                <p className="text-sm text-gray-500">{t("confidence_score_mov")}</p>
               </div>
               <div className="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2">
                 <TrendingDown size={18} />
-                - {failure.confidence_drop} Accuracy
-              </div>
+                - {failure.confidence_drop}{t("accuracy")}</div>
             </div>
           ))}
         </div>

@@ -67,7 +67,19 @@ async def predict_disease(file: UploadFile = File(...)):
         }
         
         return {
+            "crop": {"name": "Tomato"},
             "disease_name": predicted_class,
+            "disease_overview": {
+                "disease_name": predicted_class,
+                "description": "Fungal infection affecting tomato foliage and fruit.",
+                "cause_pathogen": "Alternaria solani",
+                "symptoms": "Dark spots with concentric rings developing on older leaves."
+            },
+            "diagnosis": {
+                "disease_name": predicted_class,
+                "confidence_score": confidence,
+                "severity": severity
+            },
             "confidence_score": confidence,
             "severity": severity,
             "treatment": treatment

@@ -1,7 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { Link } from 'react-router-dom';
 import { Sprout, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
+  const { t } = useTranslation();
+  
+
   return (
     <footer className="bg-gray-900 text-gray-300 pt-16 pb-8 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -10,11 +14,9 @@ const Footer = () => {
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2 text-white">
               <Sprout size={32} className="text-emerald-500" />
-              <span className="text-2xl font-black tracking-tight">Dr Agri AI</span>
+              <span className="text-2xl font-black tracking-tight">{t("dr_agri_ai")}</span>
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Empowering farmers with artificial intelligence. The world's first autonomous operating system for agriculture and supply chain provenance.
-            </p>
+            <p className="text-gray-400 text-sm leading-relaxed">{t("empowering_farmers_w")}</p>
             <div className="flex gap-4 pt-2">
               <a href="#" className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-emerald-600 flex items-center justify-center transition text-gray-400 hover:text-white" aria-label="Facebook">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
@@ -33,35 +35,35 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-bold uppercase tracking-wider mb-4">Quick Links</h3>
+            <h3 className="text-white font-bold uppercase tracking-wider mb-4">{t("quick_links")}</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link to="/scan" className="hover:text-emerald-400 transition">AI Disease Scan</Link></li>
-              <li><Link to="/marketplace" className="hover:text-emerald-400 transition">Marketplace</Link></li>
-              <li><Link to="/track" className="hover:text-emerald-400 transition">Track Order</Link></li>
-              <li><Link to="/prices" className="hover:text-emerald-400 transition">Commodity Prices</Link></li>
-              <li><Link to="/b2b" className="hover:text-emerald-400 transition">Enterprise B2B</Link></li>
+              <li><Link to="/scan" className="hover:text-emerald-400 transition">{t("ai_disease_scan")}</Link></li>
+              <li><Link to="/marketplace" className="hover:text-emerald-400 transition">{t("marketplace")}</Link></li>
+              <li><Link to="/track" className="hover:text-emerald-400 transition">{t("track_order")}</Link></li>
+              <li><Link to="/prices" className="hover:text-emerald-400 transition">{t("commodity_prices")}</Link></li>
+              <li><Link to="/b2b" className="hover:text-emerald-400 transition">{t("enterprise_b2b")}</Link></li>
             </ul>
           </div>
 
           {/* Solutions */}
           <div>
-            <h3 className="text-white font-bold uppercase tracking-wider mb-4">Solutions</h3>
+            <h3 className="text-white font-bold uppercase tracking-wider mb-4">{t("solutions")}</h3>
             <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:text-emerald-400 transition">For Farmers</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition">For Warehouses</a></li>
-              <li><Link to="/support" className="hover:text-emerald-400 transition">Support Helpdesk</Link></li>
-              <li><Link to="/schemes" className="hover:text-emerald-400 transition">Government Schemes</Link></li>
-              <li><Link to="/consult" className="hover:text-emerald-400 transition">Consultation</Link></li>
+              <li><a href="#" className="hover:text-emerald-400 transition">{t("for_farmers")}</a></li>
+              <li><a href="/schemes" className="hover:text-emerald-400 transition">{t("for_warehouses")}</a></li>
+              <li><Link to="/support" className="hover:text-emerald-400 transition">{t("support_helpdesk")}</Link></li>
+              <li><Link to="/dashboard" className="hover:text-emerald-400 transition">{t("government_schemes")}</Link></li>
+              <li><Link to="/consult" className="hover:text-emerald-400 transition">{t("call___consultation")}</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-bold uppercase tracking-wider mb-4">Contact Us</h3>
+            <h3 className="text-white font-bold uppercase tracking-wider mb-4">{t("contact_us")}</h3>
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span>123 Agri-Tech Park, Innovation City, Karnataka 570001, India</span>
+                <span>{t("123_agri_tech_park__")}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-emerald-500 shrink-0" />
@@ -69,7 +71,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-emerald-500 shrink-0" />
-                <span>support@dragri.ai</span>
+                <span>{t("support_dragri_ai")}</span>
               </li>
             </ul>
           </div>
@@ -77,11 +79,11 @@ const Footer = () => {
 
         {/* Bottom */}
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-          <p>&copy; {new Date().getFullYear()} Dr Agri AI. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()}{t("dr_agri_ai__all_righ")}</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition">Terms of Service</a>
-            <a href="#" className="hover:text-white transition">Cookie Settings</a>
+            <a href="#" className="hover:text-white transition">{t("privacy_policy")}</a>
+            <a href="#" className="hover:text-white transition">{t("terms_of_service")}</a>
+            <a href="#" className="hover:text-white transition">{t("cookie_settings")}</a>
           </div>
         </div>
       </div>

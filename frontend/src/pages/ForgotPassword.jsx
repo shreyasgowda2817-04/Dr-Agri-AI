@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -5,16 +6,21 @@ import { motion } from 'framer-motion';
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 const ForgotPassword = () => {
+  const { t } = useTranslation();
+  
+
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
+    
+
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
+
     try {
       await api.post('/auth/forgot-password', { email });
       setSuccess(true);
@@ -33,8 +39,8 @@ const ForgotPassword = () => {
       transition={{ duration: 0.4 }}
     >
       <div className="mb-10 text-center lg:text-left">
-        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">Reset Password</h2>
-        <p className="text-gray-500 text-lg">Enter your email and we'll send you a secure reset link.</p>
+        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">{t("reset_password")}</h2>
+        <p className="text-gray-500 text-lg">{t("enter_your_email_and")}</p>
       </div>
 
       {error && (
@@ -57,21 +63,17 @@ const ForgotPassword = () => {
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={24} />
           </div>
-          <h3 className="text-lg font-bold mb-2">Check your inbox</h3>
-          <p className="text-green-700 text-sm mb-6">
-            We've sent a password reset link to <strong>{email}</strong>. The link will expire in 15 minutes.
-          </p>
+          <h3 className="text-lg font-bold mb-2">{t("check_your_inbox")}</h3>
+          <p className="text-green-700 text-sm mb-6">{t("we_ve_sent_a_passwor")}<strong>{email}</strong>{t("__the_link_will_expi")}</p>
           <Link 
             to="/login"
             className="inline-block bg-white border border-green-200 text-green-700 px-6 py-2.5 rounded-xl font-bold hover:bg-green-100 transition shadow-sm"
-          >
-            Back to Login
-          </Link>
+          >{t("back_to_login")}</Link>
         </motion.div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
+            <label className="block text-gray-700 text-sm font-bold mb-2">{t("email_address")}</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                 <Mail size={20} />
@@ -100,8 +102,7 @@ const ForgotPassword = () => {
       {!success && (
         <div className="mt-8 text-center">
           <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition">
-            <ArrowLeft size={16} /> Back to Sign In
-          </Link>
+            <ArrowLeft size={16} />{t("back_to_sign_in")}</Link>
         </div>
       )}
     </motion.div>

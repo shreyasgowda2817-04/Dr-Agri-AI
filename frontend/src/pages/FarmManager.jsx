@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, Trash2, Edit3, Leaf, Droplets, Layers, Navigation, X, ChevronRight, Tractor, Target } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -27,6 +29,9 @@ const EMPTY_FORM = {
 
 // Component to programmatically fly to location
 const MapController = ({ center }) => {
+  const { t } = useTranslation();
+  
+
   const map = useMap();
   useEffect(() => {
     if (center) map.flyTo(center, 14, { duration: 1.5 });
@@ -35,18 +40,24 @@ const MapController = ({ center }) => {
 };
 
 const FarmManager = () => {
+  const { t } = useTranslation();
+  
+
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingFarm, setEditingFarm] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
   const [locating, setLocating] = useState(false);
   const [activeCenter, setActiveCenter] = useState([20.5937, 78.9629]); // Default to India center
 
   useEffect(() => { fetchFarms(); }, []);
 
   const fetchFarms = async () => {
+    
+
     try {
       const res = await api.get('/farms');
       setFarms(res.data);
@@ -65,12 +76,16 @@ const FarmManager = () => {
   };
 
   const openAddModal = () => {
+    
+
     setEditingFarm(null);
     setForm(EMPTY_FORM);
     setShowModal(true);
   };
 
   const openEditModal = (farm) => {
+    
+
     setEditingFarm(farm);
     setForm({
       name: farm.name || '',
@@ -89,6 +104,8 @@ const FarmManager = () => {
   };
 
   const detectLocation = () => {
+    
+
     setLocating(true);
     navigator.geolocation?.getCurrentPosition(
       async (pos) => {
@@ -112,6 +129,8 @@ const FarmManager = () => {
   };
 
   const handleSearchLocation = async (e) => {
+    
+
     e.preventDefault();
     if (!form.location_name) return;
     toast.info('Searching map...');
@@ -132,15 +151,17 @@ const FarmManager = () => {
   };
 
   const handleSave = async () => {
+    
+
     if (!form.name || !form.area_acres) {
       toast.error('Farm name and area are required.');
       return;
     }
     setSaving(true);
-    
+
     let lat = form.latitude;
     let lng = form.longitude;
-    
+
     if (form.location_name && (!lat || !lng)) {
       try {
         const res = await api.get(`/geocode?q=${encodeURIComponent(form.location_name)}`);
@@ -162,14 +183,15 @@ const FarmManager = () => {
     };
     try {
       if (editingFarm) {
-        await api.put(`/farms/${editingFarm.id}`, payload);
+        const res = await api.put(`/farms/${editingFarm.id}`, payload);
+        setFarms(prev => prev.map(f => f.id === editingFarm.id ? res.data : f));
         toast.success('Farm updated!');
       } else {
-        await api.post('/farms', payload);
+        const res = await api.post('/farms', payload);
+        setFarms(prev => [...prev, res.data]);
         toast.success('Farm registered!');
       }
       setShowModal(false);
-      fetchFarms();
     } catch (err) {
       toast.error('Failed to save farm.');
     } finally {
@@ -177,18 +199,27 @@ const FarmManager = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this farm and all its crops?')) return;
+  const handleDeleteClick = (id) => {
+    
+
+    setConfirmModal({ isOpen: true, id });
+  };
+
+  const performDelete = async () => {
+    
+
     try {
-      await api.delete(`/farms/${id}`);
+      await api.delete(`/farms/${confirmModal.id}`);
+      setFarms(prev => prev.filter(f => f.id !== confirmModal.id));
       toast.success('Farm deleted');
-      fetchFarms();
     } catch {
       toast.error('Failed to delete farm');
     }
   };
 
   const handleFarmClick = (farm) => {
+    
+
     if (farm.latitude && farm.longitude) {
       setActiveCenter([parseFloat(farm.latitude), parseFloat(farm.longitude)]);
     }
@@ -199,7 +230,16 @@ const FarmManager = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-73px)] w-full overflow-hidden bg-gray-50 dark:bg-gray-950 transition-colors">
-      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        onConfirm={performDelete}
+        title="Delete Farm"
+        message="Are you sure you want to delete this farm and all its crops? This action cannot be undone."
+        confirmText="Delete"
+        isDanger={true}
+      />
+
       {/* ─── LEFT SIDEBAR (List View) ─── */}
       <div className="w-full md:w-[400px] xl:w-[450px] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full z-10 shadow-xl overflow-hidden shrink-0">
         
@@ -207,8 +247,7 @@ const FarmManager = () => {
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <MapPin className="text-emerald-500" /> GIS Manager
-            </h1>
+              <MapPin className="text-emerald-500" />{t("gps_manager")}</h1>
             <button
               onClick={openAddModal}
               className="bg-emerald-500 text-white p-2 rounded-xl hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
@@ -220,11 +259,11 @@ const FarmManager = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Total Area</p>
-              <p className="text-xl font-black text-gray-900 dark:text-white">{totalAcres.toFixed(1)} <span className="text-sm font-medium text-gray-500">ac</span></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">{t("total_area")}</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white">{totalAcres.toFixed(1)} <span className="text-sm font-medium text-gray-500">{t("ac")}</span></p>
             </div>
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-              <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider mb-1">Active Plots</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider mb-1">{t("active_plots")}</p>
               <p className="text-xl font-black text-emerald-900 dark:text-emerald-400">{farms.length}</p>
             </div>
           </div>
@@ -233,17 +272,15 @@ const FarmManager = () => {
         {/* Scrollable Farm List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-gray-950/50">
           {loading ? (
-            <p className="text-center py-10 text-gray-400 font-medium">Loading geospatial data...</p>
+            <p className="text-center py-10 text-gray-400 font-medium">{t("loading_the_data___")}</p>
           ) : farms.length === 0 ? (
             <div className="text-center py-12 px-4">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Tractor className="text-gray-400 w-8 h-8" />
               </div>
-              <h3 className="text-gray-900 dark:text-white font-bold mb-2">No farms mapped</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Add your first farm plot to begin IoT telemetry mapping.</p>
-              <button onClick={openAddModal} className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-3 rounded-xl font-bold hover:scale-[1.02] transition">
-                Map New Farm
-              </button>
+              <h3 className="text-gray-900 dark:text-white font-bold mb-2">{t("no_farms_mapped")}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t("add_your_first_farm_")}</p>
+              <button onClick={openAddModal} className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-3 rounded-xl font-bold hover:scale-[1.02] transition">{t("map_new_farm")}</button>
             </div>
           ) : (
             farms.map(farm => (
@@ -258,7 +295,7 @@ const FarmManager = () => {
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white text-lg group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">{farm.name}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1 font-medium">
-                      <Target size={12} /> {farm.area_acres} acres · {farm.crop || 'Mixed'}
+                      <Target size={12} /> {farm.area_acres}{t("acres__")}{farm.crop || 'Mixed'}
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${farm.status === 'Active' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
@@ -276,8 +313,7 @@ const FarmManager = () => {
                     to={`/crops?farm_id=${farm.id}`}
                     onClick={(e) => e.stopPropagation()}
                     className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold py-2 rounded-lg text-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition flex items-center justify-center gap-1"
-                  >
-                    Manage Crops <ChevronRight size={12} />
+                  >{t("manage_crops")}<ChevronRight size={12} />
                   </Link>
                   <button onClick={(e) => { e.stopPropagation(); openEditModal(farm); }} className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                     <Edit3 size={14} />
@@ -297,8 +333,8 @@ const FarmManager = () => {
         {/* Map Overlay Controls */}
         <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
           <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300">
-            <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Telemetry Active</div>
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Soil Moisture Normal</div>
+            <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>{t("telemetry_active")}</div>
+            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"></span>{t("soil_moisture_normal")}</div>
           </div>
         </div>
 
@@ -316,8 +352,8 @@ const FarmManager = () => {
                 <Popup className="farm-popup">
                   <div className="p-1">
                     <h4 className="font-bold text-gray-900 mb-1">{farm.name}</h4>
-                    <p className="text-xs text-gray-600 mb-2">{farm.area_acres} Acres · {farm.crop}</p>
-                    <Link to={`/crops?farm_id=${farm.id}`} className="text-xs font-bold text-emerald-600 hover:underline">View Telemetry &rarr;</Link>
+                    <p className="text-xs text-gray-600 mb-2">{farm.area_acres}{t("acres__")}{farm.crop}</p>
+                    <Link to={`/crops?farm_id=${farm.id}`} className="text-xs font-bold text-emerald-600 hover:underline">{t("view_telemetry__")}</Link>
                   </div>
                 </Popup>
               </Marker>
@@ -362,17 +398,17 @@ const FarmManager = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField label="Primary Crop" value={form.crop} onChange={v => setForm(p => ({ ...p, crop: v }))} placeholder="e.g. Tomato, Wheat" />
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t("status")}</label>
                     <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
                       className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
-                      <option>Active</option><option>Fallow</option><option>Harvested</option><option>Preparing</option>
+                      <option>{t("active")}</option><option>{t("fallow")}</option><option>{t("harvested")}</option><option>{t("preparing")}</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Soil & Water */}
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-                  <p className="text-xs font-black text-gray-400 dark:text-gray-500 mb-4 uppercase tracking-widest">Soil & Irrigation Telemetry</p>
+                  <p className="text-xs font-black text-gray-400 dark:text-gray-500 mb-4 uppercase tracking-widest">{t("soil___irrigation_te")}</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <SelectField label="Soil Type" value={form.soil_type} onChange={v => setForm(p => ({ ...p, soil_type: v }))} options={SOIL_TYPES} />
                     <SelectField label="Water Source" value={form.water_source} onChange={v => setForm(p => ({ ...p, water_source: v }))} options={WATER_SOURCES} />
@@ -383,7 +419,7 @@ const FarmManager = () => {
                 {/* GPS */}
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Geospatial Data</p>
+                    <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t("geospatial_data")}</p>
                     <button onClick={detectLocation} disabled={locating}
                       className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-black hover:text-emerald-700 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg transition border border-emerald-100 dark:border-emerald-800">
                       <Navigation size={14} /> {locating ? 'Detecting...' : 'Use My GPS Location'}
@@ -391,7 +427,7 @@ const FarmManager = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Location (Village, Town, City) *</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t("location__village__t")}</label>
                       <div className="flex gap-2">
                         <input 
                           type="text" 
@@ -404,12 +440,10 @@ const FarmManager = () => {
                           onClick={handleSearchLocation} 
                           className="bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 px-5 rounded-xl font-bold transition text-sm whitespace-nowrap shadow-sm"
                           type="button"
-                        >
-                          Find on Map
-                        </button>
+                        >{t("find_on_map")}</button>
                       </div>
                       {form.latitude && form.longitude && (
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium">✓ Coordinates verified: {parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)}</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium">{t("__coordinates_verifi")}{parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)}</p>
                       )}
                     </div>
                   </div>
@@ -417,7 +451,7 @@ const FarmManager = () => {
 
                 {/* Notes */}
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Diagnostic Notes</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t("diagnostic_notes")}</label>
                   <textarea
                     value={form.description}
                     onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
@@ -429,9 +463,7 @@ const FarmManager = () => {
               </div>
 
               <div className="bg-gray-50 dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 px-6 py-4 rounded-b-3xl flex gap-3 shrink-0">
-                <button onClick={() => setShowModal(false)} className="flex-1 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                  Cancel
-                </button>
+                <button onClick={() => setShowModal(false)} className="flex-1 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">{t("cancel")}</button>
                 <button onClick={handleSave} disabled={saving}
                   className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition disabled:opacity-70 shadow-lg shadow-emerald-500/20">
                   {saving ? 'Syncing Location...' : editingFarm ? 'Update Telemetry' : 'Register Farm'}
@@ -458,7 +490,7 @@ const SelectField = ({ label, value, onChange, options }) => (
     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{label}</label>
     <select value={value} onChange={e => onChange(e.target.value)}
       className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
-      <option value="">Select...</option>
+      <option value="">{t("select___")}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   </div>

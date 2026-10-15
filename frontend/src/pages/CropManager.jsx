@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Leaf, Plus, Trash2, Edit3, CalendarDays, Activity, X, Image, ChevronDown, Sprout } from 'lucide-react';
@@ -30,6 +32,9 @@ const EMPTY_FORM = {
 };
 
 const CropManager = () => {
+  const { t } = useTranslation();
+  
+
   const [searchParams] = useSearchParams();
   const farmIdFilter = searchParams.get('farm_id');
 
@@ -40,6 +45,9 @@ const CropManager = () => {
   const [editingCrop, setEditingCrop] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM, farm_id: farmIdFilter || '' });
   const [saving, setSaving] = useState(false);
+
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
   const [filterFarm, setFilterFarm] = useState(farmIdFilter || '');
   const [activeTab, setActiveTab] = useState('crops'); // 'crops' or 'calendar'
 
@@ -48,6 +56,8 @@ const CropManager = () => {
   }, [filterFarm]);
 
   const fetchData = async () => {
+    
+
     setLoading(true);
     try {
       const [farmsRes, cropsRes] = await Promise.all([
@@ -64,12 +74,16 @@ const CropManager = () => {
   };
 
   const openAdd = () => {
+    
+
     setEditingCrop(null);
     setForm({ ...EMPTY_FORM, farm_id: filterFarm || (farms[0]?.id || '') });
     setShowModal(true);
   };
 
   const openEdit = (crop) => {
+    
+
     setEditingCrop(crop);
     setForm({
       farm_id: crop.farm_id || '',
@@ -85,6 +99,8 @@ const CropManager = () => {
   };
 
   const handleSave = async () => {
+    
+
     if (!form.farm_id || !form.crop_name) {
       toast.error('Please select a farm and enter a crop name.');
       return;
@@ -96,14 +112,15 @@ const CropManager = () => {
         area_acres: form.area_acres ? parseFloat(form.area_acres) : null,
       };
       if (editingCrop) {
-        await api.put(`/crops/${editingCrop.id}`, payload);
+        const res = await api.put(`/crops/${editingCrop.id}`, payload);
+        setCrops(prev => prev.map(c => c.id === editingCrop.id ? res.data : c));
         toast.success('Crop updated!');
       } else {
-        await api.post('/crops', payload);
+        const res = await api.post('/crops', payload);
+        setCrops(prev => [...prev, res.data]);
         toast.success('Crop registered!');
       }
       setShowModal(false);
-      fetchData();
     } catch (err) {
       toast.error('Failed to save crop.');
     } finally {
@@ -111,12 +128,19 @@ const CropManager = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this crop record?')) return;
+  const handleDeleteClick = (id) => {
+    
+
+    setConfirmModal({ isOpen: true, id });
+  };
+
+  const performDelete = async () => {
+    
+
     try {
-      await api.delete(`/crops/${id}`);
+      await api.delete(`/crops/${confirmModal.id}`);
+      setCrops(prev => prev.filter(c => c.id !== confirmModal.id));
       toast.success('Crop deleted');
-      fetchData();
     } catch {
       toast.error('Failed to delete crop');
     }
@@ -125,6 +149,8 @@ const CropManager = () => {
   const getFarmName = (farmId) => farms.find(f => f.id === farmId)?.name || 'Unknown Farm';
 
   const daysUntilHarvest = (dateStr) => {
+    
+
     if (!dateStr) return null;
     const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
     return diff;
@@ -132,20 +158,28 @@ const CropManager = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8">
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        onConfirm={performDelete}
+        title="Delete Crop"
+        message="Are you sure you want to delete this crop record? This action cannot be undone."
+        confirmText="Delete"
+        isDanger={true}
+      />
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Leaf className="text-green-600" /> Crop Manager
-          </h1>
-          <p className="text-gray-500 mt-1">Track every crop across all your farms</p>
+            <Leaf className="text-green-600" />{t("crop_manager")}</h1>
+          <p className="text-gray-500 mt-1">{t("track_every_crop_acr")}</p>
         </div>
         <button
           onClick={openAdd}
           className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 transition shadow-md shadow-green-100"
         >
-          <Plus size={18} /> Register Crop
-        </button>
+          <Plus size={18} />{t("register_crop")}</button>
       </div>
 
       {/* Tabs */}
@@ -158,8 +192,7 @@ const CropManager = () => {
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Sprout size={18} /> My Crops
-        </button>
+          <Sprout size={18} />{t("my_crops")}</button>
         <button
           onClick={() => setActiveTab('calendar')}
           className={`pb-3 px-4 font-bold flex items-center gap-2 border-b-2 transition ${
@@ -168,8 +201,7 @@ const CropManager = () => {
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <CalendarDays size={18} /> Crop Calendar
-        </button>
+          <CalendarDays size={18} />{t("crop_calendar")}</button>
       </div>
 
       {activeTab === 'calendar' ? (
@@ -188,15 +220,13 @@ const CropManager = () => {
 
       {/* Crop Grid */}
       {loading ? (
-        <p className="text-center py-20 text-gray-400">Loading crops...</p>
+        <p className="text-center py-20 text-gray-400">{t("loading_crops___")}</p>
       ) : crops.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
           <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-600 mb-2">No crops registered yet</h3>
-          <p className="text-gray-400 mb-6">Register crops to track their growth stages and health</p>
-          <button onClick={openAdd} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">
-            + Register First Crop
-          </button>
+          <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_crops_registered_")}</h3>
+          <p className="text-gray-400 mb-6">{t("register_crops_to_tr")}</p>
+          <button onClick={openAdd} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">{t("__register_first_cro")}</button>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -233,14 +263,13 @@ const CropManager = () => {
                     {crop.planting_date && (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <CalendarDays size={13} className="text-green-500" />
-                        <span>Planted: <strong>{new Date(crop.planting_date).toLocaleDateString()}</strong></span>
+                        <span>{t("planted_")}<strong>{new Date(crop.planting_date).toLocaleDateString()}</strong></span>
                       </div>
                     )}
                     {crop.expected_harvest_date && (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <CalendarDays size={13} className="text-amber-500" />
-                        <span>
-                          Harvest: <strong>{new Date(crop.expected_harvest_date).toLocaleDateString()}</strong>
+                        <span>{t("harvest_")}<strong>{new Date(crop.expected_harvest_date).toLocaleDateString()}</strong>
                           {harvestDays !== null && (
                             <span className={`ml-1.5 text-xs font-bold ${harvestDays < 0 ? 'text-red-500' : harvestDays < 14 ? 'text-amber-500' : 'text-green-500'}`}>
                               ({harvestDays < 0 ? `${Math.abs(harvestDays)}d ago` : `${harvestDays}d`})
@@ -260,9 +289,8 @@ const CropManager = () => {
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(crop)}
                       className="flex-1 py-2 bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-1">
-                      <Edit3 size={14} /> Edit
-                    </button>
-                    <button onClick={() => handleDelete(crop.id)}
+                      <Edit3 size={14} />{t("edit")}</button>
+                    <button onClick={() => handleDeleteClick(crop.id)}
                       className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition">
                       <Trash2 size={16} />
                     </button>
@@ -295,17 +323,17 @@ const CropManager = () => {
               <div className="p-6 space-y-4">
                 {/* Farm */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Farm *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("farm__")}</label>
                   <select value={form.farm_id} onChange={e => setForm(p => ({ ...p, farm_id: e.target.value }))}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white">
-                    <option value="">Select Farm</option>
+                    <option value="">{t("select_farm")}</option>
                     {farms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                 </div>
 
                 {/* Crop Name with suggestions */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Crop Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("crop_name__")}</label>
                   <input
                     list="crop-suggestions"
                     value={form.crop_name}
@@ -322,7 +350,7 @@ const CropManager = () => {
 
                 {/* Stage */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Crop Stage</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("crop_stage")}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {CROP_STAGES.map(stage => (
                       <button
@@ -349,7 +377,7 @@ const CropManager = () => {
                 <MField label="Area (Acres)" value={form.area_acres} onChange={v => setForm(p => ({ ...p, area_acres: v }))} placeholder="e.g. 2.5" type="number" />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("notes")}</label>
                   <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                     placeholder="Any observations or notes about this crop..."
                     rows={3}
@@ -358,9 +386,7 @@ const CropManager = () => {
               </div>
 
               <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex gap-3">
-                <button onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition">
-                  Cancel
-                </button>
+                <button onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 transition">{t("cancel")}</button>
                 <button onClick={handleSave} disabled={saving}
                   className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition disabled:opacity-70">
                   {saving ? 'Saving...' : editingCrop ? 'Update Crop' : 'Register Crop'}
@@ -394,6 +420,8 @@ const MField = ({ label, value, onChange, placeholder, type = 'text' }) => (
 );
 
 const getStageGradient = (stage) => {
+  
+
   const map = {
     Seedling: 'linear-gradient(to right, #84cc16, #65a30d)',
     Vegetative: 'linear-gradient(to right, #22c55e, #16a34a)',

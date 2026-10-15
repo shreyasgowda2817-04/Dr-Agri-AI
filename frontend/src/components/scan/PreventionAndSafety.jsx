@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { ShieldCheck, AlertTriangle } from 'lucide-react';
 
 const PreventionAndSafety = ({ ui }) => {
+  const { t } = useTranslation();
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}

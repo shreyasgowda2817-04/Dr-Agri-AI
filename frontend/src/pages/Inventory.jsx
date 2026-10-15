@@ -1,20 +1,27 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { Package, AlertTriangle, CheckCircle, Store, TrendingUp, Edit2, MapPin, Plus, Trash2, IndianRupee, Activity, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
 const Inventory = () => {
+  const { t } = useTranslation();
+  
+
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
-  
+
   // Adjust Stock Modal State
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [adjustAmount, setAdjustAmount] = useState(0);
   const [adjustAction, setAdjustAction] = useState('add');
+
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null, name: '' });
 
   // Add Item Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -33,6 +40,8 @@ const Inventory = () => {
   }, []);
 
   const fetchLogs = async () => {
+    
+
     setLoadingLogs(true);
     try {
       const res = await api.get('/inventory/logs');
@@ -45,6 +54,8 @@ const Inventory = () => {
   };
 
   const fetchInventory = async () => {
+    
+
     setLoading(true);
     try {
       const res = await api.get('/inventory/stock');
@@ -57,60 +68,112 @@ const Inventory = () => {
   };
 
   const handleAdjustStock = async (e) => {
+    
+
     e.preventDefault();
     try {
-      await api.post(`/inventory/adjust/${selectedItem.id}`, {
+      const amt = parseInt(adjustAmount);
+      const res = await api.post(`/inventory/adjust/${selectedItem.id}`, {
         action: adjustAction,
-        quantity: parseInt(adjustAmount)
+        quantity: amt
       });
+      const newStock = res.data.new_stock;
+      
+      setInventory(prev => prev.map(item => 
+        item.id === selectedItem.id 
+          ? { ...item, stock: newStock, status: newStock <= item.threshold ? 'Low Stock' : 'In Stock' }
+          : item
+      ));
+
+      setLogs(prev => [{
+        _id: Date.now().toString(),
+        item_name: selectedItem.name,
+        action: adjustAction === 'add' ? 'ADD_STOCK' : 'REMOVE_STOCK',
+        quantity_change: adjustAction === 'add' ? amt : -amt,
+        timestamp: new Date().toISOString()
+      }, ...prev].slice(0, 50));
+
       toast.success('Stock adjusted successfully!');
       setShowAdjustModal(false);
-      fetchInventory();
-      fetchLogs();
     } catch (err) {
       toast.error('Failed to adjust stock');
     }
   };
 
   const handleAddItem = async (e) => {
+    
+
     e.preventDefault();
     try {
-      await api.post('/inventory/item', {
+      const payload = {
         ...newItem,
         initial_stock: parseInt(newItem.initial_stock),
         threshold: parseInt(newItem.threshold),
         price_per_unit: parseFloat(newItem.price_per_unit)
-      });
+      };
+      const res = await api.post('/inventory/item', payload);
+      
+      const addedItem = {
+        id: res.data.id,
+        name: payload.name,
+        category: payload.category,
+        stock: payload.initial_stock,
+        threshold: payload.threshold,
+        zone: payload.zone,
+        status: payload.initial_stock <= payload.threshold ? 'Low Stock' : 'In Stock',
+        price_per_unit: payload.price_per_unit
+      };
+      
+      setInventory(prev => [...prev, addedItem]);
+      setLogs(prev => [{
+        _id: Date.now().toString(),
+        item_name: addedItem.name,
+        action: 'CREATE_ITEM',
+        quantity_change: addedItem.stock,
+        timestamp: new Date().toISOString()
+      }, ...prev].slice(0, 50));
+
       toast.success('New SKU added successfully!');
       setShowAddModal(false);
       setNewItem({
-        name: '',
-        category: 'Fertilizer',
-        zone: 'Zone A',
-        initial_stock: 0,
-        threshold: 10,
-        price_per_unit: 0.0
+        name: '', category: 'Fertilizer', zone: 'Zone A',
+        initial_stock: 0, threshold: 10, price_per_unit: 0.0
       });
-      fetchInventory();
-      fetchLogs();
     } catch (err) {
       toast.error('Failed to add new item');
     }
   };
 
-  const handleDeleteItem = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to permanently delete ${name}?`)) return;
+  const handleDeleteClick = (id, name) => {
+    
+
+    setConfirmModal({ isOpen: true, id, name });
+  };
+
+  const performDelete = async () => {
+    
+
     try {
-      await api.delete(`/inventory/item/${id}`);
-      toast.success(`${name} deleted successfully!`);
-      fetchInventory();
-      fetchLogs();
+      await api.delete(`/inventory/item/${confirmModal.id}`);
+      
+      setInventory(prev => prev.filter(i => i.id !== confirmModal.id));
+      setLogs(prev => [{
+        _id: Date.now().toString(),
+        item_name: confirmModal.name,
+        action: 'DELETE_ITEM',
+        quantity_change: 0,
+        timestamp: new Date().toISOString()
+      }, ...prev].slice(0, 50));
+
+      toast.success(`${confirmModal.name} deleted successfully!`);
     } catch (err) {
       toast.error('Failed to delete item');
     }
   };
 
   const openAdjustModal = (item) => {
+    
+
     setSelectedItem(item);
     setAdjustAmount(0);
     setAdjustAction('add');
@@ -133,25 +196,21 @@ const Inventory = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
-            <Store className="w-10 h-10 text-indigo-600 bg-indigo-100 p-2 rounded-xl" />
-            Warehouse Supply Chain
-          </h1>
-          <p className="text-gray-500 mt-2 font-medium">Manage stock locations, tracking, and multi-zone fulfillment</p>
+            <Store className="w-10 h-10 text-indigo-600 bg-indigo-100 p-2 rounded-xl" />{t("warehouse_supply_cha")}</h1>
+          <p className="text-gray-500 mt-2 font-medium">{t("manage_stock_locatio")}</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
           className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center gap-2"
         >
-          <Plus size={20} />
-          Add New SKU
-        </button>
+          <Plus size={20} />{t("add_new_sku")}</button>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
           <div className="flex justify-between items-center mb-4">
             <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600"><Package /></div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total SKUs</span>
+            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t("total_skus")}</span>
           </div>
           <h3 className="text-3xl font-black text-gray-900">{inventory.length}</h3>
         </div>
@@ -159,7 +218,7 @@ const Inventory = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
           <div className="flex justify-between items-center mb-4">
             <div className="bg-emerald-100 p-3 rounded-xl text-emerald-600"><IndianRupee /></div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Value</span>
+            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t("total_value")}</span>
           </div>
           <h3 className="text-3xl font-black text-gray-900">₹{totalValue.toLocaleString()}</h3>
         </div>
@@ -167,7 +226,7 @@ const Inventory = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
           <div className="flex justify-between items-center mb-4">
             <div className="bg-blue-100 p-3 rounded-xl text-blue-600"><CheckCircle /></div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Healthy Stock</span>
+            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t("healthy_stock")}</span>
           </div>
           <h3 className="text-3xl font-black text-gray-900">{inventory.length - lowStockCount}</h3>
         </div>
@@ -175,7 +234,7 @@ const Inventory = () => {
         <div className="bg-rose-50/50 p-6 rounded-2xl border border-rose-200 shadow-sm hover:shadow-md transition">
           <div className="flex justify-between items-center mb-4">
             <div className="bg-rose-100 p-3 rounded-xl text-rose-600"><AlertTriangle /></div>
-            <span className="text-sm font-bold text-rose-500 uppercase tracking-wider">Needs Restock</span>
+            <span className="text-sm font-bold text-rose-500 uppercase tracking-wider">{t("needs_restock")}</span>
           </div>
           <h3 className="text-3xl font-black text-rose-900">{lowStockCount}</h3>
         </div>
@@ -184,19 +243,18 @@ const Inventory = () => {
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50/50">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="text-gray-400" /> Multi-Zone Stock Levels
-          </h2>
+            <TrendingUp className="text-gray-400" />{t("multi_zone_stock_lev")}</h2>
         </div>
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
-                <th className="px-6 py-4">SKU / Product Name</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Warehouse Zone</th>
-                <th className="px-6 py-4">Stock Level</th>
-                <th className="px-6 py-4">Unit Value</th>
-                <th className="px-6 py-4 text-center">Actions</th>
+                <th className="px-6 py-4">{t("sku___product_name")}</th>
+                <th className="px-6 py-4">{t("category")}</th>
+                <th className="px-6 py-4">{t("warehouse_zone")}</th>
+                <th className="px-6 py-4">{t("stock_level")}</th>
+                <th className="px-6 py-4">{t("unit_value")}</th>
+                <th className="px-6 py-4 text-center">{t("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -204,8 +262,8 @@ const Inventory = () => {
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                     <Package size={48} className="mx-auto text-gray-300 mb-4" />
-                    <p className="font-bold">No inventory found.</p>
-                    <p className="text-sm">Add a new SKU to start tracking your warehouse.</p>
+                    <p className="font-bold">{t("no_inventory_found_")}</p>
+                    <p className="text-sm">{t("add_a_new_sku_to_sta")}</p>
                   </td>
                 </tr>
               ) : (
@@ -232,13 +290,12 @@ const Inventory = () => {
                           isLow ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                         }`}>
                           {isLow && <AlertTriangle size={14} className="text-rose-500"/>}
-                          {item.stock} Units
-                        </span>
-                        <div className="text-xs text-gray-400 mt-1">Min: {item.threshold}</div>
+                          {item.stock}{t("units")}</span>
+                        <div className="text-xs text-gray-400 mt-1">{t("min_")}{item.threshold}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-bold text-gray-900">₹{item.price_per_unit?.toLocaleString()}</div>
-                        <div className="text-xs text-gray-500">Total: ₹{((item.price_per_unit || 0) * item.stock).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500">{t("total___")}{((item.price_per_unit || 0) * item.stock).toLocaleString()}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition">
@@ -250,7 +307,7 @@ const Inventory = () => {
                             <Edit2 size={16} />
                           </button>
                           <button 
-                            onClick={() => handleDeleteItem(item.id, item.name)}
+                            onClick={() => handleDeleteClick(item.id, item.name)}
                             className="bg-white border border-gray-200 text-gray-700 p-2 rounded-xl hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition shadow-sm"
                             title="Delete Item"
                           >
@@ -259,7 +316,7 @@ const Inventory = () => {
                         </div>
                       </td>
                     </tr>
-                  )
+                  );
                 })
               )}
             </tbody>
@@ -271,8 +328,7 @@ const Inventory = () => {
       <div className="mt-8 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Activity className="text-indigo-600" /> Automated Activity Logs
-          </h2>
+            <Activity className="text-indigo-600" />{t("automated_activity_l")}</h2>
         </div>
         <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
           {loadingLogs ? (
@@ -282,7 +338,7 @@ const Inventory = () => {
           ) : logs.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               <Clock size={40} className="mx-auto text-gray-300 mb-4" />
-              <p className="font-bold">No activity recorded yet.</p>
+              <p className="font-bold">{t("no_activity_recorded")}</p>
             </div>
           ) : (
             <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
@@ -326,9 +382,9 @@ const Inventory = () => {
                       </div>
                       <h4 className="font-bold text-gray-900 mt-2">{log.item_name}</h4>
                       <div className="text-sm text-gray-500 mt-2 flex items-center gap-4">
-                        <div>Delta: <strong className={log.quantity_change > 0 ? 'text-emerald-600' : 'text-rose-600'}>{sign}{log.quantity_change}</strong></div>
+                        <div>{t("delta_")}<strong className={log.quantity_change > 0 ? 'text-emerald-600' : 'text-rose-600'}>{sign}{log.quantity_change}</strong></div>
                         <div className="w-px h-4 bg-gray-300"></div>
-                        <div>Stock: <strong>{log.previous_stock} → {log.new_stock}</strong></div>
+                        <div>{t("stock_")}<strong>{log.previous_stock} → {log.new_stock}</strong></div>
                       </div>
                     </div>
                   </div>
@@ -349,27 +405,23 @@ const Inventory = () => {
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
             >
-              <h2 className="text-2xl font-black text-gray-900 mb-2">Adjust Inventory</h2>
-              <p className="text-gray-500 font-medium mb-6">Updating stock for <strong className="text-gray-900">{selectedItem.name}</strong></p>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">{t("adjust_inventory")}</h2>
+              <p className="text-gray-500 font-medium mb-6">{t("updating_stock_for")}<strong className="text-gray-900">{selectedItem.name}</strong></p>
               
               <div className="bg-gray-50 rounded-xl p-4 mb-6 flex justify-between items-center border border-gray-100">
-                <span className="text-sm font-bold text-gray-500">Current Stock</span>
+                <span className="text-sm font-bold text-gray-500">{t("current_stock")}</span>
                 <span className="text-2xl font-black text-indigo-700">{selectedItem.stock}</span>
               </div>
 
               <form onSubmit={handleAdjustStock} className="space-y-4">
                 <div className="flex gap-4">
                   <label className={`flex-1 p-3 rounded-xl border-2 font-bold text-center cursor-pointer transition ${adjustAction === 'add' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-500'}`}>
-                    <input type="radio" name="action" className="hidden" checked={adjustAction === 'add'} onChange={() => setAdjustAction('add')} />
-                    + Add Stock
-                  </label>
+                    <input type="radio" name="action" className="hidden" checked={adjustAction === 'add'} onChange={() => setAdjustAction('add')} />{t("__add_stock")}</label>
                   <label className={`flex-1 p-3 rounded-xl border-2 font-bold text-center cursor-pointer transition ${adjustAction === 'remove' ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-500'}`}>
-                    <input type="radio" name="action" className="hidden" checked={adjustAction === 'remove'} onChange={() => setAdjustAction('remove')} />
-                    - Remove Stock
-                  </label>
+                    <input type="radio" name="action" className="hidden" checked={adjustAction === 'remove'} onChange={() => setAdjustAction('remove')} />{t("__remove_stock")}</label>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Quantity to {adjustAction}</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t("quantity_to")}{adjustAction}</label>
                   <input 
                     type="number" 
                     required
@@ -385,15 +437,11 @@ const Inventory = () => {
                     type="button" 
                     onClick={() => setShowAdjustModal(false)}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition"
-                  >
-                    Cancel
-                  </button>
+                  >{t("cancel")}</button>
                   <button 
                     type="submit" 
                     className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md"
-                  >
-                    Confirm Update
-                  </button>
+                  >{t("confirm_update")}</button>
                 </div>
               </form>
             </motion.div>
@@ -412,13 +460,12 @@ const Inventory = () => {
               className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
               <h2 className="text-2xl font-black text-gray-900 mb-2 flex items-center gap-2">
-                <Package className="text-indigo-600" /> Add New SKU
-              </h2>
-              <p className="text-gray-500 font-medium mb-6">Create a new item in your warehouse inventory.</p>
+                <Package className="text-indigo-600" />{t("add_new_sku")}</h2>
+              <p className="text-gray-500 font-medium mb-6">{t("create_a_new_item_in")}</p>
               
               <form onSubmit={handleAddItem} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Product Name</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("product_name")}</label>
                   <input 
                     type="text" required
                     className="w-full bg-white border border-gray-200 rounded-xl p-3 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -430,37 +477,37 @@ const Inventory = () => {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Category</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("category")}</label>
                     <select 
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
                       value={newItem.category}
                       onChange={(e) => setNewItem({...newItem, category: e.target.value})}
                     >
-                      <option>Fertilizer</option>
-                      <option>Pesticide</option>
-                      <option>Seeds</option>
-                      <option>Equipment</option>
-                      <option>Other</option>
+                      <option>{t("fertilizer")}</option>
+                      <option>{t("pesticide")}</option>
+                      <option>{t("seeds")}</option>
+                      <option>{t("equipment")}</option>
+                      <option>{t("other")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Warehouse Zone</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("warehouse_zone")}</label>
                     <select 
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
                       value={newItem.zone}
                       onChange={(e) => setNewItem({...newItem, zone: e.target.value})}
                     >
-                      <option>Zone A</option>
-                      <option>Zone B</option>
-                      <option>Zone C</option>
-                      <option>Zone D</option>
+                      <option>{t("zone_a")}</option>
+                      <option>{t("zone_b")}</option>
+                      <option>{t("zone_c")}</option>
+                      <option>{t("zone_d")}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Initial Stock</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("initial_stock")}</label>
                     <input 
                       type="number" required min="0"
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -469,7 +516,7 @@ const Inventory = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Low Stock Threshold</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("low_stock_threshold")}</label>
                     <input 
                       type="number" required min="0"
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -480,7 +527,7 @@ const Inventory = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Price Per Unit (₹)</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t("price_per_unit____")}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3.5 text-gray-500 font-bold">₹</span>
                     <input 
@@ -498,16 +545,12 @@ const Inventory = () => {
                     type="button" 
                     onClick={() => setShowAddModal(false)}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition"
-                  >
-                    Cancel
-                  </button>
+                  >{t("cancel")}</button>
                   <button 
                     type="submit" 
                     className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md flex justify-center items-center gap-2"
                   >
-                    <Plus size={18} />
-                    Add SKU
-                  </button>
+                    <Plus size={18} />{t("add_sku")}</button>
                 </div>
               </form>
             </motion.div>

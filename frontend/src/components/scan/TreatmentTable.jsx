@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { FlaskConical } from 'lucide-react';
 
 const TreatmentTable = ({ result, ui }) => {
+  const { t } = useTranslation();
   if (!result || !result.recommended_treatment?.pesticides) return null;
 
   return (
@@ -27,14 +29,37 @@ const TreatmentTable = ({ result, ui }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {result.recommended_treatment.pesticides.map((pesticide, idx) => (
-              <tr key={idx} className="hover:bg-gray-50/50 transition">
-                <td className="px-6 py-4 font-bold text-gray-900">{pesticide}</td>
-                <td className="px-6 py-4">{ui.sprayMethod}</td>
-                <td className="px-6 py-4">{ui.dosage}</td>
-                <td className="px-6 py-4 text-amber-600 font-bold">{ui.waitingDays}</td>
+            {result.recommended_treatment.pesticides && result.recommended_treatment.pesticides.length > 0 ? (
+              result.recommended_treatment.pesticides.map((pesticide, idx) => (
+                <tr key={idx} className="hover:bg-gray-50/50 transition">
+                  <td className="px-6 py-4 font-bold text-gray-900">
+                    {typeof pesticide === 'object' ? (
+                      <div>
+                        <span>{pesticide.name}</span>
+                        {pesticide.category && (
+                          <span className="block text-xs font-semibold text-indigo-600 mt-0.5">{pesticide.category}</span>
+                        )}
+                      </div>
+                    ) : pesticide}
+                  </td>
+                  <td className="px-6 py-4">
+                    {typeof pesticide === 'object' ? pesticide.method || ui.sprayMethod : ui.sprayMethod}
+                  </td>
+                  <td className="px-6 py-4">
+                    {typeof pesticide === 'object' ? pesticide.dosage || ui.dosage : ui.dosage}
+                  </td>
+                  <td className="px-6 py-4 text-amber-600 font-bold">
+                    {typeof pesticide === 'object' ? pesticide.waiting_period || ui.waitingDays : ui.waitingDays}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic">
+                  No chemical treatments required for this diagnosis.
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
