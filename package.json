@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Unified startup script for Crop Disease Detection ecosystem",
   "scripts": {
-    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && rm -rf dist && cp -r frontend/dist dist",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && source env/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
     "dev": "npx -y concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
