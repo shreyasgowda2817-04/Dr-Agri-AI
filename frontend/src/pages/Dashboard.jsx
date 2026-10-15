@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { 
   CloudRain, Activity, IndianRupee, Target, Bell, ArrowRight,
   Zap, Calendar, Package, TrendingUp, AlertTriangle, ShieldCheck, HeartPulse, CheckCircle,
-  Sun, CloudSun, Cloud, CloudLightning, Snowflake, CloudFog, CloudDrizzle, Droplets, Wind, MapPin, Thermometer, Umbrella
+  Sun, CloudSun, Cloud, CloudLightning, Snowflake, CloudFog, CloudDrizzle, Droplets, Wind, MapPin, Thermometer, Umbrella, CloudOff
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SmartFarmAlerts from '../components/dashboard/SmartFarmAlerts';
