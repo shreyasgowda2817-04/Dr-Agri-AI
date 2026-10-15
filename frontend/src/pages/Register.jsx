@@ -56,7 +56,8 @@ const Register = () => {
     setError('');
     setIsLoading(true);
     try {
-      await api.post('/auth/register', formData);
+      const { confirmPassword, ...payload } = formData;
+      await api.post('/auth/register', payload);
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
