@@ -13,7 +13,7 @@ const NotificationListener = () => {
 
     // Connect to WebSocket server for notifications
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const defaultWsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    const defaultWsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : 'dr-agri-ai.onrender.com';
     const wsHost = import.meta.env.VITE_WS_HOST || defaultWsHost;
     const wsUrl = `${wsProtocol}//${wsHost}/api/v1/notifications/ws/${user.id}?token=${token}`;
     ws.current = new WebSocket(wsUrl);

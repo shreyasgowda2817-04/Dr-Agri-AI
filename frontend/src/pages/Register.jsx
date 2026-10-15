@@ -200,7 +200,7 @@ const Register = () => {
 
       <div className="mt-6">
         <a 
-          href={`${import.meta.env.VITE_API_URL || '/api/v1'}/oauth/login/google`}
+          href={`${import.meta.env.VITE_API_URL || 'https://dr-agri-ai.onrender.com/api/v1'}/oauth/login/google`}
           className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition font-bold text-gray-700 shadow-sm"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">

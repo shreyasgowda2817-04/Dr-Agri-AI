@@ -610,7 +610,7 @@ const Marketplace = () => {
                       <Link to={`/tracking/${order.order_ref}`} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20">
                         <Navigation size={18} />{t("track_package")}</Link>
                       <button 
-                        onClick={() => window.open(`${import.meta.env.VITE_API_URL || '/api/v1'}/invoices/download/${order.order_ref}`, '_blank')}
+                        onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'https://dr-agri-ai.onrender.com/api/v1'}/invoices/download/${order.order_ref}`, '_blank')}
                         className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm"
                       >
                         <FileText size={18} />{t("download_invoice")}</button>
