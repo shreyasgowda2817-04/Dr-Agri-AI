@@ -391,19 +391,12 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
         "room_name": room_name,
         "call_type": req.call_type
     }
-    notified = False
-    for exp_key in [req.expert_id, req.expert_id.replace("-", "")]:
+    # Notify ONLY the specific chosen expert via WebSocket
+    target_expert_id = str(req.expert_id)
+    target_safe_id = target_expert_id.replace("-", "")
+    for exp_key in [target_expert_id, target_safe_id]:
         if exp_key in expert_connections:
             for ws in list(expert_connections[exp_key]):
-                try:
-                    await ws.send_json(call_msg)
-                    notified = True
-                except Exception:
-                    pass
-    if not notified:
-        # Broadcast to all on-duty active experts
-        for exp_key, ws_list in list(expert_connections.items()):
-            for ws in list(ws_list):
                 try:
                     await ws.send_json(call_msg)
                 except Exception:
@@ -425,15 +418,14 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
         {"$set": {"status": "missed"}}
     )
     
-    # Match calls specifically targeted to this expert, or unassigned/general queue calls for available experts
+    # Match calls specifically targeted to this expert, or unassigned/general queue calls
     cursor = db["active_calls"].find({
         "$or": [
             {"expert_id": expert_id},
             {"expert_id": safe_expert_id},
             {"expert_id": "exp-1"},
             {"expert_id": "expert-agronomist-default"},
-            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}},
-            {"status": "calling"}
+            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}
         ],
         "status": "calling",
         "created_at": {"$gte": cutoff}

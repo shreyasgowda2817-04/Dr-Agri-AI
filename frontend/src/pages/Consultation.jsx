@@ -128,7 +128,7 @@ const Consultation = () => {
     }
   };
 
-  const [isCalling, setIsCalling] = useState(false);
+  const [callingState, setCallingState] = useState({ expertId: null, type: null });
 
   const startCall = async (expertId, type = 'video', expertName = '') => {
     if (!user) {
@@ -136,7 +136,7 @@ const Consultation = () => {
       return;
     }
 
-    setIsCalling(true);
+    setCallingState({ expertId, type });
     setSelectedExpertName(expertName || 'Dr. Agri AI Specialist');
     // Call the backend to initiate a real session!
     try {
@@ -158,7 +158,7 @@ const Consultation = () => {
       console.error(err);
       toast.error("Failed to connect to expert");
     } finally {
-      setIsCalling(false);
+      setCallingState({ expertId: null, type: null });
     }
   };
 
@@ -320,62 +320,81 @@ const Consultation = () => {
         <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {experts.map((expert) => (
-            <motion.div 
-              key={expert.id}
-              whileHover={{ y: -5 }}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="relative">
-                  <img src={expert.img} alt={expert.name} className="w-16 h-16 rounded-full object-cover border-2 border-emerald-100" />
-                  <span
-                    className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
-                      expert.is_available ? 'bg-emerald-500' : 'bg-gray-400'
+          {experts.map((expert) => {
+            const isThisCalling = callingState.expertId === expert.id;
+            const isAudioCalling = isThisCalling && callingState.type === 'audio';
+            const isVideoCalling = isThisCalling && callingState.type === 'video';
+            const isAnyCalling = Boolean(callingState.expertId);
+
+            return (
+              <motion.div 
+                key={expert.id}
+                whileHover={{ y: -5 }}
+                className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="relative">
+                    <img src={expert.img} alt={expert.name} className="w-16 h-16 rounded-full object-cover border-2 border-emerald-100" />
+                    <span
+                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                        expert.is_available ? 'bg-emerald-500' : 'bg-gray-400'
+                      }`}
+                      title={expert.is_available ? 'Online' : 'Offline'}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg text-gray-900">{expert.name}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        expert.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {expert.is_available ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-green-600 font-medium">{expert.title}</p>
+                    <div className="flex items-center gap-1 mt-1 text-yellow-500">
+                      <Star size={14} className="fill-current" />
+                      <span className="text-xs font-bold text-gray-600 ml-1">{expert.rating.toFixed(1)} / 5.0</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-gray-500 mb-6 space-y-2">
+                  <p><strong>{t("speaks_")}</strong> {expert.lang}</p>
+                  <p><strong>{t("consultation_fee_")}</strong> <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">{t("free")}</span></p>
+                </div>
+                
+                <div className="mt-auto grid grid-cols-2 gap-3">
+                  <button 
+                    disabled={isAnyCalling}
+                    onClick={() => startCall(expert.id, 'audio', expert.name)}
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm hover:shadow-md ${
+                      isAudioCalling
+                        ? 'bg-emerald-600 text-white animate-pulse'
+                        : isAnyCalling
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
-                    title={expert.is_available ? 'Online' : 'Offline'}
-                  />
+                  >
+                    <PhoneCall size={18} /> {isAudioCalling ? 'Connecting...' : 'Voice'}
+                  </button>
+                  <button 
+                    disabled={isAnyCalling}
+                    onClick={() => startCall(expert.id, 'video', expert.name)}
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md hover:shadow-lg ${
+                      isVideoCalling
+                        ? 'bg-blue-600 text-white animate-pulse'
+                        : isAnyCalling
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    <Video size={18} /> {isVideoCalling ? 'Connecting...' : 'Video'}
+                  </button>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg text-gray-900">{expert.name}</h3>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      expert.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {expert.is_available ? 'Online' : 'Offline'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-green-600 font-medium">{expert.title}</p>
-                  <div className="flex items-center gap-1 mt-1 text-yellow-500">
-                    <Star size={14} className="fill-current" />
-                    <span className="text-xs font-bold text-gray-600 ml-1">{expert.rating.toFixed(1)} / 5.0</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-500 mb-6 space-y-2">
-                <p><strong>{t("speaks_")}</strong> {expert.lang}</p>
-                <p><strong>{t("consultation_fee_")}</strong> <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">{t("free")}</span></p>
-              </div>
-              
-              <div className="mt-auto grid grid-cols-2 gap-3">
-                <button 
-                  disabled={isCalling}
-                  onClick={() => startCall(expert.id, 'audio', expert.name)}
-                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm hover:shadow-md ${isCalling ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  <PhoneCall size={18} /> {isCalling ? 'Connecting...' : 'Voice'}
-                </button>
-                <button 
-                  disabled={isCalling}
-                  onClick={() => startCall(expert.id, 'video', expert.name)}
-                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md hover:shadow-lg ${isCalling ? 'bg-blue-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                >
-                  <Video size={18} /> {isCalling ? 'Connecting...' : 'Video'}
-                </button>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
