@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import React, { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, Loader2, Camera, Image as ImageIcon, Menu } from 'lucide-react';
+import { UploadCloud, Loader2, Camera, Image as ImageIcon, Menu, RefreshCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import jsPDF from 'jspdf';
@@ -30,18 +30,130 @@ const Scan = () => {
   const [originalResult, setOriginalResult] = useState(null); // Keep English source for clean translations
   const [uiStrings, setUiStrings] = useState(defaultUIStrings);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const nativeCameraInputRef = useRef(null);
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
-    
-
     const selected = e.target.files[0];
     if (selected) {
       setFile(selected);
       setPreview(URL.createObjectURL(selected));
       setResult(null);
+      stopCamera();
     }
   };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile && droppedFile.type.startsWith('image/')) {
+      setFile(droppedFile);
+      setPreview(URL.createObjectURL(droppedFile));
+      setResult(null);
+      stopCamera();
+    } else if (droppedFile) {
+      toast.error('Please drop a valid image file (PNG, JPG, SVG, WebP).');
+    }
+  };
+
+  const startCamera = async (mode = facingMode) => {
+    try {
+      setCameraLoading(true);
+      stopCamera();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (nativeCameraInputRef.current) {
+          nativeCameraInputRef.current.click();
+        }
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } catch (err) {
+      console.warn("Live camera stream unavailable, opening native mobile camera fallback", err);
+      if (nativeCameraInputRef.current) {
+        nativeCameraInputRef.current.click();
+      } else {
+        toast.error("Camera access denied or unavailable.");
+      }
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const flipCamera = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const capturedFile = new File([blob], `crop-scan-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        setFile(capturedFile);
+        setPreview(URL.createObjectURL(blob));
+        setResult(null);
+        stopCamera();
+        toast.success("Photo captured successfully!");
+      }
+    }, 'image/jpeg', 0.95);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const handleScan = async () => {
     
@@ -286,7 +398,8 @@ const Scan = () => {
           className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4"
         >
           <div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">{t("crop_disease")}<span className="text-indigo-600 dark:text-indigo-400">{t("intelligence")}</span>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+              {t("crop_disease")} <span className="text-indigo-600 dark:text-indigo-400">{t("intelligence")}</span>
             </h1>
             <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-2xl font-medium">{t("upload_an_image_of_a")}</p>
           </div>
@@ -301,33 +414,117 @@ const Scan = () => {
           {/* LEFT COLUMN: Upload & Preview */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Camera size={16} />{t("input_media")}</h3>
-              
-              <label 
-                className={`relative flex flex-col items-center justify-center w-full h-80 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
-                  ${preview ? 'border-transparent bg-black' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-indigo-300'}`}
-              >
-                {preview ? (
-                  <>
-                    <img src={preview} alt="Crop" className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                      <span className="bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                        <ImageIcon size={14} />{t("change_image")}</span>
-                    </div>
-                  </>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Camera size={16} />{t("input_media")}
+                </h3>
+                {/* Live Camera Toggle Button */}
+                {!isCameraActive ? (
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    disabled={cameraLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition"
+                  >
+                    <Camera size={14} />
+                    <span>Live Camera</span>
+                  </button>
                 ) : (
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                    <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-indigo-500 group-hover:scale-110 transition-transform">
-                      <UploadCloud size={32} />
-                    </div>
-                    <p className="mb-2 text-sm font-bold text-gray-700">{t("click_to_upload_or_d")}</p>
-                    <p className="text-xs text-gray-500">{t("svg__png__jpg_or_gif")}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition"
+                  >
+                    <X size={14} />
+                    <span>Close</span>
+                  </button>
                 )}
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-              </label>
+              </div>
+
+              {/* Hidden file inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <input
+                ref={nativeCameraInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+              />
+
+              {/* Live Camera Viewfinder OR Dropzone */}
+              {isCameraActive ? (
+                <div className="relative flex flex-col items-center justify-center w-full h-80 rounded-2xl bg-black overflow-hidden shadow-inner">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
+
+                  {/* Top Overlay: Flip camera */}
+                  <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                    <button
+                      type="button"
+                      onClick={flipCamera}
+                      className="p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full text-white transition active:scale-95"
+                      title="Flip Camera"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  </div>
+
+                  {/* Bottom Overlay: Capture button */}
+                  <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-3 z-10">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-full shadow-lg flex items-center gap-2 transition hover:scale-105 active:scale-95"
+                    >
+                      <Camera size={18} />
+                      <span>Capture Photo</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative flex flex-col items-center justify-center w-full h-80 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group
+                    ${isDragging ? 'border-indigo-500 bg-indigo-50/70 scale-[0.99]' : ''}
+                    ${preview ? 'border-transparent bg-black' : !isDragging ? 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-indigo-300' : ''}`}
+                >
+                  {preview ? (
+                    <>
+                      <img src={preview} alt="Crop" className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                        <span className="bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                          <ImageIcon size={14} />{t("change_image")}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                      <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-indigo-500 group-hover:scale-110 transition-transform">
+                        <UploadCloud size={32} />
+                      </div>
+                      <p className="mb-2 text-sm font-bold text-gray-700">{t("click_to_upload_or_d")}</p>
+                      <p className="text-xs text-gray-500">{t("svg__png__jpg_or_gif")}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={handleScan}
@@ -348,7 +545,7 @@ const Scan = () => {
             {!result && !loading && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100">
                 <p className="text-indigo-800 text-sm font-medium leading-relaxed">
-                  <strong>{t("system_status__ready")}</strong>{t("our_computer_vision_")}</p>
+                  <strong>{t("system_status__ready")} </strong>{t("our_computer_vision_")}</p>
               </motion.div>
             )}
           </div>
