@@ -37,6 +37,18 @@ class MongoUser(BaseModel):
     appearance: str = "system"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class MongoRefreshToken(BaseModel):
+    id: str = Field(default_factory=generate_uuid)
+    user_id: str
+    token_hash: str
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    revoked: bool = False
+    rotated_at: Optional[datetime] = None
+    revoked_at: Optional[datetime] = None
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+
 class MongoOrganization(BaseModel):
     id: str = Field(default_factory=generate_uuid)
     name: str

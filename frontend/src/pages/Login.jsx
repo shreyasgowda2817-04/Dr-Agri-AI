@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useState } from 'react';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginSuccess, fetchUser } from '../store/slices/authSlice';
+import { loginSuccess } from '../store/slices/authSlice';
 import api from '../services/api';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -18,30 +18,31 @@ const Login = () => {
   const [error, setError] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    const from = location.state?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
   }
 
   const handleSubmit = async (e) => {
-    
-
     e.preventDefault();
+    if (isLoading) return; // Prevent duplicate concurrent requests
     setError('');
     setIsLoading(true);
     try {
       const formData = new URLSearchParams();
-      formData.append('username', email);
+      formData.append('username', email.trim());
       formData.append('password', password);
       
       const response = await api.post('/auth/login', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       
-      dispatch(loginSuccess(response.data.access_token));
-      dispatch(fetchUser());
-      navigate('/dashboard');
+      dispatch(loginSuccess(response.data));
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     } catch (err) {
       const errorMsg = err.response?.data?.detail;
       setError(typeof errorMsg === 'string' ? errorMsg : 'Login failed. Please check your Email/Password.');

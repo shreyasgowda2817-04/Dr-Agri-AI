@@ -1,7 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../store/slices/authSlice';
 import { 
   Leaf, 
   Home, 
@@ -37,11 +37,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  const handleLogout = (e) => {
-    
-
+  const handleLogout = async (e) => {
     e.preventDefault();
-    dispatch(logout());
+    await dispatch(logoutUser());
     navigate('/login');
   };
 

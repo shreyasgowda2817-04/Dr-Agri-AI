@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 import certifi
 
@@ -11,8 +11,8 @@ os.environ["SSL_CERT_FILE"] = certifi.where()
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from app.core.config import settings
 from app.core.database import get_mongo_db
-from app.models.mongo_models import MongoUser
-from app.core.security import create_access_token
+from app.models.mongo_models import MongoUser, MongoRefreshToken
+from app.core.security import create_access_token, create_refresh_token, hash_token
 
 router = APIRouter()
 
@@ -84,10 +84,33 @@ async def auth_google_callback(request: Request, db = Depends(get_mongo_db)):
         await db["users"].insert_one(new_user.model_dump())
         user_dict = new_user.model_dump()
         
-    # Generate our app's JWT token
+    # Generate our app's JWT tokens
     user_id = user_dict.get("id") or str(user_dict.get("_id"))
     access_token = create_access_token(subject=str(user_id))
+    refresh_token = create_refresh_token(subject=str(user_id))
+    
+    # Store refresh token in MongoDB
+    refresh_record = MongoRefreshToken(
+        user_id=str(user_id),
+        token_hash=hash_token(refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None
+    )
+    await db["refresh_tokens"].insert_one(refresh_record.model_dump())
     
     default_front = f"https://{os.environ['VERCEL_URL']}" if os.environ.get("VERCEL_URL") else getattr(settings, "FRONTEND_URL", "http://localhost:5173")
     frontend_url = request.session.get("oauth_frontend_url") or default_front
-    return RedirectResponse(url=f"{frontend_url}/dashboard?token={access_token}")
+    
+    redirect_resp = RedirectResponse(url=f"{frontend_url}/dashboard?token={access_token}")
+    redirect_resp.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        path="/"
+    )
+    return redirect_resp

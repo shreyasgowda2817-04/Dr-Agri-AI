@@ -27,7 +27,8 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
-        if user_id is None:
+        token_type: str = payload.get("type", "access")
+        if user_id is None or token_type != "access":
             raise credentials_exception
     except (jwt.PyJWTError, ValidationError):
         raise credentials_exception
@@ -60,9 +61,20 @@ async def get_optional_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
-        if not user_id: return None
+        token_type = payload.get("type", "access")
+        if not user_id or token_type != "access":
+            return None
         user_dict = await db["users"].find_one({"id": user_id})
-        if user_dict: return UserResponse.model_validate(user_dict)
+        if not user_dict:
+            try:
+                from bson import ObjectId
+                user_dict = await db["users"].find_one({"_id": ObjectId(user_id)})
+            except:
+                pass
+        if user_dict:
+            if "id" not in user_dict:
+                user_dict["id"] = str(user_dict["_id"])
+            return UserResponse.model_validate(user_dict)
     except:
         return None
     return None

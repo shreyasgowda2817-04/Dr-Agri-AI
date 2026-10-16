@@ -1,15 +1,41 @@
 import { useTranslation } from "react-i18next";
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, Navigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Leaf } from 'lucide-react';
 
 const AuthLayout = () => {
   const { t } = useTranslation();
-  
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const location = useLocation();
+
+  // If session is being restored, display spinner instead of flashing login/register
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-900 transition-colors">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-green-200 dark:border-green-800 border-t-green-600 dark:border-t-green-500 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <p className="text-gray-600 dark:text-gray-300 font-semibold text-sm tracking-wide animate-pulse">
+            {t("verifying_session") || "Checking Dr Agri AI Session..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect authenticated farmers away from login & registration pages
+  if (isAuthenticated) {
+    const from = location.state?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-50 text-gray-900 font-sans">
-
       {/* Left side: Branding / Image */}
       <div className="hidden lg:flex w-1/2 bg-green-900 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 opacity-20">
@@ -54,7 +80,6 @@ const AuthLayout = () => {
           <Outlet />
         </div>
       </div>
-
     </div>
   );
 };

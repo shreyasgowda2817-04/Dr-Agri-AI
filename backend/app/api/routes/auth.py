@@ -1,24 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
 from typing import Any, List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import os
+from pydantic import BaseModel, EmailStr
+import jwt
 
 from app.core.database import get_mongo_db
-from app.core.security import get_password_hash, verify_password, create_access_token, ALGORITHM
+from app.core.security import (
+    get_password_hash, 
+    verify_password, 
+    create_access_token, 
+    create_refresh_token, 
+    hash_token, 
+    ALGORITHM
+)
 from app.models.user import UserCreate, UserResponse
-from app.models.mongo_models import MongoUser
+from app.models.mongo_models import MongoUser, MongoRefreshToken
 from app.api.dependencies import get_current_user
 import cloudinary
 import cloudinary.uploader
 from app.core.config import settings
-import os
-from pydantic import BaseModel, EmailStr
-import jwt
-from datetime import timedelta
 from app.services.email import send_reset_password_email
 
 if settings.CLOUDINARY_CLOUD_NAME:
@@ -31,14 +37,37 @@ if settings.CLOUDINARY_CLOUD_NAME:
 
 router = APIRouter()
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def set_refresh_cookie(response: Response, refresh_token: str):
+    """Set secure HttpOnly cookie for refresh token."""
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        path="/"
+    )
+
+def clear_refresh_cookie(response: Response):
+    """Clear refresh token cookie on logout or invalid session."""
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN
+    )
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def register(request: Request, user_in: UserCreate, db = Depends(get_mongo_db)) -> Any:
+async def register(request: Request, response: Response, user_in: UserCreate, db = Depends(get_mongo_db)) -> Any:
     """
-    Register a new user in MongoDB.
+    Register a new user in MongoDB, create persistent session, and return tokens.
     """
     # Check if user with email exists
-    existing_user = await db["users"].find_one({"email": user_in.email})
+    existing_user = await db["users"].find_one({"email": user_in.email.strip()})
     if existing_user:
         raise HTTPException(
             status_code=400,
@@ -47,35 +76,244 @@ async def register(request: Request, user_in: UserCreate, db = Depends(get_mongo
     
     # Create new user
     new_user = MongoUser(
-        name=user_in.name,
-        email=user_in.email,
+        name=user_in.name.strip(),
+        email=user_in.email.strip().lower(),
         role=user_in.role,
         password_hash=get_password_hash(user_in.password),
         created_at=datetime.now(timezone.utc)
     )
     
     await db["users"].insert_one(new_user.model_dump())
-    return UserResponse.model_validate(new_user.model_dump())
+    user_id = str(new_user.id)
+    
+    # Generate persistent session tokens
+    access_token = create_access_token(subject=user_id)
+    refresh_token = create_refresh_token(subject=user_id)
+    
+    # Store refresh token hash in DB
+    refresh_record = MongoRefreshToken(
+        user_id=user_id,
+        token_hash=hash_token(refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None
+    )
+    await db["refresh_tokens"].insert_one(refresh_record.model_dump())
+    
+    set_refresh_cookie(response, refresh_token)
+    user_response = UserResponse.model_validate(new_user.model_dump())
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": user_response,
+        **user_response.model_dump()
+    }
+
+class RefreshTokenPayload(BaseModel):
+    refresh_token: Optional[str] = None
 
 @router.post("/login")
-@limiter.limit("5/minute")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_mongo_db)) -> Any:
+@limiter.limit("10/minute")
+async def login(
+    request: Request,
+    response: Response,
+    db = Depends(get_mongo_db)
+) -> Any:
     """
-    OAuth2 compatible token login.
+    OAuth2 form-data or JSON compatible token login with secure refresh cookie.
     """
-    user_dict = await db["users"].find_one({"email": form_data.username})
+    email = ""
+    password = ""
     
-    if not user_dict or not verify_password(form_data.password, user_dict.get("password_hash") or user_dict.get("hashed_password")):
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            email = (body.get("email") or body.get("username") or "").strip()
+            password = body.get("password") or ""
+        except Exception:
+            pass
+    
+    if not email:
+        try:
+            form = await request.form()
+            email = (form.get("username") or form.get("email") or "").strip()
+            password = form.get("password") or ""
+        except Exception:
+            pass
+            
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password are required."
+        )
+        
+    user_dict = await db["users"].find_one({"email": email})
+    if not user_dict:
+        # Case insensitive email search fallback
+        user_dict = await db["users"].find_one({"email": {"$regex": f"^{email}$", "$options": "i"}})
+        
+    if not user_dict or not verify_password(password, user_dict.get("password_hash") or user_dict.get("hashed_password")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Safely get the user ID, falling back to MongoDB's _id if the UUID 'id' field is missing
+        
     user_id = user_dict.get("id") or str(user_dict.get("_id"))
+    
+    # Generate persistent session tokens
     access_token = create_access_token(subject=str(user_id))
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(subject=str(user_id))
+    
+    # Store refresh token hash in DB
+    refresh_record = MongoRefreshToken(
+        user_id=str(user_id),
+        token_hash=hash_token(refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None
+    )
+    await db["refresh_tokens"].insert_one(refresh_record.model_dump())
+    
+    set_refresh_cookie(response, refresh_token)
+    
+    if "id" not in user_dict:
+        user_dict["id"] = str(user_dict["_id"])
+    user_response = UserResponse.model_validate(user_dict)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": user_response
+    }
+
+@router.post("/refresh")
+async def refresh_session(
+    request: Request,
+    response: Response,
+    payload: Optional[RefreshTokenPayload] = None,
+    db = Depends(get_mongo_db)
+) -> Any:
+    """
+    Restore or refresh authentication session.
+    Checks HttpOnly cookie first, then request body, then X-Refresh-Token header.
+    Rotates refresh token and returns fresh access token + user profile.
+    """
+    token = request.cookies.get("refresh_token")
+    if not token and payload and payload.refresh_token:
+        token = payload.refresh_token
+    if not token:
+        token = request.headers.get("X-Refresh-Token")
+        
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh session found. Please log in."
+        )
+        
+    try:
+        jwt_payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = jwt_payload.get("sub")
+        token_type: str = jwt_payload.get("type")
+        if not user_id or token_type != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type."
+            )
+    except jwt.ExpiredSignatureError:
+        clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please log in again."
+        )
+    except (jwt.PyJWTError, Exception):
+        clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh session."
+        )
+        
+    t_hash = hash_token(token)
+    session_record = await db["refresh_tokens"].find_one({"token_hash": t_hash, "revoked": False})
+    if not session_record:
+        clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked or is invalid."
+        )
+        
+    user_dict = await db["users"].find_one({"id": user_id})
+    if not user_dict:
+        try:
+            from bson import ObjectId
+            user_dict = await db["users"].find_one({"_id": ObjectId(user_id)})
+        except:
+            pass
+            
+    if not user_dict:
+        clear_refresh_cookie(response)
+        raise HTTPException(status_code=401, detail="User account not found.")
+        
+    # Rotate refresh token
+    await db["refresh_tokens"].update_one(
+        {"_id": session_record["_id"]},
+        {"$set": {"revoked": True, "rotated_at": datetime.now(timezone.utc)}}
+    )
+    
+    new_access_token = create_access_token(subject=str(user_id))
+    new_refresh_token = create_refresh_token(subject=str(user_id))
+    
+    new_record = MongoRefreshToken(
+        user_id=str(user_id),
+        token_hash=hash_token(new_refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None
+    )
+    await db["refresh_tokens"].insert_one(new_record.model_dump())
+    
+    set_refresh_cookie(response, new_refresh_token)
+    
+    if "id" not in user_dict:
+        user_dict["id"] = str(user_dict["_id"])
+    user_response = UserResponse.model_validate(user_dict)
+    
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+        "user": user_response
+    }
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    payload: Optional[RefreshTokenPayload] = None,
+    db = Depends(get_mongo_db)
+):
+    """
+    Log out user, revoke refresh session in database, and clear cookies.
+    """
+    token = request.cookies.get("refresh_token")
+    if not token and payload and payload.refresh_token:
+        token = payload.refresh_token
+    if not token:
+        token = request.headers.get("X-Refresh-Token")
+        
+    if token:
+        t_hash = hash_token(token)
+        await db["refresh_tokens"].update_many(
+            {"token_hash": t_hash},
+            {"$set": {"revoked": True, "revoked_at": datetime.now(timezone.utc)}}
+        )
+        
+    clear_refresh_cookie(response)
+    return {"message": "Logged out successfully"}
 
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: UserResponse = Depends(get_current_user)) -> Any:

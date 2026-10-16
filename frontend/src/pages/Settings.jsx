@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-import { fetchUser, logout } from '../store/slices/authSlice';
+import { fetchUser, logoutUser } from '../store/slices/authSlice';
 
 const LANGUAGES = [
   { value: 'en-US', label: '🇺🇸 English' },
@@ -403,7 +403,7 @@ const Settings = () => {
     try {
       await api.delete('/auth/account');
       toast.success("Account deleted.");
-      dispatch(logout());
+      await dispatch(logoutUser());
       window.location.href = '/login';
     } catch (err) {
       toast.error('Failed to delete account.');

@@ -7,7 +7,11 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = "your-super-secret-key-change-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520 # 8 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # 30 minutes short-lived access token
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30 # 30 days persistent refresh token
+    COOKIE_SECURE: bool = True
+    COOKIE_SAMESITE: str = "none"
+    COOKIE_DOMAIN: str | None = None
     
     # Database
     MONGODB_URL: str = "mongodb://localhost:27017"

@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUser, logout, setTokenFromOAuth } from './store/slices/authSlice';
+import { restoreSession, logout, setTokenFromOAuth } from './store/slices/authSlice';
 import 'react-toastify/dist/ReactToastify.css';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AuthLayout from './components/layout/AuthLayout';
@@ -71,7 +71,7 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    dispatch(fetchUser());
+    dispatch(restoreSession());
 
 
 

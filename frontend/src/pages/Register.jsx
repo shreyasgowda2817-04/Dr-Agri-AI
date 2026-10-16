@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from '../store/slices/authSlice';
 import api from '../services/api';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
@@ -19,17 +21,14 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    
-
     setFormData({...formData, [e.target.name]: e.target.value});
   };
 
   const getPasswordStrength = (pass) => {
-    
-
     if (pass.length === 0) return 0;
     let strength = 0;
     if (pass.length >= 8) strength += 25;
@@ -42,9 +41,8 @@ const Register = () => {
   const strength = getPasswordStrength(formData.password);
 
   const handleSubmit = async (e) => {
-    
-
     e.preventDefault();
+    if (isLoading) return; // Prevent duplicate concurrent requests
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -57,8 +55,13 @@ const Register = () => {
     setIsLoading(true);
     try {
       const { confirmPassword, ...payload } = formData;
-      await api.post('/auth/register', payload);
-      navigate('/login');
+      const response = await api.post('/auth/register', payload);
+      if (response.data?.access_token) {
+        dispatch(loginSuccess(response.data));
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/login');
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {

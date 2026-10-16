@@ -4,10 +4,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://dr-agri-ai.onrender.com
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true, // Send and receive HttpOnly cookies across origins
   timeout: 60000, // 60 seconds timeout for ML Inference + Image Uploads
 });
 
-// Add a request interceptor to attach the JWT token
+// Add a request interceptor to attach the JWT access token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -19,20 +20,82 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle 401 token expiration globally
+// Token refresh mutex and queue to handle concurrent 401s without race conditions
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Add a response interceptor to handle token refresh and 401 gracefully
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("Token expired or unauthorized. Logging out...");
-      localStorage.removeItem('token');
-      // Dispatch a custom event so the React app can pick it up and redirect
-      window.dispatchEvent(new Event('auth:unauthorized'));
-      // Fallback redirect if event listener isn't caught
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If no response or already retried, reject immediately
+    if (!error.response || !originalRequest) {
+      return Promise.reject(error);
+    }
+
+    // Do NOT intercept auth endpoints to avoid loops
+    const authEndpoints = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+    const isAuthEndpoint = authEndpoints.some((ep) => originalRequest.url?.includes(ep));
+
+    if (error.response.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      if (isRefreshing) {
+        // Queue pending request while refresh is in flight
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((newToken) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Call refresh endpoint with withCredentials to send HttpOnly cookie
+        const refreshResponse = await axios.post(
+          `${API_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        const { access_token } = refreshResponse.data;
+        if (access_token) {
+          localStorage.setItem('token', access_token);
+          api.defaults.headers.common.Authorization = `Bearer ${access_token}`;
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+
+          processQueue(null, access_token);
+          return api(originalRequest);
+        } else {
+          throw new Error('No access token received from refresh session');
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        console.warn('Session expired or revoked. Logging out...');
+        localStorage.removeItem('token');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );
