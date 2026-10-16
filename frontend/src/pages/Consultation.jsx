@@ -16,6 +16,7 @@ const Consultation = () => {
   const [callType, setCallType] = useState('video');
   const [roomName, setRoomName] = useState('');
   const [selectedExpertName, setSelectedExpertName] = useState('');
+  const [resumableCall, setResumableCall] = useState(null);
   const [experts, setExperts] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [supplies, setSupplies] = useState([]);
@@ -61,10 +62,43 @@ const Consultation = () => {
       }
     };
 
+    const checkActiveSession = async () => {
+      // 1. Check local session storage for quick restore (< 90 seconds)
+      try {
+        const cached = sessionStorage.getItem('dragri_active_call');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const ageSeconds = (Date.now() - (parsed.timestamp || 0)) / 1000;
+          if (ageSeconds < 90) {
+            setResumableCall({
+              id: parsed.id,
+              room_name: parsed.roomName,
+              call_type: parsed.callType || 'video',
+              peer_name: parsed.expertName || 'Dr. Agri AI Specialist',
+              status: 'calling'
+            });
+          } else {
+            sessionStorage.removeItem('dragri_active_call');
+          }
+        }
+      } catch (e) {}
+
+      // 2. Query backend for active / ongoing call
+      try {
+        const res = await api.get('/consultations/my-active-call');
+        if (res.data?.has_active_call && res.data.call) {
+          setResumableCall(res.data.call);
+        } else if (!sessionStorage.getItem('dragri_active_call')) {
+          setResumableCall(null);
+        }
+      } catch (e) {}
+    };
+
     fetchExperts();
     if (user) {
       fetchPrescriptions();
       fetchSupplies();
+      checkActiveSession();
     }
   }, [user]);
 
@@ -111,6 +145,14 @@ const Consultation = () => {
       setReviewCallId(res.data.call_id);
       setCallType(type);
       setActiveCall(true);
+      setResumableCall(null);
+      sessionStorage.setItem('dragri_active_call', JSON.stringify({
+        id: res.data.call_id,
+        roomName: res.data.room_name,
+        callType: type,
+        expertName: expertName || 'Dr. Agri AI Specialist',
+        timestamp: Date.now()
+      }));
       toast.success(`Ringing ${expertName || 'the specialist'} for a ${type} call...`);
     } catch (err) {
       console.error(err);
@@ -118,6 +160,28 @@ const Consultation = () => {
     } finally {
       setIsCalling(false);
     }
+  };
+
+  const resumeCall = () => {
+    if (!resumableCall) return;
+    setRoomName(resumableCall.room_name);
+    setCallType(resumableCall.call_type || 'video');
+    setReviewCallId(resumableCall.id);
+    setSelectedExpertName(resumableCall.peer_name || 'Dr. Agri AI Specialist');
+    setActiveCall(true);
+    setResumableCall(null);
+    toast.info(`Reconnecting to consultation with ${resumableCall.peer_name || 'Specialist'}...`);
+  };
+
+  const dismissAndEndResumableCall = async () => {
+    if (resumableCall?.id) {
+      try {
+        await api.post(`/consultations/call/${resumableCall.id}/cancel`);
+      } catch (e) {}
+    }
+    sessionStorage.removeItem('dragri_active_call');
+    setResumableCall(null);
+    toast.info("Consultation session ended.");
   };
 
   const submitReview = async () => {
@@ -145,6 +209,7 @@ const Consultation = () => {
   };
 
   const handleEndCall = async () => {
+    sessionStorage.removeItem('dragri_active_call');
     if (reviewCallId) {
       try {
         await api.post(`/consultations/call/${reviewCallId}/cancel`);
@@ -160,7 +225,12 @@ const Consultation = () => {
   useEffect(() => {
     const handleUnload = () => {
       if (reviewCallId && activeCall) {
-        navigator.sendBeacon?.(`/api/v1/consultations/call/${reviewCallId}/cancel`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://dr-agri-ai.onrender.com/api/v1';
+        const parsedBase = (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))
+          ? apiUrl.replace(/\/+$/, '')
+          : window.location.origin + '/api/v1';
+        const beaconUrl = `${parsedBase}/consultations/call/${reviewCallId}/leave-beacon`;
+        navigator.sendBeacon?.(beaconUrl);
       }
     };
     window.addEventListener('beforeunload', handleUnload);
@@ -188,6 +258,43 @@ const Consultation = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-4 sm:py-8 px-3 sm:px-6 w-full min-w-0 overflow-hidden">
+      {/* ─── Active Call Reconnection & Grace Period Banner ─── */}
+      {resumableCall && (
+        <div className="mb-6 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 border-2 border-emerald-400/40 rounded-2xl p-4 sm:p-5 text-white shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0 shadow-inner">
+              <PhoneCall className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <h4 className="text-sm sm:text-base font-bold text-white">Ongoing Consultation in Progress</h4>
+                <span className="text-[10px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full capitalize">
+                  {resumableCall.status === 'accepted' ? 'Live Call' : 'Calling'}
+                </span>
+              </div>
+              <p className="text-xs text-emerald-100/80 mt-0.5">
+                You have an active session with <span className="font-semibold text-white">{resumableCall.peer_name}</span>. Would you like to resume?
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              onClick={dismissAndEndResumableCall}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition"
+            >
+              End Call
+            </button>
+            <button
+              onClick={resumeCall}
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-400 hover:bg-emerald-300 text-gray-950 transition shadow-lg flex items-center gap-2 font-mono"
+            >
+              <Video size={14} /> Resume Call
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-r from-blue-900 to-indigo-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 text-white mb-8 sm:mb-12 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="max-w-2xl text-center md:text-left">
           <h1 className="text-2xl sm:text-4xl font-extrabold mb-3 sm:mb-4 flex items-center justify-center md:justify-start gap-2 sm:gap-3">

@@ -25,6 +25,8 @@ from app.api.routes.consultations import (
     update_expert_availability,
     get_farmer_crops,
     debug_call_rooms,
+    get_my_active_call,
+    leave_call_beacon,
 )
 
 # Mock Mongo Collection
@@ -41,15 +43,28 @@ class MockCollection:
             inserted_id = doc["_id"]
         return Res()
 
-    async def find_one(self, query):
-        for d in self.docs:
+    async def find_one(self, query, sort=None, *args, **kwargs):
+        def matches(d, q):
+            for k, v in q.items():
+                if isinstance(v, dict) and "$in" in v:
+                    if d.get(k) not in v["$in"]:
+                        return False
+                elif d.get(k) != v:
+                    return False
+            return True
+
+        docs = list(self.docs)
+        if sort:
+            for key, direction in reversed(sort):
+                docs.sort(key=lambda d: str(d.get(key) or ''), reverse=(direction == -1))
+
+        for d in docs:
             if "$or" in query:
                 for branch in query["$or"]:
-                    if branch and all(d.get(k) == v for k, v in branch.items()):
+                    if branch and matches(d, branch):
                         return dict(d)
             else:
-                match = all(d.get(k) == v for k, v in query.items())
-                if match:
+                if matches(d, query):
                     return dict(d)
         return None
 
@@ -57,7 +72,11 @@ class MockCollection:
         for d in self.docs:
             match = True
             for k, v in filter_q.items():
-                if d.get(k) != v:
+                if isinstance(v, dict) and "$in" in v:
+                    if d.get(k) not in v["$in"]:
+                        match = False
+                        break
+                elif d.get(k) != v:
                     match = False
                     break
             if match:
@@ -244,8 +263,17 @@ async def test_consultation_lifecycle():
     rooms_status = await debug_call_rooms()
     assert "active_rooms" in rooms_status
 
-    # 12. Test call cancellation
+    # 12. Test call cancellation and resumption
     new_call = await initiate_call(CallRequest(expert_id=expert_id, call_type="video"), current_user=farmer, db=db)
+    # Check active call is detectable by both farmer and expert
+    farmer_active = await get_my_active_call(current_user=farmer, db=db)
+    assert farmer_active["has_active_call"] is True
+    assert farmer_active["call"]["id"] == new_call["call_id"]
+
+    # Test unload beacon
+    beacon_res = await leave_call_beacon(new_call["call_id"], db=db)
+    assert beacon_res["message"] == "Beacon recorded"
+
     cancel_res = await cancel_call(new_call["call_id"], current_user=farmer, db=db)
     assert cancel_res["message"] == "Call cancelled successfully"
     cancelled_doc = await db["active_calls"].find_one({"_id": ObjectId(new_call["call_id"])})

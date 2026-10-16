@@ -453,16 +453,77 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
         })
     return result
 
+@router.get("/my-active-call")
+async def get_my_active_call(current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
+    """Checks if the logged-in user (farmer or expert) has an ongoing or recently interrupted call that can be resumed."""
+    uid = str(current_user.id)
+    safe_uid = uid.replace("-", "")
+    now = datetime.now(timezone.utc)
+    # Recent cutoff for active sessions
+    cutoff = now - timedelta(minutes=30)
+    
+    query = {
+        "$or": [
+            {"farmer_id": {"$in": [uid, safe_uid]}},
+            {"expert_id": {"$in": [uid, safe_uid]}},
+            {"accepted_by": {"$in": [uid, safe_uid]}}
+        ],
+        "status": {"$in": ["calling", "accepted"]},
+        "created_at": {"$gte": cutoff}
+    }
+    
+    call = await db["active_calls"].find_one(query, sort=[("created_at", -1)])
+    if not call:
+        return {"has_active_call": False, "call": None}
+        
+    call_created = call.get("created_at", now)
+    # If unaccepted calling session is older than 95 seconds, retire it
+    if call.get("status") == "calling" and (now - call_created).total_seconds() > 95:
+        await db["active_calls"].update_one({"_id": call["_id"]}, {"$set": {"status": "missed"}})
+        return {"has_active_call": False, "call": None}
+
+    # Fetch peer details
+    is_caller = str(call.get("farmer_id")) in [uid, safe_uid]
+    peer_name = "Dr. Agri AI Specialist"
+    if is_caller:
+        exp_id = call.get("accepted_by") or call.get("expert_id")
+        if exp_id:
+            try:
+                exp_query = {"$or": [{"id": exp_id}, {"id": str(exp_id).replace("-", "")}]}
+                if ObjectId.is_valid(str(exp_id)):
+                    exp_query["$or"].append({"_id": ObjectId(str(exp_id))})
+                exp_user = await db["users"].find_one(exp_query)
+                if exp_user:
+                    peer_name = exp_user.get("name") or "Dr. Agri AI Specialist"
+            except Exception:
+                pass
+    else:
+        peer_name = call.get("farmer_name", "Farmer")
+
+    return {
+        "has_active_call": True,
+        "call": {
+            "id": str(call["_id"]),
+            "room_name": call.get("room_name"),
+            "call_type": call.get("call_type", "video"),
+            "status": call.get("status"),
+            "is_caller": is_caller,
+            "peer_name": peer_name,
+            "created_at": call.get("created_at"),
+            "accepted_at": call.get("accepted_at")
+        }
+    }
+
 @router.post("/call/{call_id}/cancel")
 async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
-    """Farmer or expert cancels a calling session before it connects."""
+    """Farmer or expert cancels/terminates a call session."""
     try:
         obj_id = ObjectId(call_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid call ID format")
 
     call = await db["active_calls"].find_one_and_update(
-        {"_id": obj_id, "status": "calling"},
+        {"_id": obj_id, "status": {"$in": ["calling", "accepted"]}},
         {"$set": {
             "status": "cancelled",
             "cancelled_by": str(current_user.id),
@@ -474,11 +535,39 @@ async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_cur
             try:
                 await ws.send_json({
                     "type": "call_cancelled",
-                    "reason": "Call was cancelled by the caller."
+                    "reason": "Call was ended by the participant."
                 })
             except Exception:
                 pass
     return {"message": "Call cancelled successfully"}
+
+@router.post("/call/{call_id}/leave-beacon")
+async def leave_call_beacon(call_id: str, db = Depends(get_mongo_db)):
+    """Browser unload beacon handler. Gracefully updates leave status without needing JWT auth."""
+    try:
+        obj_id = ObjectId(call_id)
+        call = await db["active_calls"].find_one({"_id": obj_id})
+        if call and call.get("status") in ["calling", "accepted"]:
+            if call.get("status") == "calling":
+                await db["active_calls"].update_one(
+                    {"_id": obj_id},
+                    {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc)}}
+                )
+            else:
+                await db["active_calls"].update_one(
+                    {"_id": obj_id},
+                    {"$set": {"last_left_at": datetime.now(timezone.utc)}}
+                )
+            room_name = call.get("room_name")
+            if room_name and room_name in call_room_connections:
+                for ws in list(call_room_connections[room_name]):
+                    try:
+                        await ws.send_json({"type": "peer_temporarily_left"})
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return {"message": "Beacon recorded"}
 
 @router.post("/call/{call_id}/accept")
 async def accept_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):

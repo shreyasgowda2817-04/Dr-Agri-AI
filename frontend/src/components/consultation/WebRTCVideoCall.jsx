@@ -417,10 +417,10 @@ export const WebRTCVideoCall = ({
             setCallState('ended');
             toast.info('Consultation completed.');
             if (onEndCall) onEndCall();
-          } else if (data.type === 'peer_left') {
-            toast.info(`${remoteDisplayName} has disconnected.`);
+          } else if (data.type === 'peer_left' || data.type === 'peer_temporarily_left') {
+            toast.info(`${remoteDisplayName} disconnected or refreshed. Waiting for reconnection...`, { autoClose: 4000 });
             setCallState('reconnecting');
-            setStatusMessage(`${remoteDisplayName} disconnected.`);
+            setStatusMessage(`${remoteDisplayName} disconnected or refreshed. Reconnecting within 60s grace period...`);
           }
         } catch (err) {
           console.warn('Signaling message handling error:', err);

@@ -198,8 +198,42 @@ const ExpertDashboard = () => {
     if (user) {
       fetchOverviewData();
       fetchAppointments();
+      const checkActiveConsultation = async () => {
+        try {
+          const res = await api.get('/consultations/my-active-call');
+          if (res.data?.has_active_call && res.data.call?.status === 'accepted') {
+            const c = res.data.call;
+            setRoomName(c.room_name);
+            setActiveCallId(c.id);
+            setActiveCall(c.call_type || 'video');
+            setActiveTab('live');
+            if (c.farmer_id) {
+              setFarmerId(c.farmer_id);
+              fetchTriageData(c.farmer_id);
+              fetchFarmerCrops(c.farmer_id);
+            }
+          }
+        } catch (e) {}
+      };
+      checkActiveConsultation();
     }
   }, [user, fetchOverviewData, fetchAppointments]);
+
+  // Unload beacon for expert
+  useEffect(() => {
+    const handleUnload = () => {
+      if (activeCallId && activeCall) {
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://dr-agri-ai.onrender.com/api/v1';
+        const parsedBase = (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))
+          ? apiUrl.replace(/\/+$/, '')
+          : window.location.origin + '/api/v1';
+        const beaconUrl = `${parsedBase}/consultations/call/${activeCallId}/leave-beacon`;
+        navigator.sendBeacon?.(beaconUrl);
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [activeCallId, activeCall]);
 
   // Tab switch fetcher
   useEffect(() => {
