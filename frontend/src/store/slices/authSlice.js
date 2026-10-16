@@ -71,15 +71,25 @@ export const logoutUser = createAsyncThunk(
       console.warn("Server logout request error:", err);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       dispatch(authSlice.actions.logout());
     }
   }
 );
 
+const savedToken = localStorage.getItem('token');
+const savedUserStr = localStorage.getItem('user');
+let savedUser = null;
+try {
+  savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+} catch (e) {
+  savedUser = null;
+}
+
 const initialState = {
-  user: null,
-  isAuthenticated: false,
-  loading: true, // Remains true while initial session verification is active
+  user: savedUser,
+  isAuthenticated: !!savedToken,
+  loading: false, // Non-blocking: background session restoration
   error: null,
 };
 
@@ -96,6 +106,7 @@ const authSlice = createSlice({
         localStorage.setItem('token', payload.access_token);
         if (payload.user) {
           state.user = payload.user;
+          localStorage.setItem('user', JSON.stringify(payload.user));
         }
         state.isAuthenticated = true;
       }
@@ -104,6 +115,7 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       state.user = null;
       state.isAuthenticated = false;
       state.loading = false;
@@ -117,12 +129,15 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // restoreSession
+      // restoreSession runs seamlessly in background without locking screen
       .addCase(restoreSession.pending, (state) => {
-        state.loading = true;
+        // Keep non-blocking
       })
       .addCase(restoreSession.fulfilled, (state, action) => {
         state.user = action.payload.user;
+        if (action.payload.user) {
+          localStorage.setItem('user', JSON.stringify(action.payload.user));
+        }
         state.isAuthenticated = true;
         state.loading = false;
         state.error = null;
@@ -131,10 +146,15 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.loading = false;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       })
       // fetchUser
       .addCase(fetchUser.fulfilled, (state, action) => {
         state.user = action.payload;
+        if (action.payload) {
+          localStorage.setItem('user', JSON.stringify(action.payload));
+        }
         state.isAuthenticated = true;
         state.loading = false;
       })
