@@ -47,6 +47,17 @@ async def get_current_user(
     # Ensure id field is set for the response model
     if not user_dict.get("id"):
         user_dict["id"] = str(user_dict.get("_id", user_id))
+
+    if "role" in user_dict and isinstance(user_dict["role"], str):
+        role_str = user_dict["role"].strip().upper()
+        if role_str in ["EXPERT", "AGRONOMY_EXPERT", "AGRONOMIST", "SPECIALIST"]:
+            user_dict["role"] = UserRole.AGRONOMY_EXPERT.value
+        elif role_str in ["ADMIN", "ADMINISTRATOR"]:
+            user_dict["role"] = UserRole.ADMIN.value
+        elif role_str in ["SUPER_ADMIN", "SUPERADMIN"]:
+            user_dict["role"] = UserRole.SUPER_ADMIN.value
+        elif role_str in ["FARMER", "USER"]:
+            user_dict["role"] = UserRole.FARMER.value
         
     return UserResponse.model_validate(user_dict)
 
@@ -74,6 +85,16 @@ async def get_optional_current_user(
         if user_dict:
             if "id" not in user_dict:
                 user_dict["id"] = str(user_dict["_id"])
+            if "role" in user_dict and isinstance(user_dict["role"], str):
+                role_str = user_dict["role"].strip().upper()
+                if role_str in ["EXPERT", "AGRONOMY_EXPERT", "AGRONOMIST", "SPECIALIST"]:
+                    user_dict["role"] = UserRole.AGRONOMY_EXPERT.value
+                elif role_str in ["ADMIN", "ADMINISTRATOR"]:
+                    user_dict["role"] = UserRole.ADMIN.value
+                elif role_str in ["SUPER_ADMIN", "SUPERADMIN"]:
+                    user_dict["role"] = UserRole.SUPER_ADMIN.value
+                elif role_str in ["FARMER", "USER"]:
+                    user_dict["role"] = UserRole.FARMER.value
             return UserResponse.model_validate(user_dict)
     except:
         return None
@@ -81,10 +102,23 @@ async def get_optional_current_user(
 
 def RequireRole(allowed_roles: List[UserRole]):
     async def role_checker(current_user: UserResponse = Depends(get_current_user)):
-        if current_user.role not in allowed_roles:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated"
+            )
+        user_role_str = str(current_user.role.value if hasattr(current_user.role, "value") else current_user.role).upper()
+        allowed_values = [str(r.value if hasattr(r, "value") else r).upper() for r in allowed_roles]
+
+        is_allowed = user_role_str in allowed_values
+        if not is_allowed and UserRole.AGRONOMY_EXPERT.value in allowed_values:
+            if user_role_str in ["ADMIN", "SUPER_ADMIN", "EXPERT", "AGRONOMIST", "AGRONOMY_EXPERT"]:
+                is_allowed = True
+
+        if not is_allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation not permitted. Requires one of: {[r.value for r in allowed_roles]}"
+                detail=f"Operation not permitted. Requires one of: {allowed_values}"
             )
         return current_user
     return role_checker

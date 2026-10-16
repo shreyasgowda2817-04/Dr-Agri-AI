@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime, timezone
 from app.models.mongo_models import UserRole
@@ -7,6 +7,27 @@ class UserBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=50)
     email: EmailStr
     role: UserRole = Field(default=UserRole.FARMER)
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def normalize_role(cls, v):
+        if isinstance(v, UserRole):
+            return v
+        if isinstance(v, str):
+            v_upper = v.strip().upper()
+            if v_upper in ["EXPERT", "AGRONOMY_EXPERT", "AGRONOMIST", "SPECIALIST"]:
+                return UserRole.AGRONOMY_EXPERT
+            if v_upper in ["ADMIN", "ADMINISTRATOR"]:
+                return UserRole.ADMIN
+            if v_upper in ["SUPER_ADMIN", "SUPERADMIN"]:
+                return UserRole.SUPER_ADMIN
+            if v_upper in ["FARMER", "USER"]:
+                return UserRole.FARMER
+            try:
+                return UserRole(v_upper)
+            except ValueError:
+                return UserRole.FARMER
+        return v
     phone: Optional[str] = None
     location: Optional[str] = None
     is_onboarded: bool = False

@@ -433,7 +433,8 @@ const ExpertDashboard = () => {
 
   // Real-time Push WebSocket with Auto-Reconnect for instant incoming consultation alerts
   useEffect(() => {
-    if (!user?.id) return;
+    const expertUserId = user?.id || user?._id || user?.sub;
+    if (!expertUserId) return;
     let ws = null;
     let pingInterval = null;
     let reconnectTimeout = null;
@@ -441,7 +442,7 @@ const ExpertDashboard = () => {
 
     const connectExpertWs = () => {
       try {
-        const path = `/api/v1/consultations/ws/experts/${user.id}`;
+        const path = `/api/v1/consultations/ws/experts/${expertUserId}`;
         let wsUrl;
         if (import.meta.env.VITE_WS_HOST) {
           const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -463,7 +464,7 @@ const ExpertDashboard = () => {
 
         ws.onopen = () => {
           if (!isMounted) return;
-          console.log(`Expert WebSocket connected for user ${user.id}`);
+          console.log(`Expert WebSocket connected for user ${expertUserId}`);
           if (pingInterval) clearInterval(pingInterval);
           pingInterval = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -518,7 +519,7 @@ const ExpertDashboard = () => {
         try { ws.close(); } catch (e) {}
       }
     };
-  }, [user?.id, registerIncomingCall, dismissIncomingCall]);
+  }, [user?.id, user?._id, registerIncomingCall, dismissIncomingCall, fetchAppointments, fetchOverviewData]);
 
   // Wait time counter
   const [waitTimeStr, setWaitTimeStr] = useState('0:00');
@@ -535,40 +536,48 @@ const ExpertDashboard = () => {
 
   // Accept Consultation
   const acceptCall = async (callIdToAccept = null) => {
-    const callToAccept = callIdToAccept ? appointments.find(a => a.id === callIdToAccept) || incomingCall : incomingCall;
-    if (!callToAccept) return;
+    const targetId = callIdToAccept || incomingCall?.id;
+    if (!targetId) return;
+
+    const callToAccept = (callIdToAccept ? appointments.find(a => String(a.id) === String(callIdToAccept)) : null) || incomingCall || { id: targetId };
 
     try {
-      const res = await api.post(`/consultations/call/${callToAccept.id}/accept`);
+      const res = await api.post(`/consultations/call/${targetId}/accept`);
       const activeRoom = res.data?.room_name || callToAccept.room || callToAccept.room_name;
       const activeFarmerId = res.data?.farmer_id || callToAccept.farmerId || callToAccept.farmer_id;
       const activeCallType = res.data?.call_type || callToAccept.callType || callToAccept.call_type || 'video';
 
       setRoomName(activeRoom);
       setFarmerId(activeFarmerId);
-      setActiveCallId(callToAccept.id);
+      setActiveCallId(targetId);
       setActiveCall(activeCallType);
-      dismissIncomingCall(callToAccept.id, null, true);
+      dismissIncomingCall(targetId, null, true);
       setActiveTab('live');
       toast.success("Consultation connected! Opening live room.");
-      fetchTriageData(activeFarmerId);
-      fetchFarmerCrops(activeFarmerId);
+      if (activeFarmerId) {
+        fetchTriageData(activeFarmerId);
+        fetchFarmerCrops(activeFarmerId);
+      }
       fetchAppointments();
       fetchOverviewData();
     } catch (err) {
+      console.error("Error accepting call:", err);
       const activeRoom = err.response?.data?.room_name || callToAccept.room || callToAccept.room_name;
       const activeFarmerId = err.response?.data?.farmer_id || callToAccept.farmerId || callToAccept.farmer_id;
       if (activeRoom) {
         setRoomName(activeRoom);
         setFarmerId(activeFarmerId);
-        setActiveCallId(callToAccept.id);
+        setActiveCallId(targetId);
         setActiveCall(callToAccept.callType || callToAccept.call_type || 'video');
-        dismissIncomingCall(callToAccept.id, null, true);
+        dismissIncomingCall(targetId, null, true);
         setActiveTab('live');
-        fetchTriageData(activeFarmerId);
-        fetchFarmerCrops(activeFarmerId);
+        if (activeFarmerId) {
+          fetchTriageData(activeFarmerId);
+          fetchFarmerCrops(activeFarmerId);
+        }
       } else {
-        toast.error("Failed to connect to consultation room.");
+        const errorMsg = err.response?.data?.detail || "Failed to connect to consultation room.";
+        toast.error(errorMsg);
       }
     }
   };
@@ -584,8 +593,8 @@ const ExpertDashboard = () => {
       fetchAppointments();
       fetchOverviewData();
     } catch (err) {
-      console.error(err);
       dismissIncomingCall(targetId);
+      fetchAppointments();
     }
   };
 

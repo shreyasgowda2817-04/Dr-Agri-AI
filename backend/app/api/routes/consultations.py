@@ -20,22 +20,24 @@ call_room_connections: Dict[str, List[WebSocket]] = {}
 
 @router.websocket("/ws/experts/{expert_id}")
 async def expert_call_signaling(websocket: WebSocket, expert_id: str):
-    print(f"DEBUG: WebSocket connection attempt for expert {expert_id}")
     await websocket.accept()
-    print(f"DEBUG: WebSocket connected for expert {expert_id}")
-    if expert_id not in expert_connections:
-        expert_connections[expert_id] = []
-    expert_connections[expert_id].append(websocket)
-    print(f"DEBUG: Active connections for {expert_id}: {len(expert_connections[expert_id])}")
+    safe_id = expert_id.replace("-", "")
+    all_keys = {expert_id, safe_id, "all", "general", "exp-1"}
+    for k in all_keys:
+        if k not in expert_connections:
+            expert_connections[k] = []
+        if websocket not in expert_connections[k]:
+            expert_connections[k].append(websocket)
     try:
         while True:
             # Keep connection alive
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print(f"DEBUG: WebSocket disconnected for expert {expert_id}")
-        expert_connections[expert_id].remove(websocket)
-        if not expert_connections[expert_id]:
-            del expert_connections[expert_id]
+        for k in all_keys:
+            if k in expert_connections and websocket in expert_connections[k]:
+                expert_connections[k].remove(websocket)
+                if not expert_connections[k]:
+                    del expert_connections[k]
 
 @router.websocket("/ws/call/{room_name}")
 async def call_room_signaling(
@@ -166,7 +168,9 @@ class ExpertOverviewResponse(BaseModel):
 @router.get("/experts", response_model=List[ExpertResponse])
 async def get_experts(db = Depends(get_mongo_db)):
     """Returns a list of all users with AGRONOMY_EXPERT role."""
-    experts = await db["users"].find({"role": UserRole.AGRONOMY_EXPERT.value}).to_list(length=100)
+    experts = await db["users"].find({
+        "role": {"$in": [UserRole.AGRONOMY_EXPERT.value, "AGRONOMY_EXPERT", "agronomy_expert", "expert", "EXPERT"]}
+    }).to_list(length=100)
     
     expert_list = []
     for e in experts:
@@ -443,8 +447,8 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
                     except Exception:
                         pass
 
-    # If general default expert exp-1 was dialed, also broadcast to any connected active experts
-    if req.expert_id in ["exp-1", "default", "general", "all", ""]:
+    # If general default expert exp-1 was dialed or no specific expert was reached, also broadcast to any connected active experts
+    if req.expert_id in ["exp-1", "default", "general", "all", ""] or not notified_sockets:
         for exp_key, ws_list in list(expert_connections.items()):
             for ws in list(ws_list):
                 if ws not in notified_sockets:
@@ -523,6 +527,9 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
         or_conds.append({"expert_aliases": k})
     or_conds.append({"expert_id": {"$in": exp_list}})
     or_conds.append({"expert_aliases": {"$in": exp_list}})
+    # Open incoming queue calls for on-duty experts
+    or_conds.append({"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}})
+    or_conds.append({"status": "calling"})
 
     # Match calls specifically targeted to this expert, or unassigned/general queue calls
     cursor = db["active_calls"].find({
@@ -714,13 +721,13 @@ async def leave_call_beacon(call_id: str, db = Depends(get_mongo_db)):
 @router.post("/call/{call_id}/accept")
 async def accept_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert accepts the call. Uses atomic findOneAndUpdate to claim the consultation."""
-    try:
-        obj_id = ObjectId(call_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid call ID format")
+    lookup = {"_id": ObjectId(call_id)} if ObjectId.is_valid(call_id) else {"$or": [{"_id": call_id}, {"id": call_id}]}
 
     result = await db["active_calls"].find_one_and_update(
-        {"_id": obj_id, "status": "calling"},
+        {
+            **lookup,
+            "status": {"$in": ["calling", "scheduled", "requested", "pending"]}
+        },
         {"$set": {
             "status": "accepted",
             "accepted_by": str(current_user.id),
@@ -729,9 +736,19 @@ async def accept_call(call_id: str, current_user: UserResponse = Depends(Require
         }}
     )
     if not result:
-        # Check if already accepted by this user
-        existing = await db["active_calls"].find_one({"_id": obj_id})
-        if existing and existing.get("accepted_by") == str(current_user.id):
+        # Check if already accepted or active
+        existing = await db["active_calls"].find_one(lookup)
+        if existing and existing.get("status") in ["accepted", "in_progress", "calling", "scheduled", "requested", "pending"]:
+            # Ensure it is assigned to this expert and return room details
+            await db["active_calls"].update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "status": "accepted",
+                    "accepted_by": str(current_user.id),
+                    "expert_id": str(current_user.id),
+                    "accepted_at": existing.get("accepted_at") or datetime.now(timezone.utc)
+                }}
+            )
             return {
                 "message": "Call accepted",
                 "id": str(existing["_id"]),
@@ -739,7 +756,7 @@ async def accept_call(call_id: str, current_user: UserResponse = Depends(Require
                 "farmer_id": existing.get("farmer_id"),
                 "call_type": existing.get("call_type", "video")
             }
-        raise HTTPException(status_code=400, detail="Call already accepted or cancelled.")
+        raise HTTPException(status_code=400, detail="Call already completed or cancelled.")
 
     room_name = result.get("room_name")
     if room_name and room_name in call_room_connections:
@@ -766,13 +783,10 @@ async def accept_call(call_id: str, current_user: UserResponse = Depends(Require
 @router.post("/call/{call_id}/decline")
 async def decline_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert declines the call."""
-    try:
-        obj_id = ObjectId(call_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid call ID")
+    lookup = {"_id": ObjectId(call_id)} if ObjectId.is_valid(call_id) else {"$or": [{"_id": call_id}, {"id": call_id}]}
 
     call = await db["active_calls"].find_one_and_update(
-        {"_id": obj_id},
+        lookup,
         {"$set": {
             "status": "declined",
             "declined_by": str(current_user.id),
@@ -793,13 +807,10 @@ async def decline_call(call_id: str, current_user: UserResponse = Depends(Requir
 @router.post("/call/{call_id}/complete")
 async def complete_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert marks consultation as completed."""
-    try:
-        obj_id = ObjectId(call_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid consultation call ID")
+    lookup = {"_id": ObjectId(call_id)} if ObjectId.is_valid(call_id) else {"$or": [{"_id": call_id}, {"id": call_id}]}
 
     result = await db["active_calls"].find_one_and_update(
-        {"_id": obj_id},
+        lookup,
         {"$set": {
             "status": "completed",
             "completed_at": datetime.now(timezone.utc)
@@ -855,14 +866,14 @@ async def get_expert_overview(current_user: UserResponse = Depends(RequireRole([
 
     # Active incoming queue count
     active_queue_count = await db["active_calls"].count_documents({
-        "$or": or_expert_calls,
+        "$or": or_expert_calls + [{"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}, {"status": "calling"}],
         "status": "calling"
     })
 
     # Today's appointments count
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_appointments_count = await db["active_calls"].count_documents({
-        "$or": or_expert_calls,
+        "$or": or_expert_calls + [{"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}, {"status": {"$in": ["calling", "scheduled", "requested", "pending"]}}],
         "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending"]},
         "created_at": {"$gte": today_start}
     })
@@ -926,11 +937,23 @@ async def get_expert_appointments(current_user: UserResponse = Depends(RequireRo
     or_expert_calls.append({"expert_aliases": {"$in": exp_list}})
     or_expert_calls.append({"accepted_by": {"$in": exp_list}})
 
-    cursor = db["active_calls"].find({
-        "$or": or_expert_calls,
-        "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending", "missed"]},
-        "created_at": {"$gte": now - timedelta(days=7)}
-    }).sort("created_at", -1).limit(50)
+    user_role_str = str(current_user.role.value if hasattr(current_user.role, "value") else current_user.role).upper()
+    if user_role_str in ["ADMIN", "SUPER_ADMIN"]:
+        query = {
+            "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending", "missed"]},
+            "created_at": {"$gte": now - timedelta(days=7)}
+        }
+    else:
+        query = {
+            "$or": or_expert_calls + [
+                {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}},
+                {"status": {"$in": ["calling", "requested", "pending"]}}
+            ],
+            "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending", "missed"]},
+            "created_at": {"$gte": now - timedelta(days=7)}
+        }
+
+    cursor = db["active_calls"].find(query).sort("created_at", -1).limit(50)
     calls = await cursor.to_list(length=50)
 
     result = []

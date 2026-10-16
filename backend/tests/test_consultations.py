@@ -327,3 +327,30 @@ async def test_consultation_lifecycle():
     assert found_apt["status"] == "scheduled"
     assert isinstance(found_apt["created_at"], str)
 
+    # 16. Test expert picking/accepting a scheduled consultation appointment
+    apt_accept = await accept_call(book_res["appointment_id"], current_user=expert, db=db)
+    assert apt_accept["message"] == "Call accepted"
+    assert "room_name" in apt_accept
+    assert apt_accept["id"] == book_res["appointment_id"]
+
+    # 17. Test accepting an already accepted call returns room info safely without 400
+    repeat_accept = await accept_call(book_res["appointment_id"], current_user=expert, db=db)
+    assert repeat_accept["message"] == "Call accepted"
+    assert repeat_accept["room_name"] == apt_accept["room_name"]
+
+    # 18. Test open queue call dialed to default exp-1 is received and pickable by on-duty expert
+    exp1_call = await initiate_call(CallRequest(expert_id="exp-1", call_type="video"), current_user=farmer, db=db)
+    on_duty_calls = await get_active_calls(current_user=expert, db=db)
+    assert any(c["id"] == exp1_call["call_id"] for c in on_duty_calls)
+    exp1_accept = await accept_call(exp1_call["call_id"], current_user=expert, db=db)
+    assert exp1_accept["message"] == "Call accepted"
+
+    # 19. Test role normalization validator
+    from app.models.user import UserBase
+    test_user_expert = UserBase(name="Dr. Test", email="test@dragri.ai", role="expert")
+    assert test_user_expert.role == UserRole.AGRONOMY_EXPERT
+    test_user_admin = UserBase(name="Admin Test", email="admin@dragri.ai", role="admin")
+    assert test_user_admin.role == UserRole.ADMIN
+    test_user_farmer = UserBase(name="Farmer Test", email="farmer@dragri.ai", role="farmer")
+    assert test_user_farmer.role == UserRole.FARMER
+

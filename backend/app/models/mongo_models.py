@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -22,6 +22,27 @@ class MongoUser(BaseModel):
     name: str
     email: str
     role: UserRole = UserRole.FARMER
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def normalize_role(cls, v):
+        if isinstance(v, UserRole):
+            return v
+        if isinstance(v, str):
+            v_upper = v.strip().upper()
+            if v_upper in ["EXPERT", "AGRONOMY_EXPERT", "AGRONOMIST", "SPECIALIST"]:
+                return UserRole.AGRONOMY_EXPERT
+            if v_upper in ["ADMIN", "ADMINISTRATOR"]:
+                return UserRole.ADMIN
+            if v_upper in ["SUPER_ADMIN", "SUPERADMIN"]:
+                return UserRole.SUPER_ADMIN
+            if v_upper in ["FARMER", "USER"]:
+                return UserRole.FARMER
+            try:
+                return UserRole(v_upper)
+            except ValueError:
+                return UserRole.FARMER
+        return v
     phone: Optional[str] = None
     location: Optional[str] = None
     password_hash: str
