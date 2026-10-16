@@ -152,6 +152,29 @@ const Consultation = () => {
     }
   };
 
+  const handleEndCall = async () => {
+    if (reviewCallId) {
+      try {
+        await api.post(`/consultations/call/${reviewCallId}/cancel`);
+      } catch (err) {
+        // Ignored if already accepted/completed
+      }
+    }
+    setActiveCall(false);
+    setShowReviewModal(true); // Open review modal after call ends
+    fetchPrescriptions(); // Refresh prescriptions right after call
+  };
+
+  useEffect(() => {
+    const handleUnload = () => {
+      if (reviewCallId && activeCall) {
+        navigator.sendBeacon?.(`/api/v1/consultations/call/${reviewCallId}/cancel`);
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [reviewCallId, activeCall]);
+
   if (activeCall) {
     return (
       <div className="max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 w-full">
@@ -164,11 +187,7 @@ const Consultation = () => {
             role: 'farmer'
           }}
           peerName="Dr. Agri AI Specialist"
-          onEndCall={() => {
-            setActiveCall(false);
-            setShowReviewModal(true); // Open review modal after call ends
-            fetchPrescriptions(); // Refresh prescriptions right after call
-          }}
+          onEndCall={handleEndCall}
           isExpert={false}
         />
       </div>

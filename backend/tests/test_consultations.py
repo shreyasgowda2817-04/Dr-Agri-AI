@@ -9,6 +9,7 @@ from app.api.routes.consultations import (
     ReviewRequest,
     ExpertAvailabilityUpdate,
     initiate_call,
+    cancel_call,
     get_active_calls,
     accept_call,
     decline_call,
@@ -73,6 +74,28 @@ class MockCollection:
                 d[k] = v
         return Res()
 
+    async def update_many(self, filter_q, update_q):
+        class Res:
+            matched_count = 0
+        res = Res()
+        for d in self.docs:
+            match = True
+            for k, v in filter_q.items():
+                if k == "status" and d.get("status") != v:
+                    match = False
+                elif k == "farmer_id" and d.get("farmer_id") != v:
+                    match = False
+                elif k == "created_at" and isinstance(v, dict):
+                    if "$lt" in v and d.get("created_at") and d.get("created_at") >= v["$lt"]:
+                        match = False
+                    if "$gte" in v and d.get("created_at") and d.get("created_at") < v["$gte"]:
+                        match = False
+            if match:
+                for k, v in update_q.get("$set", {}).items():
+                    d[k] = v
+                res.matched_count += 1
+        return res
+
     async def count_documents(self, query):
         count = 0
         for d in self.docs:
@@ -84,15 +107,13 @@ class MockCollection:
         for d in self.docs:
             if "$or" in query:
                 or_matches = any(
-                    all(d.get(k) == v for k, v in branch.items())
+                    all(d.get(k) == v for k, v in branch.items() if not isinstance(v, dict))
                     for branch in query["$or"]
                 )
                 if or_matches:
                     matched.append(dict(d))
             else:
-                match = all(d.get(k) == v for k, v in query.items())
-                if match:
-                    matched.append(dict(d))
+                matched.append(dict(d))
 
         class Cursor:
             def __init__(self, items):
@@ -222,3 +243,10 @@ async def test_consultation_lifecycle():
     # 11. Test WebRTC call room status
     rooms_status = await debug_call_rooms()
     assert "active_rooms" in rooms_status
+
+    # 12. Test call cancellation
+    new_call = await initiate_call(CallRequest(expert_id=expert_id, call_type="video"), current_user=farmer, db=db)
+    cancel_res = await cancel_call(new_call["call_id"], current_user=farmer, db=db)
+    assert cancel_res["message"] == "Call cancelled successfully"
+    cancelled_doc = await db["active_calls"].find_one({"_id": ObjectId(new_call["call_id"])})
+    assert cancelled_doc["status"] == "cancelled"

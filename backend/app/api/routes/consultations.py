@@ -5,7 +5,7 @@ from app.models.user import UserResponse
 from app.core.database import get_mongo_db
 from app.models.mongo_models import UserRole
 from pydantic import BaseModel, Field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
 router = APIRouter()
@@ -352,13 +352,20 @@ async def get_prescriptions(current_user: UserResponse = Depends(get_current_use
 
 @router.post("/call")
 async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
-    """Farmer initiates a call to an expert."""
+    """Farmer initiates a real-time call to an expert."""
     safe_farmer_id = str(current_user.id).replace("-", "").lower()[:6]
     safe_expert_id = str(req.expert_id).replace("-", "").lower()[:6]
     room_name = f"dragriai{safe_expert_id}{safe_farmer_id}{int(datetime.now(timezone.utc).timestamp())}"
     
+    # Cancel any previous lingering 'calling' sessions from this farmer to prevent phantom rings
+    await db["active_calls"].update_many(
+        {"farmer_id": str(current_user.id), "status": "calling"},
+        {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc)}}
+    )
+
     call_doc = {
         "farmer_id": str(current_user.id),
+        "farmer_name": current_user.name or "Farmer",
         "expert_id": req.expert_id,
         "room_name": room_name,
         "call_type": req.call_type,
@@ -366,7 +373,6 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
         "created_at": datetime.now(timezone.utc)
     }
     
-    print(f"DEBUG: Created call for expert_id={req.expert_id} from farmer_id={current_user.id}")
     res = await db["active_calls"].insert_one(call_doc)
     call_id = str(res.inserted_id)
     
@@ -375,6 +381,7 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
         "type": "incoming_call",
         "id": call_id,
         "farmer_id": call_doc["farmer_id"],
+        "farmer_name": call_doc["farmer_name"],
         "room_name": room_name,
         "call_type": req.call_type
     }
@@ -400,9 +407,17 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
 
 @router.get("/active-calls")
 async def get_active_calls(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
-    """Expert polls this to see if any farmer is currently calling them."""
+    """Expert polls this to see if any real farmer is currently calling them."""
     expert_id = str(current_user.id)
     safe_expert_id = expert_id.replace("-", "")
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=90)
+    
+    # Auto-retire any stale or abandoned calls older than 90 seconds
+    await db["active_calls"].update_many(
+        {"status": "calling", "created_at": {"$lt": cutoff}},
+        {"$set": {"status": "missed"}}
+    )
     
     # Match calls specifically targeted to this expert, or unassigned/general queue calls for available experts
     cursor = db["active_calls"].find({
@@ -411,11 +426,11 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
             {"expert_id": safe_expert_id},
             {"expert_id": "exp-1"},
             {"expert_id": "expert-agronomist-default"},
-            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}},
-            {"status": "calling"}
+            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}
         ],
-        "status": "calling"
-    }).sort("created_at", 1)
+        "status": "calling",
+        "created_at": {"$gte": cutoff}
+    }).sort("created_at", -1)
     
     calls = await cursor.to_list(length=10)
     
@@ -424,11 +439,30 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
         result.append({
             "id": str(c["_id"]),
             "farmer_id": c["farmer_id"],
+            "farmer_name": c.get("farmer_name", "Farmer"),
             "room_name": c["room_name"],
             "call_type": c.get("call_type", "video"),
             "created_at": c["created_at"]
         })
     return result
+
+@router.post("/call/{call_id}/cancel")
+async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
+    """Farmer or expert cancels a calling session before it connects."""
+    try:
+        obj_id = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid call ID format")
+
+    await db["active_calls"].update_one(
+        {"_id": obj_id, "status": "calling"},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_by": str(current_user.id),
+            "cancelled_at": datetime.now(timezone.utc)
+        }}
+    )
+    return {"message": "Call cancelled successfully"}
 
 @router.post("/call/{call_id}/accept")
 async def accept_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
@@ -577,21 +611,38 @@ async def get_expert_appointments(current_user: UserResponse = Depends(RequireRo
     """Returns active requests, upcoming consultations, and queued appointments for this expert."""
     expert_id = str(current_user.id)
     safe_expert_id = expert_id.replace("-", "")
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=90)
+
+    # Clean up stale calling records
+    await db["active_calls"].update_many(
+        {"status": "calling", "created_at": {"$lt": cutoff}},
+        {"$set": {"status": "missed"}}
+    )
 
     cursor = db["active_calls"].find({
-        "$or": [
-            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
-            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
-        ],
-        "status": {"$in": ["calling", "accepted", "scheduled"]}
-    }).sort("created_at", 1).limit(30)
+        "$and": [
+            {
+                "$or": [
+                    {"expert_id": expert_id}, {"expert_id": safe_expert_id},
+                    {"expert_id": "exp-1"}, {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
+                ]
+            },
+            {
+                "$or": [
+                    {"status": {"$in": ["accepted", "scheduled"]}},
+                    {"status": "calling", "created_at": {"$gte": cutoff}}
+                ]
+            }
+        ]
+    }).sort("created_at", -1).limit(30)
     calls = await cursor.to_list(length=30)
 
     result = []
     for c in calls:
         farmer_id = c.get("farmer_id")
-        farmer_name = "Farmer"
-        farmer_location = "Agricultural Plot"
+        farmer_name = c.get("farmer_name") or "Farmer"
+        farmer_location = "Farm Plot"
         farmer_phone = ""
         farmer_avatar = None
 

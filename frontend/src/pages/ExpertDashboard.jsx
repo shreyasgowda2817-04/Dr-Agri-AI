@@ -222,24 +222,31 @@ const ExpertDashboard = () => {
         setQueueLength(calls.length);
 
         if (calls.length > 0 && !activeCallRef.current) {
-          const nextCall = calls[0]; // FIFO from backend
+          const nextCall = calls[0]; // Newest real incoming call
 
-          if (!incomingCallRef.current || incomingCallRef.current.id !== nextCall.id) {
-            setIncomingCall({
-              id: nextCall.id,
-              room: nextCall.room_name,
-              farmerId: nextCall.farmer_id,
-              callType: nextCall.call_type || 'video',
-              createdAt: nextCall.created_at
-            });
-            setFarmerId(nextCall.farmer_id);
-            setWaitingSince(new Date(nextCall.created_at));
-            fetchTriageData(nextCall.farmer_id);
-            fetchFarmerCrops(nextCall.farmer_id);
+          // Ensure the call was created in the last 90 seconds to reject stale/zombie rings
+          const callAgeMs = new Date().getTime() - new Date(nextCall.created_at).getTime();
+          if (callAgeMs < 95000) {
+            if (!incomingCallRef.current || incomingCallRef.current.id !== nextCall.id) {
+              setIncomingCall({
+                id: nextCall.id,
+                room: nextCall.room_name,
+                farmerId: nextCall.farmer_id,
+                farmerName: nextCall.farmer_name || 'Farmer',
+                callType: nextCall.call_type || 'video',
+                createdAt: nextCall.created_at
+              });
+              setFarmerId(nextCall.farmer_id);
+              setWaitingSince(new Date(nextCall.created_at));
+              fetchTriageData(nextCall.farmer_id);
+              fetchFarmerCrops(nextCall.farmer_id);
+            }
+          } else {
+            setIncomingCall(null);
           }
         } else if (calls.length === 0 && !activeCallRef.current) {
-          setIncomingCall(null);
-          if (!incomingCallRef.current) {
+          if (incomingCallRef.current) {
+            setIncomingCall(null);
             setTriageData(null);
             setFarmerCrops([]);
           }
@@ -348,11 +355,14 @@ const ExpertDashboard = () => {
     try {
       await api.post(`/consultations/call/${targetId}/decline`);
       setIncomingCall(null);
+      setTriageData(null);
+      setFarmerCrops([]);
       toast.info("Consultation request declined.");
       fetchAppointments();
       fetchOverviewData();
     } catch (err) {
       console.error(err);
+      setIncomingCall(null);
     }
   };
 
