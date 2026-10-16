@@ -16,6 +16,7 @@ import NotificationDropdown from './NotificationDropdown';
 const DashboardLayout = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const isAiAssistant = location.pathname.startsWith('/agronomy');
 
   // Desktop defaults to open, mobile/tablet defaults to closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -144,12 +145,12 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        <main className="flex-grow flex flex-col pt-2 sm:pt-4 min-w-0 w-full max-w-full">
-          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex-grow min-w-0">
+        <main className={`flex-grow flex flex-col min-w-0 w-full max-w-full ${isAiAssistant ? 'p-0 overflow-hidden' : 'pt-2 sm:pt-4'}`}>
+          <div className={`w-full flex-grow min-w-0 ${isAiAssistant ? 'p-0 max-w-full h-full' : 'max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'}`}>
             <Outlet />
           </div>
         </main>
-        <Footer />
+        {!isAiAssistant && <Footer />}
       </div>
     </div>
   );
