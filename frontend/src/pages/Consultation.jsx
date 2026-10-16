@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
-import { JitsiMeeting } from '@jitsi/react-sdk';
+import WebRTCVideoCall from '../components/consultation/WebRTCVideoCall';
 import { motion } from 'framer-motion';
 import { Video, Calendar, Clock, Star, PhoneCall, FileText, ShoppingCart, CheckCircle, Package } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -147,47 +147,21 @@ const Consultation = () => {
 
   if (activeCall) {
     return (
-      <div className="w-full h-[85vh] min-h-[400px] bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border-2 sm:border-4 border-gray-800">
-        <JitsiMeeting
-          domain={import.meta.env.VITE_JITSI_DOMAIN || 'meet.ffmuc.net'}
+      <div className="max-w-6xl mx-auto py-4 sm:py-6 px-3 sm:px-6 w-full">
+        <WebRTCVideoCall
           roomName={roomName}
-          spinner={() => (
-            <div className="flex flex-col items-center justify-center h-full min-h-[350px] w-full bg-gray-900 text-white rounded-2xl p-4 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mb-4"></div>
-              <p className="text-base sm:text-lg font-bold">{t("connecting_to_secure")}</p>
-              <p className="text-xs sm:text-sm text-gray-400 mt-2">{t("initializing_end_to_")}<br/>{t("this_may_take_a_few_")}</p>
-            </div>
-          )}
-          configOverwrite={{
-            prejoinPageEnabled: false,
-            prejoinConfig: { enabled: false },
-            disableDeepLinking: true,
-            enableClosePage: false,
-            startWithAudioMuted: false,
-            startWithVideoMuted: callType === 'audio',
-            disableModeratorIndicator: true,
-            startScreenSharing: false,
-            enableEmailInStats: false
+          callType={callType}
+          currentUser={{
+            id: user?.id,
+            name: user?.name || 'Farmer',
+            role: 'farmer'
           }}
-          interfaceConfigOverwrite={{
-            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_POWERED_BY: false
+          peerName="Dr. Agri AI Specialist"
+          onEndCall={() => {
+            setActiveCall(false);
+            setShowReviewModal(true); // Open review modal after call ends
           }}
-          userInfo={{
-            displayName: user ? user.name : 'Farmer'
-          }}
-          onApiReady={(externalApi) => {
-            externalApi.addListener('videoConferenceLeft', () => {
-              setActiveCall(false);
-              setShowReviewModal(true); // Open review modal after call ends
-            });
-          }}
-          getIFrameRef={(iframeRef) => {
-            iframeRef.style.height = '100%';
-            iframeRef.style.width = '100%';
-          }}
+          isExpert={false}
         />
       </div>
     );

@@ -23,6 +23,7 @@ from app.api.routes.consultations import (
     get_expert_availability,
     update_expert_availability,
     get_farmer_crops,
+    debug_call_rooms,
 )
 
 # Mock Mongo Collection
@@ -217,3 +218,7 @@ async def test_consultation_lifecycle():
     assert len(crops) == 1
     assert crops[0]["crop_name"] == "Tomato"
     assert crops[0]["image_url"] == "https://example.com/leaf.jpg"
+
+    # 11. Test WebRTC call room status
+    rooms_status = await debug_call_rooms()
+    assert "active_rooms" in rooms_status

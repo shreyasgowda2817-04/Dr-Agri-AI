@@ -10,8 +10,13 @@ from bson import ObjectId
 
 router = APIRouter()
 
+import json
+
 # In-memory map of expert_id -> List of WebSockets
 expert_connections: Dict[str, List[WebSocket]] = {}
+
+# In-memory map of room_name -> List of WebSockets for WebRTC Video Calling
+call_room_connections: Dict[str, List[WebSocket]] = {}
 
 @router.websocket("/ws/experts/{expert_id}")
 async def expert_call_signaling(websocket: WebSocket, expert_id: str):
@@ -32,9 +37,64 @@ async def expert_call_signaling(websocket: WebSocket, expert_id: str):
         if not expert_connections[expert_id]:
             del expert_connections[expert_id]
 
+@router.websocket("/ws/call/{room_name}")
+async def call_room_signaling(
+    websocket: WebSocket,
+    room_name: str,
+    client_id: Optional[str] = None,
+    role: Optional[str] = None
+):
+    """Real-time WebRTC signaling gateway for farmer-expert video & audio consultations."""
+    await websocket.accept()
+    if room_name not in call_room_connections:
+        call_room_connections[room_name] = []
+    call_room_connections[room_name].append(websocket)
+    
+    # Notify peers in the room that a peer joined
+    peer_count = len(call_room_connections[room_name])
+    for peer in list(call_room_connections[room_name]):
+        if peer != websocket:
+            try:
+                await peer.send_json({"type": "peer_joined", "peer_count": peer_count, "sender_role": role})
+            except Exception:
+                pass
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            if raw == "ping":
+                await websocket.send_text("pong")
+                continue
+            if room_name in call_room_connections:
+                for peer in list(call_room_connections[room_name]):
+                    if peer != websocket:
+                        try:
+                            await peer.send_text(raw)
+                        except Exception:
+                            pass
+    except WebSocketDisconnect:
+        if room_name in call_room_connections:
+            if websocket in call_room_connections[room_name]:
+                call_room_connections[room_name].remove(websocket)
+            for peer in list(call_room_connections[room_name]):
+                try:
+                    await peer.send_json({"type": "peer_left"})
+                except Exception:
+                    pass
+            if not call_room_connections[room_name]:
+                del call_room_connections[room_name]
+
 @router.get("/debug-ws")
 async def debug_ws():
     return {"active_ws_experts": list(expert_connections.keys())}
+
+@router.get("/debug-call-rooms")
+async def debug_call_rooms():
+    return {
+        "active_rooms": {
+            room: len(conns) for room, conns in call_room_connections.items()
+        }
+    }
 
 class ExpertResponse(BaseModel):
     id: str

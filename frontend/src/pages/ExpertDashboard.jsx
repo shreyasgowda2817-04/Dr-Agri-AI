@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { JitsiMeeting } from '@jitsi/react-sdk';
+import WebRTCVideoCall from '../components/consultation/WebRTCVideoCall';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Video, 
@@ -612,59 +612,19 @@ const ExpertDashboard = () => {
           <div className="lg:col-span-8 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl relative flex flex-col min-h-[420px] sm:min-h-[520px]">
             {activeCall ? (
               <div className="flex-1 flex flex-col h-full w-full">
-                {/* Active Meeting Top Status Bar */}
-                <div className="bg-gray-800/90 backdrop-blur-md px-4 py-2.5 flex items-center justify-between border-b border-gray-700 text-white z-20">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-red-400">Live Secure Consultation</span>
-                    <span className="text-xs text-gray-400 font-mono">Room: {roomName}</span>
-                  </div>
-                  <button
-                    onClick={handleConsultationEnd}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-sm"
-                  >
-                    Finish Consultation
-                  </button>
-                </div>
-
-                <div className="flex-1 w-full h-full relative">
-                  <JitsiMeeting
-                    domain={import.meta.env.VITE_JITSI_DOMAIN || 'meet.ffmuc.net'}
-                    roomName={roomName}
-                    spinner={() => (
-                      <div className="flex flex-col items-center justify-center h-full w-full bg-[#111827] text-white">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mb-4"></div>
-                        <p className="text-lg font-bold">{t("connecting_you_to_th")}</p>
-                        <p className="text-sm text-gray-400 mt-2 text-center">{t("establishing_secure_")}<br/>{t("please_wait_")}</p>
-                      </div>
-                    )}
-                    configOverwrite={{ 
-                      prejoinPageEnabled: false,
-                      prejoinConfig: { enabled: false },
-                      disableDeepLinking: true,
-                      enableClosePage: false,
-                      startWithAudioMuted: false,
-                      startWithVideoMuted: activeCall === 'audio',
-                      disableModeratorIndicator: true,
-                      startScreenSharing: false,
-                      enableEmailInStats: false
-                    }}
-                    interfaceConfigOverwrite={{
-                      DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                      SHOW_JITSI_WATERMARK: false,
-                      SHOW_WATERMARK_FOR_GUESTS: false,
-                      SHOW_POWERED_BY: false
-                    }}
-                    userInfo={{ displayName: `Dr. ${user?.name || 'Expert'}` }}
-                    onApiReady={(externalApi) => {
-                      externalApi.addListener('videoConferenceLeft', handleConsultationEnd);
-                    }}
-                    getIFrameRef={(iframeRef) => { 
-                      iframeRef.style.height = '100%'; 
-                      iframeRef.style.width = '100%'; 
-                    }}
-                  />
-                </div>
+                <WebRTCVideoCall
+                  roomName={roomName}
+                  callType={activeCall}
+                  currentUser={{
+                    id: user?.id,
+                    displayName: `Dr. ${user?.name || 'Expert'}`,
+                    name: user?.name || 'Expert',
+                    role: 'expert'
+                  }}
+                  peerName={triageData?.farmer_name || 'Farmer'}
+                  onEndCall={handleConsultationEnd}
+                  isExpert={true}
+                />
               </div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80')] bg-cover bg-center">
