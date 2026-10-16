@@ -485,15 +485,21 @@ const FormField = ({ label, value, onChange, placeholder, type = 'text' }) => (
   </div>
 );
 
-const SelectField = ({ label, value, onChange, options }) => (
-  <div>
-    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{label}</label>
-    <select value={value} onChange={e => onChange(e.target.value)}
-      className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
-      <option value="">{t("select___")}</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  </div>
-);
+const SelectField = ({ label, value, onChange, options }) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{label}</label>
+      <select 
+        value={value} 
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition"
+      >
+        <option value="">{t("select___") || "Select..."}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+};
 
 export default FarmManager;
