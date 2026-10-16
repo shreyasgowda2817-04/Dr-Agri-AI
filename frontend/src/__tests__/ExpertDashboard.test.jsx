@@ -14,6 +14,7 @@ vi.mock('../services/api', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
   },
 }));
 
@@ -123,6 +124,29 @@ describe('ExpertDashboard Component (Agronomy Expert Portal)', () => {
           },
         });
       }
+      if (url === '/consultations/expert/overview') {
+        return Promise.resolve({
+          data: {
+            total_consultations: 5,
+            active_queue_count: 1,
+            today_appointments_count: 2,
+            average_rating: 4.9,
+            total_reviews: 12,
+            total_prescriptions: 8,
+            fee_per_consultation: 250,
+            total_earnings: 1250,
+            is_available: true,
+            working_hours: { start: '09:00', end: '18:00', timezone: 'Asia/Kolkata' },
+            available_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            specializations: ['Crop Pathology'],
+            title: 'Chief Agronomist',
+            bio: 'Expert advisor',
+          },
+        });
+      }
+      if (url === '/consultations/expert/appointments') {
+        return Promise.resolve({ data: [] });
+      }
       return Promise.resolve({ data: [] });
     });
 
@@ -211,6 +235,42 @@ describe('ExpertDashboard Component (Agronomy Expert Portal)', () => {
         farmer_id: 'farmer-123',
         prescribed_products: expect.arrayContaining(['prod-neem']),
         notes: 'Spray 5ml/L every 5 days in early morning',
+      }));
+    });
+  });
+
+  it('switches tabs and saves availability working hours schedule', async () => {
+    api.put.mockResolvedValueOnce({
+      data: { message: 'Schedule updated' }
+    });
+
+    render(
+      <Provider store={store}>
+        <ExpertDashboard />
+      </Provider>
+    );
+
+    // Switch to Availability tab
+    const availTabBtn = screen.getByRole('button', { name: /Availability & Working Hours/i });
+    fireEvent.click(availTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Working Hours & Availability Management/i)).toBeTruthy();
+      expect(screen.getByText(/Available Consultation Days/i)).toBeTruthy();
+    });
+
+    // Toggle a day (e.g. Saturday)
+    const satBtn = screen.getByRole('button', { name: /Saturday/i });
+    fireEvent.click(satBtn);
+
+    // Click Save Schedule
+    const saveBtn = screen.getByRole('button', { name: /Save Availability Schedule/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(api.put).toHaveBeenCalledWith('/consultations/expert/availability', expect.objectContaining({
+        is_available: true,
+        available_days: expect.arrayContaining(['Saturday']),
       }));
     });
   });

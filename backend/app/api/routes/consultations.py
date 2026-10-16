@@ -4,7 +4,7 @@ from app.api.dependencies import get_current_user, RequireRole
 from app.models.user import UserResponse
 from app.core.database import get_mongo_db
 from app.models.mongo_models import UserRole
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -70,6 +70,36 @@ class CallRequest(BaseModel):
 class ReviewRequest(BaseModel):
     rating: int
     comment: Optional[str] = None
+
+class WorkingHours(BaseModel):
+    start: str = "09:00"
+    end: str = "18:00"
+    timezone: str = "Asia/Kolkata"
+
+class ExpertAvailabilityUpdate(BaseModel):
+    is_available: bool = True
+    working_hours: WorkingHours = Field(default_factory=WorkingHours)
+    available_days: List[str] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    fee_per_consultation: float = 0.0
+    title: Optional[str] = "Senior Agronomy Specialist"
+    specializations: List[str] = ["Crop Pathology", "Soil Science", "Pest Management"]
+    bio: Optional[str] = "Certified agricultural expert advising farmers on crop health, soil nutrients, and yield maximization."
+
+class ExpertOverviewResponse(BaseModel):
+    total_consultations: int
+    active_queue_count: int
+    today_appointments_count: int
+    average_rating: float
+    total_reviews: int
+    total_prescriptions: int
+    fee_per_consultation: float
+    total_earnings: float
+    is_available: bool
+    working_hours: WorkingHours
+    available_days: List[str]
+    specializations: List[str]
+    title: str
+    bio: str
 
 
 @router.get("/experts", response_model=List[ExpertResponse])
@@ -317,3 +347,329 @@ async def decline_call(call_id: str, current_user: UserResponse = Depends(Requir
         {"$set": {"status": "declined"}}
     )
     return {"message": "Call declined"}
+
+
+@router.post("/call/{call_id}/complete")
+async def complete_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Expert marks consultation as completed."""
+    try:
+        obj_id = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid consultation call ID")
+
+    result = await db["active_calls"].update_one(
+        {"_id": obj_id},
+        {"$set": {
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc)
+        }}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Consultation call not found")
+
+    return {"message": "Consultation completed successfully"}
+
+
+@router.get("/expert/overview", response_model=ExpertOverviewResponse)
+async def get_expert_overview(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Aggregates all real metrics, consultation counts, ratings, and schedule settings for the logged-in expert."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+
+    # Retrieve expert user doc for profile configurations
+    expert_query = {"$or": [{"id": expert_id}, {"id": safe_expert_id}]}
+    if ObjectId.is_valid(expert_id):
+        expert_query["$or"].append({"_id": ObjectId(expert_id)})
+    user_doc = await db["users"].find_one(expert_query)
+    profile_data = (user_doc or {}).get("expert_profile", {})
+
+    # Calculate completed and total consultations
+    total_consultations = await db["active_calls"].count_documents({
+        "$or": [
+            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
+            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
+        ],
+        "status": {"$in": ["accepted", "completed"]}
+    })
+
+    # Active incoming queue count
+    active_queue_count = await db["active_calls"].count_documents({
+        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}],
+        "status": "calling"
+    })
+
+    # Today's appointments count
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_appointments_count = await db["active_calls"].count_documents({
+        "$or": [
+            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
+            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
+        ],
+        "status": {"$in": ["calling", "accepted", "scheduled"]},
+        "created_at": {"$gte": today_start}
+    })
+
+    # Reviews and real rating aggregation
+    reviews = await db["reviews"].find({
+        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}]
+    }).to_list(length=200)
+    total_reviews = len(reviews)
+    avg_rating = round(sum(r.get("rating", 5) for r in reviews) / total_reviews, 1) if total_reviews > 0 else 5.0
+
+    # Total prescriptions issued
+    total_prescriptions = await db["prescriptions"].count_documents({
+        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}]
+    })
+
+    # Earnings calculation
+    fee_per_consultation = float(profile_data.get("fee_per_consultation", 0.0))
+    total_earnings = round(total_consultations * fee_per_consultation, 2)
+
+    return ExpertOverviewResponse(
+        total_consultations=total_consultations,
+        active_queue_count=active_queue_count,
+        today_appointments_count=today_appointments_count,
+        average_rating=avg_rating,
+        total_reviews=total_reviews,
+        total_prescriptions=total_prescriptions,
+        fee_per_consultation=fee_per_consultation,
+        total_earnings=total_earnings,
+        is_available=profile_data.get("is_available", True),
+        working_hours=WorkingHours(**profile_data.get("working_hours", {"start": "09:00", "end": "18:00", "timezone": "Asia/Kolkata"})),
+        available_days=profile_data.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]),
+        specializations=profile_data.get("specializations", ["Crop Pathology", "Soil Science", "Pest Management"]),
+        title=profile_data.get("title", "Senior Agronomy Specialist"),
+        bio=profile_data.get("bio", "Certified agricultural expert advising farmers on crop health, soil nutrients, and yield maximization.")
+    )
+
+
+@router.get("/expert/appointments")
+async def get_expert_appointments(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Returns active requests, upcoming consultations, and queued appointments for this expert."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+
+    cursor = db["active_calls"].find({
+        "$or": [
+            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
+            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
+        ],
+        "status": {"$in": ["calling", "accepted", "scheduled"]}
+    }).sort("created_at", 1).limit(30)
+    calls = await cursor.to_list(length=30)
+
+    result = []
+    for c in calls:
+        farmer_id = c.get("farmer_id")
+        farmer_name = "Farmer"
+        farmer_location = "Agricultural Plot"
+        farmer_phone = ""
+        farmer_avatar = None
+
+        if farmer_id:
+            try:
+                f_query = {"$or": [{"id": farmer_id}, {"id": str(farmer_id).replace("-", "")}]}
+                if ObjectId.is_valid(str(farmer_id)):
+                    f_query["$or"].append({"_id": ObjectId(str(farmer_id))})
+                f_doc = await db["users"].find_one(f_query)
+                if f_doc:
+                    farmer_name = f_doc.get("name", "Farmer")
+                    farmer_phone = f_doc.get("phone", "")
+                    farmer_avatar = f_doc.get("avatar_url")
+                    loc_parts = [f_doc.get("village"), f_doc.get("district"), f_doc.get("location")]
+                    valid_locs = [p for p in loc_parts if p]
+                    farmer_location = ", ".join(valid_locs) if valid_locs else "Agricultural Plot"
+            except Exception:
+                pass
+
+        crop_issue = "General Crop Health Inspection"
+        scan_image = None
+        if farmer_id:
+            try:
+                scan = await db["disease_reports"].find_one({"user_id": str(farmer_id)}, sort=[("created_at", -1)])
+                if scan:
+                    crop_name = scan.get("crop_name", "Crop")
+                    disease_name = scan.get("disease_name", "Health Check").replace("___", " ")
+                    crop_issue = f"{crop_name} - {disease_name}"
+                    scan_image = scan.get("image_url")
+            except Exception:
+                pass
+
+        result.append({
+            "id": str(c["_id"]),
+            "farmer_id": farmer_id,
+            "farmer_name": farmer_name,
+            "farmer_phone": farmer_phone,
+            "farmer_location": farmer_location,
+            "farmer_avatar": farmer_avatar or f"https://ui-avatars.com/api/?name={farmer_name.replace(' ', '+')}&background=059669&color=fff",
+            "crop_issue": crop_issue,
+            "scan_image": scan_image,
+            "call_type": c.get("call_type", "video"),
+            "room_name": c.get("room_name"),
+            "status": c.get("status", "calling"),
+            "created_at": c.get("created_at"),
+            "scheduled_time": c.get("scheduled_time") or c.get("created_at")
+        })
+
+    return result
+
+
+@router.get("/expert/history")
+async def get_expert_consultation_history(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Returns past handled and completed consultations for this expert."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+
+    cursor = db["active_calls"].find({
+        "$or": [
+            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
+            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
+        ],
+        "status": {"$in": ["accepted", "completed", "declined"]}
+    }).sort("created_at", -1).limit(50)
+    calls = await cursor.to_list(length=50)
+
+    result = []
+    for c in calls:
+        call_id = str(c["_id"])
+        farmer_id = c.get("farmer_id")
+        farmer_name = "Farmer"
+
+        if farmer_id:
+            try:
+                f_query = {"$or": [{"id": farmer_id}, {"id": str(farmer_id).replace("-", "")}]}
+                if ObjectId.is_valid(str(farmer_id)):
+                    f_query["$or"].append({"_id": ObjectId(str(farmer_id))})
+                f_doc = await db["users"].find_one(f_query)
+                if f_doc:
+                    farmer_name = f_doc.get("name", "Farmer")
+            except Exception:
+                pass
+
+        # Check prescription
+        rx = await db["prescriptions"].find_one({"farmer_id": str(farmer_id), "expert_id": expert_id})
+        diagnosis = rx.get("diagnosis") if rx else "Crop Assessment Completed"
+
+        # Check review
+        rev = await db["reviews"].find_one({"call_id": call_id})
+        rating = rev.get("rating") if rev else None
+        comment = rev.get("comment") if rev else None
+
+        result.append({
+            "id": call_id,
+            "farmer_id": farmer_id,
+            "farmer_name": farmer_name,
+            "call_type": c.get("call_type", "video"),
+            "status": c.get("status", "completed"),
+            "diagnosis": diagnosis,
+            "room_name": c.get("room_name"),
+            "created_at": c.get("created_at"),
+            "completed_at": c.get("completed_at"),
+            "rating": rating,
+            "comment": comment
+        })
+
+    return result
+
+
+@router.get("/expert/reviews")
+async def get_expert_reviews(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Returns authentic farmer ratings and feedback for this expert."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+
+    cursor = db["reviews"].find({
+        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}]
+    }).sort("created_at", -1).limit(50)
+    reviews = await cursor.to_list(length=50)
+
+    result = []
+    for r in reviews:
+        farmer_id = r.get("farmer_id")
+        farmer_name = "Farmer"
+        farmer_location = "Agricultural District"
+        if farmer_id:
+            try:
+                f_query = {"$or": [{"id": farmer_id}, {"id": str(farmer_id).replace("-", "")}]}
+                if ObjectId.is_valid(str(farmer_id)):
+                    f_query["$or"].append({"_id": ObjectId(str(farmer_id))})
+                f_doc = await db["users"].find_one(f_query)
+                if f_doc:
+                    farmer_name = f_doc.get("name", "Farmer")
+                    farmer_location = f_doc.get("location") or f"{f_doc.get('village', '')}, {f_doc.get('district', '')}".strip(", ") or "Agricultural District"
+            except Exception:
+                pass
+
+        result.append({
+            "id": str(r["_id"]),
+            "farmer_name": farmer_name,
+            "farmer_location": farmer_location,
+            "rating": r.get("rating", 5),
+            "comment": r.get("comment", "Great agronomic advice and support."),
+            "created_at": r.get("created_at", datetime.now(timezone.utc))
+        })
+
+    return result
+
+
+@router.get("/expert/availability")
+async def get_expert_availability(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Retrieves current availability toggle, working hours, and fees."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+    expert_query = {"$or": [{"id": expert_id}, {"id": safe_expert_id}]}
+    if ObjectId.is_valid(expert_id):
+        expert_query["$or"].append({"_id": ObjectId(expert_id)})
+    user_doc = await db["users"].find_one(expert_query)
+    profile_data = (user_doc or {}).get("expert_profile", {})
+
+    return {
+        "is_available": profile_data.get("is_available", True),
+        "working_hours": profile_data.get("working_hours", {"start": "09:00", "end": "18:00", "timezone": "Asia/Kolkata"}),
+        "available_days": profile_data.get("available_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]),
+        "fee_per_consultation": float(profile_data.get("fee_per_consultation", 0.0)),
+        "title": profile_data.get("title", "Senior Agronomy Specialist"),
+        "specializations": profile_data.get("specializations", ["Crop Pathology", "Soil Science", "Pest Management"]),
+        "bio": profile_data.get("bio", "Certified agricultural expert advising farmers on crop health, soil nutrients, and yield maximization.")
+    }
+
+
+@router.put("/expert/availability")
+async def update_expert_availability(req: ExpertAvailabilityUpdate, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Updates availability status, working hours, and consultation fee."""
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
+    update_data = req.model_dump()
+
+    expert_query = {"$or": [{"id": expert_id}, {"id": safe_expert_id}]}
+    if ObjectId.is_valid(expert_id):
+        expert_query["$or"].append({"_id": ObjectId(expert_id)})
+
+    await db["users"].update_one(
+        expert_query,
+        {"$set": {"expert_profile": update_data}}
+    )
+    return {"message": "Availability and working hours updated successfully", "profile": update_data}
+
+
+@router.get("/farmer-crops/{farmer_id}")
+async def get_farmer_crops(farmer_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
+    """Allows authorized agronomy experts to review farmer's uploaded crop diagnosis images and scan history."""
+    cursor = db["disease_reports"].find({
+        "$or": [{"user_id": str(farmer_id)}, {"user_id": str(farmer_id).replace("-", "")}]
+    }).sort("created_at", -1).limit(20)
+    scans = await cursor.to_list(length=20)
+
+    result = []
+    for s in scans:
+        result.append({
+            "id": str(s["_id"]),
+            "crop_name": s.get("crop_name", "Crop"),
+            "disease_name": s.get("disease_name", "Healthy").replace("___", " "),
+            "confidence": s.get("confidence_score") or s.get("confidence", 0.0),
+            "severity": s.get("severity", "Moderate"),
+            "image_url": s.get("image_url", ""),
+            "symptoms": s.get("symptoms_observed", []),
+            "created_at": s.get("created_at", datetime.now(timezone.utc))
+        })
+    return result
