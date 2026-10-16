@@ -60,6 +60,7 @@ const ExpertDashboard = () => {
 
   // Queue State
   const [incomingCall, setIncomingCall] = useState(null);
+  const [incomingCallsQueue, setIncomingCallsQueue] = useState([]);
   const [queueLength, setQueueLength] = useState(0);
   const [waitingSince, setWaitingSince] = useState(null);
 
@@ -105,6 +106,7 @@ const ExpertDashboard = () => {
   // Refs for polling closures
   const activeCallRef = useRef(activeCall);
   const incomingCallRef = useRef(incomingCall);
+  const incomingCallsQueueRef = useRef(incomingCallsQueue);
 
   useEffect(() => {
     activeCallRef.current = activeCall;
@@ -113,6 +115,10 @@ const ExpertDashboard = () => {
   useEffect(() => {
     incomingCallRef.current = incomingCall;
   }, [incomingCall]);
+
+  useEffect(() => {
+    incomingCallsQueueRef.current = incomingCallsQueue;
+  }, [incomingCallsQueue]);
 
   const fetchOverviewData = useCallback(async () => {
     try {
@@ -243,7 +249,130 @@ const ExpertDashboard = () => {
     if (activeTab === 'earnings') fetchOverviewData();
   }, [activeTab, fetchAppointments, fetchHistory, fetchReviews, fetchOverviewData]);
 
-  // Real-time Queue Polling Loop (FIFO Queue)
+  // Fetch AI Triage data for patient
+  const fetchTriageData = useCallback(async (id) => {
+    if (!id) return;
+    setLoadingTriage(true);
+    try {
+      const res = await api.get(`/consultations/triage/${id}`);
+      if (res.data) {
+        setTriageData(res.data);
+        if (res.data.most_common_disease && res.data.most_common_disease !== 'Unknown' && res.data.most_common_disease !== 'None') {
+          setPrescriptionForm(prev => ({ ...prev, diagnosis: res.data.most_common_disease }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load triage data", err);
+    } finally {
+      setLoadingTriage(false);
+    }
+  }, []);
+
+  // Fetch Farmer's high-res crop scans
+  const fetchFarmerCrops = useCallback(async (id) => {
+    if (!id) return;
+    setLoadingCrops(true);
+    try {
+      const res = await api.get(`/consultations/farmer-crops/${id}`);
+      setFarmerCrops(res.data || []);
+    } catch (err) {
+      console.warn("Could not load farmer crops:", err);
+    } finally {
+      setLoadingCrops(false);
+    }
+  }, []);
+
+  // Dismiss an incoming call cleanly from queue and active slot
+  const dismissIncomingCall = useCallback((callId, reason = null, preserveTriage = false) => {
+    setIncomingCallsQueue(prev => {
+      const filtered = prev.filter(c => c.id !== callId);
+      setQueueLength(filtered.length);
+
+      if (incomingCallRef.current?.id === callId) {
+        if (filtered.length > 0) {
+          const nextCall = filtered[0];
+          setIncomingCall(nextCall);
+          setFarmerId(nextCall.farmerId);
+          setWaitingSince(new Date(nextCall.createdAt));
+          fetchTriageData(nextCall.farmerId);
+          fetchFarmerCrops(nextCall.farmerId);
+        } else {
+          setIncomingCall(null);
+          if (!preserveTriage && !activeCallRef.current) {
+            setTriageData(null);
+            setFarmerCrops([]);
+          }
+          setWaitingSince(null);
+        }
+      }
+      return filtered;
+    });
+
+    if (reason) {
+      toast.info(reason);
+    }
+  }, [fetchTriageData, fetchFarmerCrops]);
+
+  // Register an incoming call into queue and activate if idle
+  const registerIncomingCall = useCallback((callData, shouldChime = false) => {
+    if (activeCallRef.current) return;
+    if (!callData?.id) return;
+
+    const createdTime = callData.createdAt || callData.created_at || new Date().toISOString();
+    const callAgeMs = new Date().getTime() - new Date(createdTime).getTime();
+    if (callAgeMs >= 95000) return; // Discard expired calls older than 95s
+
+    const normalizedCall = {
+      id: callData.id,
+      room: callData.room || callData.room_name,
+      room_name: callData.room || callData.room_name,
+      farmerId: callData.farmerId || callData.farmer_id,
+      farmer_id: callData.farmerId || callData.farmer_id,
+      farmerName: callData.farmerName || callData.farmer_name || 'Farmer',
+      farmer_name: callData.farmerName || callData.farmer_name || 'Farmer',
+      callType: callData.callType || callData.call_type || 'video',
+      call_type: callData.callType || callData.call_type || 'video',
+      createdAt: createdTime,
+      created_at: createdTime
+    };
+
+    setIncomingCallsQueue(prev => {
+      const exists = prev.some(c => c.id === normalizedCall.id);
+      if (exists) {
+        return prev.map(c => c.id === normalizedCall.id ? { ...c, ...normalizedCall } : c);
+      }
+      return [...prev, normalizedCall];
+    });
+
+    // If no active incoming call, or if this updates the currently shown incoming call
+    if (!incomingCallRef.current || incomingCallRef.current.id === normalizedCall.id) {
+      setIncomingCall(normalizedCall);
+      setFarmerId(normalizedCall.farmerId);
+      setWaitingSince(new Date(createdTime));
+      fetchTriageData(normalizedCall.farmerId);
+      fetchFarmerCrops(normalizedCall.farmerId);
+    }
+
+    setQueueLength(prev => Math.max(prev, 1));
+
+    if (shouldChime) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+      } catch (e) {}
+    }
+  }, [fetchTriageData, fetchFarmerCrops]);
+
+  // Real-time Queue Polling Loop (Protected from clearing active calls)
   useEffect(() => {
     if (!user) return;
     let isPolling = true;
@@ -256,37 +385,32 @@ const ExpertDashboard = () => {
         setQueueLength(calls.length);
 
         if (calls.length > 0 && !activeCallRef.current) {
-          const nextCall = calls[0]; // Newest real incoming call
-
-          // Ensure the call was created in the last 90 seconds to reject stale/zombie rings
-          const callAgeMs = new Date().getTime() - new Date(nextCall.created_at).getTime();
-          if (callAgeMs < 95000) {
-            if (!incomingCallRef.current || incomingCallRef.current.id !== nextCall.id) {
-              setIncomingCall({
-                id: nextCall.id,
-                room: nextCall.room_name,
-                farmerId: nextCall.farmer_id,
-                farmerName: nextCall.farmer_name || 'Farmer',
-                callType: nextCall.call_type || 'video',
-                createdAt: nextCall.created_at
-              });
-              setFarmerId(nextCall.farmer_id);
-              setWaitingSince(new Date(nextCall.created_at));
-              fetchTriageData(nextCall.farmer_id);
-              fetchFarmerCrops(nextCall.farmer_id);
-            }
-          } else {
-            setIncomingCall(null);
-          }
+          calls.forEach(c => registerIncomingCall(c, false));
         } else if (calls.length === 0 && !activeCallRef.current) {
-          if (incomingCallRef.current) {
-            setIncomingCall(null);
-            setTriageData(null);
-            setFarmerCrops([]);
+          // Protected check: DO NOT immediately clear incomingCall
+          const currentCall = incomingCallRef.current;
+          if (currentCall) {
+            const callAgeMs = new Date().getTime() - new Date(currentCall.createdAt).getTime();
+            if (callAgeMs >= 95000) {
+              dismissIncomingCall(currentCall.id, "Consultation request timed out.");
+            } else if (callAgeMs >= 6000) {
+              try {
+                const statusRes = await api.get(`/consultations/call/${currentCall.id}/status`);
+                const status = statusRes.data?.status;
+                if (status && status !== 'calling') {
+                  const msg = status === 'cancelled'
+                    ? 'The farmer cancelled the consultation request.'
+                    : status === 'missed'
+                    ? 'Consultation request timed out.'
+                    : null;
+                  dismissIncomingCall(currentCall.id, msg);
+                }
+              } catch (e) {}
+            }
           }
         }
       } catch (err) {
-        console.error("Polling error", err);
+        console.warn("Queue polling check:", err);
       }
 
       if (isPolling) {
@@ -296,13 +420,14 @@ const ExpertDashboard = () => {
 
     pollQueue();
     return () => { isPolling = false; };
-  }, [user]);
+  }, [user, registerIncomingCall, dismissIncomingCall]);
 
-  // Real-time Push WebSocket for instant incoming consultation alerts
+  // Real-time Push WebSocket with Auto-Reconnect for instant incoming consultation alerts
   useEffect(() => {
     if (!user?.id) return;
     let ws = null;
     let pingInterval = null;
+    let reconnectTimeout = null;
     let isMounted = true;
 
     const connectExpertWs = () => {
@@ -330,6 +455,7 @@ const ExpertDashboard = () => {
         ws.onopen = () => {
           if (!isMounted) return;
           console.log(`Expert WebSocket connected for user ${user.id}`);
+          if (pingInterval) clearInterval(pingInterval);
           pingInterval = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {
               try { ws.send("ping"); } catch (e) {}
@@ -343,41 +469,10 @@ const ExpertDashboard = () => {
             if (event.data === "pong") return;
             const data = JSON.parse(event.data);
             if (data.type === 'incoming_call' && !activeCallRef.current) {
-              setIncomingCall({
-                id: data.id,
-                room: data.room_name,
-                farmerId: data.farmer_id,
-                farmerName: data.farmer_name || 'Farmer',
-                callType: data.call_type || 'video',
-                createdAt: new Date().toISOString()
-              });
-              setFarmerId(data.farmer_id);
-              setWaitingSince(new Date());
-              setQueueLength((prev) => Math.max(prev, 1));
-              fetchTriageData(data.farmer_id);
-              fetchFarmerCrops(data.farmer_id);
-              // Audio notification chime if supported
-              try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.4);
-              } catch (e) {}
+              registerIncomingCall(data, true);
               toast.info(`Incoming consultation from ${data.farmer_name || 'Farmer'}!`, { autoClose: 6000 });
             } else if (data.type === 'call_cancelled') {
-              if (incomingCallRef.current?.id === data.id) {
-                setIncomingCall(null);
-                setTriageData(null);
-                setFarmerCrops([]);
-                toast.info('The farmer cancelled the call.');
-              }
+              dismissIncomingCall(data.id, 'The farmer cancelled the consultation request.');
             }
           } catch (e) {}
         };
@@ -385,6 +480,11 @@ const ExpertDashboard = () => {
         ws.onerror = () => {};
         ws.onclose = () => {
           if (pingInterval) clearInterval(pingInterval);
+          if (isMounted) {
+            reconnectTimeout = setTimeout(() => {
+              if (isMounted) connectExpertWs();
+            }, 3000);
+          }
         };
       } catch (err) {
         console.warn("Could not connect expert WS:", err);
@@ -396,11 +496,12 @@ const ExpertDashboard = () => {
     return () => {
       isMounted = false;
       if (pingInterval) clearInterval(pingInterval);
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (ws) {
         try { ws.close(); } catch (e) {}
       }
     };
-  }, [user?.id]);
+  }, [user?.id, registerIncomingCall, dismissIncomingCall]);
 
   // Wait time counter
   const [waitTimeStr, setWaitTimeStr] = useState('0:00');
@@ -414,37 +515,6 @@ const ExpertDashboard = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [waitingSince]);
-
-  // Fetch AI Triage data for patient
-  const fetchTriageData = async (id) => {
-    setLoadingTriage(true);
-    try {
-      const res = await api.get(`/consultations/triage/${id}`);
-      if (res.data) {
-        setTriageData(res.data);
-        if (res.data.most_common_disease && res.data.most_common_disease !== 'Unknown' && res.data.most_common_disease !== 'None') {
-          setPrescriptionForm(prev => ({ ...prev, diagnosis: res.data.most_common_disease }));
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load triage data", err);
-    } finally {
-      setLoadingTriage(false);
-    }
-  };
-
-  // Fetch Farmer's high-res crop scans
-  const fetchFarmerCrops = async (id) => {
-    setLoadingCrops(true);
-    try {
-      const res = await api.get(`/consultations/farmer-crops/${id}`);
-      setFarmerCrops(res.data || []);
-    } catch (err) {
-      console.warn("Could not load farmer crops:", err);
-    } finally {
-      setLoadingCrops(false);
-    }
-  };
 
   // Accept Consultation
   const acceptCall = async (callIdToAccept = null) => {
@@ -461,7 +531,7 @@ const ExpertDashboard = () => {
       setFarmerId(activeFarmerId);
       setActiveCallId(callToAccept.id);
       setActiveCall(activeCallType);
-      setIncomingCall(null);
+      dismissIncomingCall(callToAccept.id, null, true);
       setActiveTab('live');
       toast.success("Consultation connected! Opening live room.");
       fetchTriageData(activeFarmerId);
@@ -476,6 +546,7 @@ const ExpertDashboard = () => {
         setFarmerId(activeFarmerId);
         setActiveCallId(callToAccept.id);
         setActiveCall(callToAccept.callType || callToAccept.call_type || 'video');
+        dismissIncomingCall(callToAccept.id, null, true);
         setActiveTab('live');
         fetchTriageData(activeFarmerId);
         fetchFarmerCrops(activeFarmerId);
@@ -492,15 +563,12 @@ const ExpertDashboard = () => {
 
     try {
       await api.post(`/consultations/call/${targetId}/decline`);
-      setIncomingCall(null);
-      setTriageData(null);
-      setFarmerCrops([]);
-      toast.info("Consultation request declined.");
+      dismissIncomingCall(targetId, "Consultation request declined.");
       fetchAppointments();
       fetchOverviewData();
     } catch (err) {
       console.error(err);
-      setIncomingCall(null);
+      dismissIncomingCall(targetId);
     }
   };
 
@@ -833,12 +901,19 @@ const ExpertDashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                          Ringing
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {incomingCallsQueue.length > 1 && (
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              +{incomingCallsQueue.length - 1} in queue
+                            </span>
+                          )}
+                          <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                            Ringing
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/5 space-y-3">
+                      <div className="bg-black/40 rounded-2xl p-4 mb-4 border border-white/5 space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("farmer")}</span>
                           <span className="text-sm text-white font-bold">{triageData?.farmer_name || incomingCall.farmerName || 'Farmer'}</span>
@@ -856,6 +931,33 @@ const ExpertDashboard = () => {
                           </span>
                         </div>
                       </div>
+
+                      {incomingCallsQueue.length > 1 && (
+                        <div className="mb-4">
+                          <p className="text-[11px] text-gray-300 font-semibold mb-2">Other queued requests:</p>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {incomingCallsQueue.map(c => (
+                              <button
+                                key={c.id}
+                                onClick={() => {
+                                  setIncomingCall(c);
+                                  setFarmerId(c.farmerId);
+                                  setWaitingSince(new Date(c.createdAt));
+                                  fetchTriageData(c.farmerId);
+                                  fetchFarmerCrops(c.farmerId);
+                                }}
+                                className={`text-xs px-2.5 py-1 rounded-xl border transition shrink-0 ${
+                                  incomingCall.id === c.id 
+                                    ? 'bg-emerald-500/30 border-emerald-400 text-white font-bold' 
+                                    : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
+                                }`}
+                              >
+                                {c.farmerName} • {c.callType === 'audio' ? 'Voice' : 'Video'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <button

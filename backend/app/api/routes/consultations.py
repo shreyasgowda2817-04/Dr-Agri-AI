@@ -369,14 +369,36 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
         {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc)}}
     )
 
+    # Resolve all expert alias keys (UUID, ObjectId, safe ID, email)
+    target_expert_id = str(req.expert_id)
+    target_safe_id = target_expert_id.replace("-", "")
+    expert_keys = {target_expert_id, target_safe_id}
+    try:
+        exp_lookup = {"$or": [{"id": target_expert_id}, {"id": target_safe_id}]}
+        if ObjectId.is_valid(target_expert_id):
+            exp_lookup["$or"].append({"_id": ObjectId(target_expert_id)})
+        exp_user = await db["users"].find_one(exp_lookup)
+        if exp_user:
+            if exp_user.get("id"):
+                expert_keys.add(str(exp_user["id"]))
+                expert_keys.add(str(exp_user["id"]).replace("-", ""))
+            if exp_user.get("_id"):
+                expert_keys.add(str(exp_user["_id"]))
+            if exp_user.get("email"):
+                expert_keys.add(str(exp_user["email"]).lower())
+    except Exception:
+        pass
+
+    now = datetime.now(timezone.utc)
     call_doc = {
         "farmer_id": str(current_user.id),
         "farmer_name": current_user.name or "Farmer",
         "expert_id": req.expert_id,
+        "expert_aliases": list(expert_keys),
         "room_name": room_name,
         "call_type": req.call_type,
         "status": "calling",
-        "created_at": datetime.now(timezone.utc)
+        "created_at": now
     }
     
     res = await db["active_calls"].insert_one(call_doc)
@@ -389,20 +411,79 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
         "farmer_id": call_doc["farmer_id"],
         "farmer_name": call_doc["farmer_name"],
         "room_name": room_name,
-        "call_type": req.call_type
+        "call_type": req.call_type,
+        "created_at": now.isoformat()
     }
-    # Notify ONLY the specific chosen expert via WebSocket
-    target_expert_id = str(req.expert_id)
-    target_safe_id = target_expert_id.replace("-", "")
-    for exp_key in [target_expert_id, target_safe_id]:
+
+    # Notify all matching expert keys with socket deduplication
+    notified_sockets = set()
+    for exp_key in expert_keys:
         if exp_key in expert_connections:
             for ws in list(expert_connections[exp_key]):
-                try:
-                    await ws.send_json(call_msg)
-                except Exception:
-                    pass
+                if ws not in notified_sockets:
+                    try:
+                        await ws.send_json(call_msg)
+                        notified_sockets.add(ws)
+                    except Exception:
+                        pass
+
+    # If general default expert exp-1 was dialed, also broadcast to any connected active experts
+    if req.expert_id in ["exp-1", "default", "general", "all", ""]:
+        for exp_key, ws_list in list(expert_connections.items()):
+            for ws in list(ws_list):
+                if ws not in notified_sockets:
+                    try:
+                        await ws.send_json(call_msg)
+                        notified_sockets.add(ws)
+                    except Exception:
+                        pass
                 
-    return {"room_name": room_name, "call_id": str(res.inserted_id)}
+    return {"room_name": room_name, "call_id": call_id}
+
+@router.get("/call/{call_id}/status")
+async def get_call_status(
+    call_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db = Depends(get_mongo_db)
+):
+    """Check current state of an incoming or active consultation."""
+    try:
+        obj_id = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid call ID")
+        
+    call = await db["active_calls"].find_one({"_id": obj_id})
+    if not call:
+        return {"id": call_id, "status": "not_found", "exists": False}
+        
+    now = datetime.now(timezone.utc)
+    call_created = call.get("created_at", now)
+    
+    # 90-second timeout policy for unanswered calls
+    if call.get("status") == "calling" and (now - call_created).total_seconds() > 95:
+        await db["active_calls"].update_one({"_id": obj_id}, {"$set": {"status": "missed"}})
+        return {
+            "id": call_id,
+            "status": "missed",
+            "exists": True,
+            "expired": True
+        }
+        
+    created_val = call.get("created_at")
+    created_str = created_val.isoformat() if isinstance(created_val, datetime) else str(created_val)
+
+    return {
+        "id": call_id,
+        "status": call.get("status"),
+        "exists": True,
+        "farmer_id": call.get("farmer_id"),
+        "farmer_name": call.get("farmer_name", "Farmer"),
+        "expert_id": call.get("expert_id"),
+        "accepted_by": call.get("accepted_by"),
+        "room_name": call.get("room_name"),
+        "call_type": call.get("call_type", "video"),
+        "created_at": created_str
+    }
 
 @router.get("/active-calls")
 async def get_active_calls(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
@@ -418,14 +499,28 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
         {"$set": {"status": "missed"}}
     )
     
+    expert_keys = {expert_id, safe_expert_id, "exp-1", "expert-agronomist-default", "default", "general", "all", ""}
+    try:
+        user_lookup = {"$or": [{"id": expert_id}, {"id": safe_expert_id}]}
+        if ObjectId.is_valid(expert_id):
+            user_lookup["$or"].append({"_id": ObjectId(expert_id)})
+        u_doc = await db["users"].find_one(user_lookup)
+        if u_doc:
+            if u_doc.get("id"):
+                expert_keys.add(str(u_doc["id"]))
+                expert_keys.add(str(u_doc["id"]).replace("-", ""))
+            if u_doc.get("_id"):
+                expert_keys.add(str(u_doc["_id"]))
+            if u_doc.get("email"):
+                expert_keys.add(str(u_doc["email"]).lower())
+    except Exception:
+        pass
+
     # Match calls specifically targeted to this expert, or unassigned/general queue calls
     cursor = db["active_calls"].find({
         "$or": [
-            {"expert_id": expert_id},
-            {"expert_id": safe_expert_id},
-            {"expert_id": "exp-1"},
-            {"expert_id": "expert-agronomist-default"},
-            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}
+            {"expert_id": {"$in": list(expert_keys)}},
+            {"expert_aliases": {"$in": list(expert_keys)}}
         ],
         "status": "calling",
         "created_at": {"$gte": cutoff}
@@ -435,13 +530,15 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
     
     result = []
     for c in calls:
+        created_val = c.get("created_at")
+        created_str = created_val.isoformat() if isinstance(created_val, datetime) else str(created_val or now.isoformat())
         result.append({
             "id": str(c["_id"]),
             "farmer_id": c["farmer_id"],
             "farmer_name": c.get("farmer_name", "Farmer"),
             "room_name": c["room_name"],
             "call_type": c.get("call_type", "video"),
-            "created_at": c["created_at"]
+            "created_at": created_str
         })
     return result
 
@@ -522,15 +619,44 @@ async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_cur
             "cancelled_at": datetime.now(timezone.utc)
         }}
     )
-    if call and call.get("room_name") in call_room_connections:
-        for ws in list(call_room_connections[call["room_name"]]):
-            try:
-                await ws.send_json({
-                    "type": "call_cancelled",
-                    "reason": "Call was ended by the participant."
-                })
-            except Exception:
-                pass
+    if call:
+        room_name = call.get("room_name")
+        if room_name and room_name in call_room_connections:
+            for ws in list(call_room_connections[room_name]):
+                try:
+                    await ws.send_json({
+                        "type": "call_cancelled",
+                        "id": str(call["_id"]),
+                        "reason": "Call was ended by the participant."
+                    })
+                except Exception:
+                    pass
+
+        # Also broadcast cancellation to expert's personal incoming queue channel so ringing modal closes in real time
+        cancel_msg = {
+            "type": "call_cancelled",
+            "id": str(call["_id"]),
+            "reason": "The farmer cancelled the consultation request."
+        }
+        exp_keys = set()
+        if call.get("expert_id"):
+            exp_keys.add(str(call["expert_id"]))
+            exp_keys.add(str(call["expert_id"]).replace("-", ""))
+        if call.get("accepted_by"):
+            exp_keys.add(str(call["accepted_by"]))
+            exp_keys.add(str(call["accepted_by"]).replace("-", ""))
+        for alias in call.get("expert_aliases", []):
+            exp_keys.add(str(alias))
+            exp_keys.add(str(alias).replace("-", ""))
+
+        for k in exp_keys:
+            if k in expert_connections:
+                for ws in list(expert_connections[k]):
+                    try:
+                        await ws.send_json(cancel_msg)
+                    except Exception:
+                        pass
+
     return {"message": "Call cancelled successfully"}
 
 @router.post("/call/{call_id}/leave-beacon")
@@ -545,6 +671,25 @@ async def leave_call_beacon(call_id: str, db = Depends(get_mongo_db)):
                     {"_id": obj_id},
                     {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc)}}
                 )
+                cancel_msg = {
+                    "type": "call_cancelled",
+                    "id": str(call["_id"]),
+                    "reason": "Farmer disconnected."
+                }
+                exp_keys = set()
+                if call.get("expert_id"):
+                    exp_keys.add(str(call["expert_id"]))
+                    exp_keys.add(str(call["expert_id"]).replace("-", ""))
+                for alias in call.get("expert_aliases", []):
+                    exp_keys.add(str(alias))
+                    exp_keys.add(str(alias).replace("-", ""))
+                for k in exp_keys:
+                    if k in expert_connections:
+                        for ws in list(expert_connections[k]):
+                            try:
+                                await ws.send_json(cancel_msg)
+                            except Exception:
+                                pass
             else:
                 await db["active_calls"].update_one(
                     {"_id": obj_id},

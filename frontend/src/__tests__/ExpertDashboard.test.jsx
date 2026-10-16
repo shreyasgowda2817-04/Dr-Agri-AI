@@ -274,4 +274,97 @@ describe('ExpertDashboard Component (Agronomy Expert Portal)', () => {
       }));
     });
   });
+
+  it('keeps incoming-call card visible and does not disappear when polling returns empty array', async () => {
+    let pollCount = 0;
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) => {
+      if (url === '/consultations/active-calls') {
+        pollCount++;
+        if (pollCount === 1) {
+          return Promise.resolve({
+            data: [
+              {
+                id: 'call-persistent-1',
+                room_name: 'dragriairoom1',
+                farmer_id: 'farmer-123',
+                farmer_name: 'Farmer Ramesh',
+                call_type: 'video',
+                created_at: new Date().toISOString(),
+              },
+            ],
+          });
+        }
+        // Subsequent polls return empty array - must NOT wipe the active incoming card!
+        return Promise.resolve({ data: [] });
+      }
+      if (url === '/consultations/call/call-persistent-1/status') {
+        return Promise.resolve({ data: { id: 'call-persistent-1', status: 'calling' } });
+      }
+      return defaultGet(url);
+    });
+
+    render(
+      <Provider store={store}>
+        <ExpertDashboard />
+      </Provider>
+    );
+
+    // Initial load shows the incoming call card
+    await waitFor(() => {
+      expect(screen.getByText(/1 farmer waiting/i)).toBeTruthy();
+      expect(screen.getAllByText(/Farmer Ramesh/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/Accept Consultation/i)).toBeTruthy();
+      expect(screen.getByText(/Ringing/i)).toBeTruthy();
+    });
+
+    // Wait a moment where polling returns empty array
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // The incoming call card MUST STILL BE VISIBLE!
+    expect(screen.getAllByText(/Farmer Ramesh/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Accept Consultation/i)).toBeTruthy();
+  });
+
+  it('safely handles multiple incoming calls in queue with switcher', async () => {
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) => {
+      if (url === '/consultations/active-calls') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'call-1',
+              room_name: 'room-1',
+              farmer_id: 'farmer-123',
+              farmer_name: 'Farmer Ramesh',
+              call_type: 'video',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'call-2',
+              room_name: 'room-2',
+              farmer_id: 'farmer-456',
+              farmer_name: 'Farmer Suresh',
+              call_type: 'audio',
+              created_at: new Date().toISOString(),
+            },
+          ],
+        });
+      }
+      return defaultGet(url);
+    });
+
+    render(
+      <Provider store={store}>
+        <ExpertDashboard />
+      </Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/\+1 in queue/i)).toBeTruthy();
+      expect(screen.getByText(/Other queued requests:/i)).toBeTruthy();
+      expect(screen.getByText(/Farmer Suresh • Voice/i)).toBeTruthy();
+    });
+  });
 });
+

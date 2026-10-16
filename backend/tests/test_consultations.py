@@ -27,6 +27,7 @@ from app.api.routes.consultations import (
     debug_call_rooms,
     get_my_active_call,
     leave_call_beacon,
+    get_call_status,
 )
 
 # Mock Mongo Collection
@@ -278,3 +279,9 @@ async def test_consultation_lifecycle():
     assert cancel_res["message"] == "Call cancelled successfully"
     cancelled_doc = await db["active_calls"].find_one({"_id": ObjectId(new_call["call_id"])})
     assert cancelled_doc["status"] == "cancelled"
+
+    # 13. Test real-time get_call_status endpoint
+    call_status_res = await get_call_status(new_call["call_id"], current_user=expert, db=db)
+    assert call_status_res["exists"] is True
+    assert call_status_res["status"] == "cancelled"
+    assert call_status_res["farmer_id"] == str(farmer.id)
