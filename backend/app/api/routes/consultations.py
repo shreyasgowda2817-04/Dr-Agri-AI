@@ -356,6 +356,39 @@ async def get_prescriptions(current_user: UserResponse = Depends(get_current_use
         result.append(p)
     return result
 
+
+class AppointmentBookingRequest(BaseModel):
+    expert_id: str
+    call_type: str = "video"
+    scheduled_time: Optional[datetime] = None
+    crop_issue: Optional[str] = "Crop Assessment & Advisory"
+    notes: Optional[str] = None
+
+
+async def resolve_expert_keys(expert_id: str, db, include_defaults: bool = False) -> set:
+    target_id = str(expert_id)
+    safe_id = target_id.replace("-", "")
+    keys = {target_id, safe_id}
+    if include_defaults:
+        keys.update(["exp-1", "expert-agronomist-default", "default", "general", "all", ""])
+    try:
+        lookup = {"$or": [{"id": target_id}, {"id": safe_id}]}
+        if ObjectId.is_valid(target_id):
+            lookup["$or"].append({"_id": ObjectId(target_id)})
+        u_doc = await db["users"].find_one(lookup)
+        if u_doc:
+            if u_doc.get("id"):
+                keys.add(str(u_doc["id"]))
+                keys.add(str(u_doc["id"]).replace("-", ""))
+            if u_doc.get("_id"):
+                keys.add(str(u_doc["_id"]))
+            if u_doc.get("email"):
+                keys.add(str(u_doc["email"]).lower())
+    except Exception:
+        pass
+    return keys
+
+
 @router.post("/call")
 async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
     """Farmer initiates a real-time call to an expert."""
@@ -370,24 +403,7 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
     )
 
     # Resolve all expert alias keys (UUID, ObjectId, safe ID, email)
-    target_expert_id = str(req.expert_id)
-    target_safe_id = target_expert_id.replace("-", "")
-    expert_keys = {target_expert_id, target_safe_id}
-    try:
-        exp_lookup = {"$or": [{"id": target_expert_id}, {"id": target_safe_id}]}
-        if ObjectId.is_valid(target_expert_id):
-            exp_lookup["$or"].append({"_id": ObjectId(target_expert_id)})
-        exp_user = await db["users"].find_one(exp_lookup)
-        if exp_user:
-            if exp_user.get("id"):
-                expert_keys.add(str(exp_user["id"]))
-                expert_keys.add(str(exp_user["id"]).replace("-", ""))
-            if exp_user.get("_id"):
-                expert_keys.add(str(exp_user["_id"]))
-            if exp_user.get("email"):
-                expert_keys.add(str(exp_user["email"]).lower())
-    except Exception:
-        pass
+    expert_keys = await resolve_expert_keys(req.expert_id, db, include_defaults=False)
 
     now = datetime.now(timezone.utc)
     call_doc = {
@@ -489,39 +505,28 @@ async def get_call_status(
 async def get_active_calls(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert polls this to see if any real farmer is currently calling them."""
     expert_id = str(current_user.id)
-    safe_expert_id = expert_id.replace("-", "")
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=90)
+    cutoff = now - timedelta(seconds=95)
     
-    # Auto-retire any stale or abandoned calls older than 90 seconds
+    # Auto-retire any stale or abandoned calls older than 95 seconds
     await db["active_calls"].update_many(
         {"status": "calling", "created_at": {"$lt": cutoff}},
         {"$set": {"status": "missed"}}
     )
     
-    expert_keys = {expert_id, safe_expert_id, "exp-1", "expert-agronomist-default", "default", "general", "all", ""}
-    try:
-        user_lookup = {"$or": [{"id": expert_id}, {"id": safe_expert_id}]}
-        if ObjectId.is_valid(expert_id):
-            user_lookup["$or"].append({"_id": ObjectId(expert_id)})
-        u_doc = await db["users"].find_one(user_lookup)
-        if u_doc:
-            if u_doc.get("id"):
-                expert_keys.add(str(u_doc["id"]))
-                expert_keys.add(str(u_doc["id"]).replace("-", ""))
-            if u_doc.get("_id"):
-                expert_keys.add(str(u_doc["_id"]))
-            if u_doc.get("email"):
-                expert_keys.add(str(u_doc["email"]).lower())
-    except Exception:
-        pass
+    expert_keys = await resolve_expert_keys(expert_id, db, include_defaults=True)
+    exp_list = list(expert_keys)
+
+    or_conds = []
+    for k in exp_list:
+        or_conds.append({"expert_id": k})
+        or_conds.append({"expert_aliases": k})
+    or_conds.append({"expert_id": {"$in": exp_list}})
+    or_conds.append({"expert_aliases": {"$in": exp_list}})
 
     # Match calls specifically targeted to this expert, or unassigned/general queue calls
     cursor = db["active_calls"].find({
-        "$or": [
-            {"expert_id": {"$in": list(expert_keys)}},
-            {"expert_aliases": {"$in": list(expert_keys)}}
-        ],
+        "$or": or_conds,
         "status": "calling",
         "created_at": {"$gte": cutoff}
     }).sort("created_at", -1)
@@ -830,42 +835,48 @@ async def get_expert_overview(current_user: UserResponse = Depends(RequireRole([
     user_doc = await db["users"].find_one(expert_query)
     profile_data = (user_doc or {}).get("expert_profile", {})
 
+    expert_keys = await resolve_expert_keys(expert_id, db, include_defaults=True)
+    exp_list = list(expert_keys)
+
+    or_expert_calls = []
+    for k in exp_list:
+        or_expert_calls.append({"expert_id": k})
+        or_expert_calls.append({"expert_aliases": k})
+        or_expert_calls.append({"accepted_by": k})
+    or_expert_calls.append({"expert_id": {"$in": exp_list}})
+    or_expert_calls.append({"expert_aliases": {"$in": exp_list}})
+    or_expert_calls.append({"accepted_by": {"$in": exp_list}})
+
     # Calculate completed and total consultations
     total_consultations = await db["active_calls"].count_documents({
-        "$or": [
-            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
-            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
-        ],
+        "$or": or_expert_calls,
         "status": {"$in": ["accepted", "completed"]}
     })
 
     # Active incoming queue count
     active_queue_count = await db["active_calls"].count_documents({
-        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}],
+        "$or": or_expert_calls,
         "status": "calling"
     })
 
     # Today's appointments count
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_appointments_count = await db["active_calls"].count_documents({
-        "$or": [
-            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
-            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
-        ],
-        "status": {"$in": ["calling", "accepted", "scheduled"]},
+        "$or": or_expert_calls,
+        "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending"]},
         "created_at": {"$gte": today_start}
     })
 
     # Reviews and real rating aggregation
     reviews = await db["reviews"].find({
-        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}]
+        "$or": [{"expert_id": k} for k in exp_list] + [{"expert_id": {"$in": exp_list}}]
     }).to_list(length=200)
     total_reviews = len(reviews)
     avg_rating = round(sum(r.get("rating", 5) for r in reviews) / total_reviews, 1) if total_reviews > 0 else 5.0
 
     # Total prescriptions issued
     total_prescriptions = await db["prescriptions"].count_documents({
-        "$or": [{"expert_id": expert_id}, {"expert_id": safe_expert_id}]
+        "$or": [{"expert_id": k} for k in exp_list] + [{"expert_id": {"$in": exp_list}}]
     })
 
     # Earnings calculation
@@ -894,33 +905,33 @@ async def get_expert_overview(current_user: UserResponse = Depends(RequireRole([
 async def get_expert_appointments(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Returns active requests, upcoming consultations, and queued appointments for this expert."""
     expert_id = str(current_user.id)
-    safe_expert_id = expert_id.replace("-", "")
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=90)
+    cutoff = now - timedelta(seconds=95)
 
-    # Clean up stale calling records
+    # Clean up stale calling records older than 95s
     await db["active_calls"].update_many(
         {"status": "calling", "created_at": {"$lt": cutoff}},
         {"$set": {"status": "missed"}}
     )
 
+    expert_keys = await resolve_expert_keys(expert_id, db, include_defaults=True)
+    exp_list = list(expert_keys)
+
+    or_expert_calls = []
+    for k in exp_list:
+        or_expert_calls.append({"expert_id": k})
+        or_expert_calls.append({"expert_aliases": k})
+        or_expert_calls.append({"accepted_by": k})
+    or_expert_calls.append({"expert_id": {"$in": exp_list}})
+    or_expert_calls.append({"expert_aliases": {"$in": exp_list}})
+    or_expert_calls.append({"accepted_by": {"$in": exp_list}})
+
     cursor = db["active_calls"].find({
-        "$and": [
-            {
-                "$or": [
-                    {"expert_id": expert_id}, {"expert_id": safe_expert_id},
-                    {"expert_id": "exp-1"}, {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
-                ]
-            },
-            {
-                "$or": [
-                    {"status": {"$in": ["accepted", "scheduled"]}},
-                    {"status": "calling", "created_at": {"$gte": cutoff}}
-                ]
-            }
-        ]
-    }).sort("created_at", -1).limit(30)
-    calls = await cursor.to_list(length=30)
+        "$or": or_expert_calls,
+        "status": {"$in": ["calling", "accepted", "scheduled", "requested", "pending", "missed"]},
+        "created_at": {"$gte": now - timedelta(days=7)}
+    }).sort("created_at", -1).limit(50)
+    calls = await cursor.to_list(length=50)
 
     result = []
     for c in calls:
@@ -946,9 +957,9 @@ async def get_expert_appointments(current_user: UserResponse = Depends(RequireRo
             except Exception:
                 pass
 
-        crop_issue = "General Crop Health Inspection"
+        crop_issue = c.get("crop_issue") or "General Crop Health Inspection"
         scan_image = None
-        if farmer_id:
+        if farmer_id and crop_issue == "General Crop Health Inspection":
             try:
                 scan = await db["disease_reports"].find_one({"user_id": str(farmer_id)}, sort=[("created_at", -1)])
                 if scan:
@@ -958,6 +969,11 @@ async def get_expert_appointments(current_user: UserResponse = Depends(RequireRo
                     scan_image = scan.get("image_url")
             except Exception:
                 pass
+
+        created_val = c.get("created_at")
+        created_str = created_val.isoformat() if isinstance(created_val, datetime) else str(created_val or now.isoformat())
+        sched_val = c.get("scheduled_time") or created_val
+        sched_str = sched_val.isoformat() if isinstance(sched_val, datetime) else str(sched_val or now.isoformat())
 
         result.append({
             "id": str(c["_id"]),
@@ -971,11 +987,73 @@ async def get_expert_appointments(current_user: UserResponse = Depends(RequireRo
             "call_type": c.get("call_type", "video"),
             "room_name": c.get("room_name"),
             "status": c.get("status", "calling"),
-            "created_at": c.get("created_at"),
-            "scheduled_time": c.get("scheduled_time") or c.get("created_at")
+            "notes": c.get("notes"),
+            "created_at": created_str,
+            "scheduled_time": sched_str
         })
 
     return result
+
+
+@router.post("/appointments")
+@router.post("/book")
+async def book_appointment(
+    req: AppointmentBookingRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db = Depends(get_mongo_db)
+):
+    """Farmer books or schedules a consultation appointment with an expert."""
+    expert_keys = await resolve_expert_keys(req.expert_id, db, include_defaults=False)
+    safe_farmer_id = str(current_user.id).replace("-", "").lower()[:6]
+    safe_expert_id = str(req.expert_id).replace("-", "").lower()[:6]
+    room_name = f"dragriai{safe_expert_id}{safe_farmer_id}{int(datetime.now(timezone.utc).timestamp())}"
+    now = datetime.now(timezone.utc)
+    scheduled_at = req.scheduled_time or now
+
+    apt_doc = {
+        "farmer_id": str(current_user.id),
+        "farmer_name": current_user.name or "Farmer",
+        "expert_id": req.expert_id,
+        "expert_aliases": list(expert_keys),
+        "room_name": room_name,
+        "call_type": req.call_type,
+        "status": "scheduled",
+        "scheduled_time": scheduled_at,
+        "crop_issue": req.crop_issue,
+        "notes": req.notes,
+        "created_at": now
+    }
+    res = await db["active_calls"].insert_one(apt_doc)
+    call_id = str(res.inserted_id)
+
+    # Notify expert via WebSocket
+    notify_msg = {
+        "type": "new_appointment",
+        "id": call_id,
+        "farmer_id": apt_doc["farmer_id"],
+        "farmer_name": apt_doc["farmer_name"],
+        "scheduled_time": scheduled_at.isoformat() if isinstance(scheduled_at, datetime) else str(scheduled_at),
+        "call_type": req.call_type,
+        "crop_issue": req.crop_issue,
+        "status": "scheduled"
+    }
+    notified_sockets = set()
+    for exp_key in expert_keys:
+        if exp_key in expert_connections:
+            for ws in list(expert_connections[exp_key]):
+                if ws not in notified_sockets:
+                    try:
+                        await ws.send_json(notify_msg)
+                        notified_sockets.add(ws)
+                    except Exception:
+                        pass
+
+    return {
+        "message": "Appointment booked successfully",
+        "appointment_id": call_id,
+        "room_name": room_name,
+        "scheduled_time": scheduled_at.isoformat() if isinstance(scheduled_at, datetime) else str(scheduled_at)
+    }
 
 
 @router.get("/expert/history")
@@ -984,12 +1062,21 @@ async def get_expert_consultation_history(current_user: UserResponse = Depends(R
     expert_id = str(current_user.id)
     safe_expert_id = expert_id.replace("-", "")
 
+    expert_keys = await resolve_expert_keys(expert_id, db, include_defaults=True)
+    exp_list = list(expert_keys)
+
+    or_expert_calls = []
+    for k in exp_list:
+        or_expert_calls.append({"expert_id": k})
+        or_expert_calls.append({"expert_aliases": k})
+        or_expert_calls.append({"accepted_by": k})
+    or_expert_calls.append({"expert_id": {"$in": exp_list}})
+    or_expert_calls.append({"expert_aliases": {"$in": exp_list}})
+    or_expert_calls.append({"accepted_by": {"$in": exp_list}})
+
     cursor = db["active_calls"].find({
-        "$or": [
-            {"expert_id": expert_id}, {"expert_id": safe_expert_id},
-            {"accepted_by": expert_id}, {"accepted_by": safe_expert_id}
-        ],
-        "status": {"$in": ["accepted", "completed", "declined"]}
+        "$or": or_expert_calls,
+        "status": {"$in": ["accepted", "completed", "declined", "missed"]}
     }).sort("created_at", -1).limit(50)
     calls = await cursor.to_list(length=50)
 
@@ -997,7 +1084,7 @@ async def get_expert_consultation_history(current_user: UserResponse = Depends(R
     for c in calls:
         call_id = str(c["_id"])
         farmer_id = c.get("farmer_id")
-        farmer_name = "Farmer"
+        farmer_name = c.get("farmer_name") or "Farmer"
 
         if farmer_id:
             try:
@@ -1006,18 +1093,26 @@ async def get_expert_consultation_history(current_user: UserResponse = Depends(R
                     f_query["$or"].append({"_id": ObjectId(str(farmer_id))})
                 f_doc = await db["users"].find_one(f_query)
                 if f_doc:
-                    farmer_name = f_doc.get("name", "Farmer")
+                    farmer_name = f_doc.get("name", farmer_name)
             except Exception:
                 pass
 
         # Check prescription
-        rx = await db["prescriptions"].find_one({"farmer_id": str(farmer_id), "expert_id": expert_id})
-        diagnosis = rx.get("diagnosis") if rx else "Crop Assessment Completed"
+        rx = await db["prescriptions"].find_one({
+            "farmer_id": str(farmer_id),
+            "$or": [{"expert_id": k} for k in exp_list]
+        })
+        diagnosis = rx.get("diagnosis") if rx else (c.get("crop_issue") or "Crop Assessment Completed")
 
         # Check review
         rev = await db["reviews"].find_one({"call_id": call_id})
         rating = rev.get("rating") if rev else None
         comment = rev.get("comment") if rev else None
+
+        created_val = c.get("created_at")
+        created_str = created_val.isoformat() if isinstance(created_val, datetime) else str(created_val)
+        completed_val = c.get("completed_at")
+        completed_str = completed_val.isoformat() if isinstance(completed_val, datetime) else (str(completed_val) if completed_val else None)
 
         result.append({
             "id": call_id,
@@ -1027,8 +1122,8 @@ async def get_expert_consultation_history(current_user: UserResponse = Depends(R
             "status": c.get("status", "completed"),
             "diagnosis": diagnosis,
             "room_name": c.get("room_name"),
-            "created_at": c.get("created_at"),
-            "completed_at": c.get("completed_at"),
+            "created_at": created_str,
+            "completed_at": completed_str,
             "rating": rating,
             "comment": comment
         })

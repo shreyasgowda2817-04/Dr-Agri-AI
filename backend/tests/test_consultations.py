@@ -28,6 +28,8 @@ from app.api.routes.consultations import (
     get_my_active_call,
     leave_call_beacon,
     get_call_status,
+    AppointmentBookingRequest,
+    book_appointment,
 )
 
 # Mock Mongo Collection
@@ -116,24 +118,38 @@ class MockCollection:
                 res.matched_count += 1
         return res
 
-    async def count_documents(self, query):
-        count = 0
-        for d in self.docs:
-            count += 1
-        return count
-
     def find(self, query):
+        def matches_branch(d, branch):
+            for k, v in branch.items():
+                val = d.get(k)
+                if isinstance(v, dict) and "$in" in v:
+                    if isinstance(val, list):
+                        if not any(item in v["$in"] for item in val):
+                            return False
+                    elif val not in v["$in"]:
+                        return False
+                elif isinstance(v, dict) and "$gte" in v:
+                    if not val or val < v["$gte"]:
+                        return False
+                elif isinstance(v, dict) and "$lt" in v:
+                    if not val or val >= v["$lt"]:
+                        return False
+                elif val != v:
+                    return False
+            return True
+
         matched = []
         for d in self.docs:
             if "$or" in query:
-                or_matches = any(
-                    all(d.get(k) == v for k, v in branch.items() if not isinstance(v, dict))
-                    for branch in query["$or"]
-                )
-                if or_matches:
-                    matched.append(dict(d))
-            else:
-                matched.append(dict(d))
+                or_matches = any(matches_branch(d, branch) for branch in query["$or"])
+                if not or_matches:
+                    continue
+            
+            top_level = {k: v for k, v in query.items() if k != "$or"}
+            if top_level and not matches_branch(d, top_level):
+                continue
+
+            matched.append(dict(d))
 
         class Cursor:
             def __init__(self, items):
@@ -147,6 +163,11 @@ class MockCollection:
                 return self.items[:length]
 
         return Cursor(matched)
+
+    async def count_documents(self, query):
+        cursor = self.find(query)
+        res = await cursor.to_list(1000)
+        return len(res)
 
 class MockDB(dict):
     def __getitem__(self, item):
@@ -285,3 +306,24 @@ async def test_consultation_lifecycle():
     assert call_status_res["exists"] is True
     assert call_status_res["status"] == "cancelled"
     assert call_status_res["farmer_id"] == str(farmer.id)
+
+    # 14. Test appointment booking
+    book_req = AppointmentBookingRequest(
+        expert_id=expert_id,
+        call_type="video",
+        crop_issue="Yellow rust on wheat leaves",
+        notes="Please inspect early morning leaf discoloration."
+    )
+    book_res = await book_appointment(book_req, current_user=farmer, db=db)
+    assert book_res["message"] == "Appointment booked successfully"
+    assert "appointment_id" in book_res
+
+    # 15. Test get_expert_appointments returns active and scheduled consultations
+    appointments = await get_expert_appointments(current_user=expert, db=db)
+    assert len(appointments) >= 1
+    found_apt = next((a for a in appointments if a["id"] == book_res["appointment_id"]), None)
+    assert found_apt is not None
+    assert found_apt["crop_issue"] == "Yellow rust on wheat leaves"
+    assert found_apt["status"] == "scheduled"
+    assert isinstance(found_apt["created_at"], str)
+

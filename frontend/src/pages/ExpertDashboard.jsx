@@ -26,7 +26,8 @@ import {
   ArrowUpRight,
   ChevronRight,
   Sliders,
-  Award
+  Award,
+  PhoneOff
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -86,6 +87,7 @@ const ExpertDashboard = () => {
   // Appointments / History / Reviews State
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [appointmentFilter, setAppointmentFilter] = useState('all');
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [reviews, setReviews] = useState([]);
@@ -376,9 +378,11 @@ const ExpertDashboard = () => {
   useEffect(() => {
     if (!user) return;
     let isPolling = true;
+    let pollCount = 0;
 
     const pollQueue = async () => {
       if (!isPolling) return;
+      pollCount++;
       try {
         const res = await api.get('/consultations/active-calls');
         const calls = res.data || [];
@@ -409,6 +413,11 @@ const ExpertDashboard = () => {
             }
           }
         }
+
+        // Keep appointments list & overview counters synced automatically
+        if (pollCount % 2 === 0) {
+          fetchAppointments();
+        }
       } catch (err) {
         console.warn("Queue polling check:", err);
       }
@@ -420,7 +429,7 @@ const ExpertDashboard = () => {
 
     pollQueue();
     return () => { isPolling = false; };
-  }, [user, registerIncomingCall, dismissIncomingCall]);
+  }, [user, registerIncomingCall, dismissIncomingCall, fetchAppointments]);
 
   // Real-time Push WebSocket with Auto-Reconnect for instant incoming consultation alerts
   useEffect(() => {
@@ -471,8 +480,16 @@ const ExpertDashboard = () => {
             if (data.type === 'incoming_call' && !activeCallRef.current) {
               registerIncomingCall(data, true);
               toast.info(`Incoming consultation from ${data.farmer_name || 'Farmer'}!`, { autoClose: 6000 });
+              fetchAppointments();
+              fetchOverviewData();
+            } else if (data.type === 'new_appointment') {
+              toast.info(`New consultation request from ${data.farmer_name || 'Farmer'}!`, { autoClose: 6000 });
+              fetchAppointments();
+              fetchOverviewData();
             } else if (data.type === 'call_cancelled') {
               dismissIncomingCall(data.id, 'The farmer cancelled the consultation request.');
+              fetchAppointments();
+              fetchOverviewData();
             }
           } catch (e) {}
         };
@@ -853,6 +870,65 @@ const ExpertDashboard = () => {
         ))}
       </div>
 
+      {/* ─── Global Call Alert Banner (Visible on ALL tabs when incoming call is ringing) ─── */}
+      <AnimatePresence>
+        {incomingCall && !activeCall && activeTab !== 'live' && (
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.99 }}
+            className="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 border-2 border-emerald-400 rounded-3xl p-4 sm:p-5 text-white shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-red-500 via-emerald-400 to-teal-300 animate-pulse" />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                <div className={`w-12 h-12 ${incomingCall.callType === 'audio' ? 'bg-blue-600' : 'bg-emerald-500'} rounded-2xl flex items-center justify-center shadow-lg shrink-0 relative`}>
+                  {incomingCall.callType === 'audio' ? <PhoneCall className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full animate-ping" />
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-emerald-950" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-red-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full animate-pulse tracking-wide">
+                      Incoming Call
+                    </span>
+                    <span className="text-xs text-emerald-300 font-mono font-bold">
+                      Wait: {waitTimeStr}
+                    </span>
+                    {incomingCallsQueue.length > 1 && (
+                      <span className="bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        +{incomingCallsQueue.length - 1} in queue
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
+                    {triageData?.farmer_name || incomingCall.farmerName || 'Farmer'} is calling ({incomingCall.callType === 'audio' ? 'Voice' : 'Video'})
+                  </h3>
+                  <p className="text-xs text-emerald-200/90 font-medium">
+                    Issue: <span className="text-white font-semibold">{triageData?.most_common_disease || 'Crop Health Consultation'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button
+                  onClick={() => declineCall(incomingCall.id)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition flex items-center gap-1.5"
+                >
+                  <PhoneOff size={14} /> Decline
+                </button>
+                <button
+                  onClick={() => acceptCall(incomingCall.id)}
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-gray-950 transition shadow-xl flex items-center justify-center gap-2 tracking-wide font-sans cursor-pointer"
+                >
+                  <Video size={15} /> Accept & Start Call
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─── TAB 1: LIVE CONSULTATION & QUEUE ─── */}
       {activeTab === 'live' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[550px]">
@@ -1168,14 +1244,90 @@ const ExpertDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
             <div>
               <h2 className="text-xl font-black text-gray-900">Upcoming Consultations & Active Queue</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Real-time appointments booked by farmers across India</p>
+              <p className="text-xs text-gray-500 mt-0.5">Real-time consultation requests and appointments from farmers across India</p>
             </div>
-            <button
-              onClick={fetchAppointments}
-              className="self-start sm:self-auto px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-            >
-              <RefreshCw size={13} className={loadingAppointments ? "animate-spin" : ""} /> Refresh List
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  fetchAppointments();
+                  fetchOverviewData();
+                }}
+                className="self-start sm:self-auto px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <RefreshCw size={13} className={loadingAppointments ? "animate-spin text-emerald-600" : ""} /> Refresh List
+              </button>
+            </div>
+          </div>
+
+          {/* Active Ringing Alert in Appointments tab */}
+          {incomingCall && !activeCall && (
+            <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 border-2 border-emerald-400/80 rounded-2xl p-4 sm:p-5 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-3.5">
+                <div className={`w-12 h-12 ${incomingCall.callType === 'audio' ? 'bg-blue-600' : 'bg-emerald-500'} rounded-2xl flex items-center justify-center shadow-lg shrink-0 relative`}>
+                  {incomingCall.callType === 'audio' ? <PhoneCall className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-red-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full animate-pulse">
+                      Live Ringing Call
+                    </span>
+                    <span className="text-xs text-emerald-300 font-mono font-bold">
+                      Wait: {waitTimeStr}
+                    </span>
+                  </div>
+                  <h4 className="text-base font-bold text-white mt-0.5">
+                    {triageData?.farmer_name || incomingCall.farmerName || 'Farmer'} is waiting on the line ({incomingCall.callType === 'audio' ? 'Voice' : 'Video'})
+                  </h4>
+                  <p className="text-xs text-emerald-200/90 font-medium">
+                    Issue: {triageData?.most_common_disease || 'Crop Inspection & Advisory'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+                <button
+                  onClick={() => declineCall(incomingCall.id)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => acceptCall(incomingCall.id)}
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-gray-950 transition shadow-lg flex items-center gap-2"
+                >
+                  <Video size={14} /> Accept Consultation Now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            {[
+              { id: 'all', label: 'All Requests', count: appointments.length },
+              { id: 'calling', label: 'Live Ringing', count: appointments.filter(a => a.status === 'calling').length },
+              { id: 'scheduled', label: 'Scheduled & Upcoming', count: appointments.filter(a => ['scheduled', 'requested', 'pending'].includes(a.status)).length },
+              { id: 'accepted', label: 'In Progress / Accepted', count: appointments.filter(a => a.status === 'accepted').length },
+              { id: 'missed', label: 'Missed Calls', count: appointments.filter(a => a.status === 'missed').length },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setAppointmentFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  appointmentFilter === tab.id
+                    ? 'bg-emerald-700 text-white shadow-sm'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+              >
+                {tab.label}
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  appointmentFilter === tab.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
           </div>
 
           {loadingAppointments ? (
@@ -1193,76 +1345,133 @@ const ExpertDashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {appointments.map((apt) => (
-                <div key={apt.id} className="bg-emerald-50/30 rounded-2xl p-5 border border-emerald-100 hover:shadow-md transition flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <img src={apt.farmer_avatar} alt={apt.farmer_name} className="w-12 h-12 rounded-xl object-cover border border-emerald-200" />
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900">{apt.farmer_name}</h4>
-                          <p className="text-[11px] text-gray-500">{apt.farmer_location}</p>
+              {appointments
+                .filter(apt => {
+                  if (appointmentFilter === 'all') return true;
+                  if (appointmentFilter === 'calling') return apt.status === 'calling';
+                  if (appointmentFilter === 'scheduled') return ['scheduled', 'requested', 'pending'].includes(apt.status);
+                  if (appointmentFilter === 'accepted') return apt.status === 'accepted';
+                  if (appointmentFilter === 'missed') return apt.status === 'missed';
+                  return true;
+                })
+                .map((apt) => {
+                  const formatTime = (timeStr) => {
+                    if (!timeStr) return 'Recently';
+                    try {
+                      const d = new Date(timeStr);
+                      return isNaN(d.getTime()) ? String(timeStr) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    } catch (e) {
+                      return String(timeStr);
+                    }
+                  };
+
+                  return (
+                    <div key={apt.id} className="bg-emerald-50/30 rounded-2xl p-5 border border-emerald-100 hover:shadow-md transition flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <img src={apt.farmer_avatar} alt={apt.farmer_name} className="w-12 h-12 rounded-xl object-cover border border-emerald-200" />
+                            <div>
+                              <h4 className="font-bold text-sm text-gray-900">{apt.farmer_name}</h4>
+                              <p className="text-[11px] text-gray-500">{apt.farmer_location}</p>
+                              {apt.farmer_phone && (
+                                <p className="text-[10px] text-gray-400 font-mono">{apt.farmer_phone}</p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            apt.status === 'calling' ? 'bg-red-500 text-white animate-pulse' :
+                            apt.status === 'accepted' ? 'bg-emerald-100 text-emerald-800' :
+                            ['scheduled', 'requested', 'pending'].includes(apt.status) ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {apt.status === 'calling' ? 'Ringing Now' :
+                             apt.status === 'accepted' ? 'In Progress' :
+                             apt.status === 'scheduled' ? 'Scheduled' :
+                             apt.status === 'missed' ? 'Missed Call' : apt.status}
+                          </span>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-3 border border-emerald-100/60 mb-4 space-y-1.5 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 font-medium">Reported Issue:</span>
+                            <span className="font-bold text-gray-900 text-right truncate max-w-[150px]">{apt.crop_issue}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 font-medium">Call Mode:</span>
+                            <span className="font-bold text-emerald-800 capitalize">{apt.call_type || 'video'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 font-medium">Requested Time:</span>
+                            <span className="text-gray-600 font-medium">{formatTime(apt.scheduled_time || apt.created_at)}</span>
+                          </div>
+                          {apt.notes && (
+                            <div className="pt-1 border-t border-gray-100">
+                              <span className="text-gray-400 text-[11px] block">Notes: {apt.notes}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        apt.status === 'calling' ? 'bg-red-100 text-red-700 animate-pulse' :
-                        apt.status === 'accepted' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {apt.status}
-                      </span>
-                    </div>
 
-                    <div className="bg-white rounded-xl p-3 border border-emerald-100/60 mb-4 space-y-1.5 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 font-medium">Reported Issue:</span>
-                        <span className="font-bold text-gray-900 text-right truncate max-w-[150px]">{apt.crop_issue}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 font-medium">Call Mode:</span>
-                        <span className="font-bold text-emerald-800 capitalize">{apt.call_type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 font-medium">Requested:</span>
-                        <span className="text-gray-600">{new Date(apt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div className="flex items-center gap-2 pt-2">
+                        {apt.status === 'calling' ? (
+                          <>
+                            <button
+                              onClick={() => declineCall(apt.id)}
+                              className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition"
+                            >
+                              Decline
+                            </button>
+                            <button
+                              onClick={() => acceptCall(apt.id)}
+                              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                            >
+                              <Video size={14} /> Accept Call
+                            </button>
+                          </>
+                        ) : apt.status === 'accepted' ? (
+                          <button
+                            onClick={() => {
+                              setRoomName(apt.room_name);
+                              setFarmerId(apt.farmer_id);
+                              setActiveCallId(apt.id);
+                              setActiveCall(apt.call_type || 'video');
+                              setActiveTab('live');
+                              fetchTriageData(apt.farmer_id);
+                              fetchFarmerCrops(apt.farmer_id);
+                            }}
+                            className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                          >
+                            <Video size={14} /> Reconnect Call Room
+                          </button>
+                        ) : ['scheduled', 'requested', 'pending'].includes(apt.status) ? (
+                          <button
+                            onClick={() => acceptCall(apt.id)}
+                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                          >
+                            <Video size={14} /> Start Consultation
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setRoomName(apt.room_name);
+                              setFarmerId(apt.farmer_id);
+                              setActiveCallId(apt.id);
+                              setActiveCall(apt.call_type || 'video');
+                              setActiveTab('live');
+                              fetchTriageData(apt.farmer_id);
+                              fetchFarmerCrops(apt.farmer_id);
+                              toast.info(`Calling back ${apt.farmer_name}...`);
+                            }}
+                            className="w-full py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                          >
+                            <PhoneCall size={14} /> Call Farmer Back
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    {apt.status === 'calling' ? (
-                      <>
-                        <button
-                          onClick={() => declineCall(apt.id)}
-                          className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition"
-                        >
-                          Decline
-                        </button>
-                        <button
-                          onClick={() => acceptCall(apt.id)}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
-                        >
-                          <Video size={14} /> Accept Call
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setRoomName(apt.room_name);
-                          setFarmerId(apt.farmer_id);
-                          setActiveCallId(apt.id);
-                          setActiveCall(apt.call_type || 'video');
-                          setActiveTab('live');
-                          fetchTriageData(apt.farmer_id);
-                          fetchFarmerCrops(apt.farmer_id);
-                        }}
-                        className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-1.5"
-                      >
-                        <Video size={14} /> Reconnect Call Room
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           )}
         </div>
