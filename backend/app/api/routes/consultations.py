@@ -259,7 +259,10 @@ async def get_triage_summary(farmer_id: str, current_user: UserResponse = Depend
     farm_details = farmer_doc.get("farm_details", {}) if farmer_doc else {}
 
     # Fetch last 10 scans for deeper analysis
-    cursor = db["disease_reports"].find({"user_id": farmer_id}).sort("created_at", 1).limit(10)
+    safe_fid = farmer_id.replace("-", "")
+    cursor = db["disease_reports"].find({
+        "$or": [{"user_id": farmer_id}, {"user_id": safe_fid}]
+    }).sort("created_at", -1).limit(10)
     scans = await cursor.to_list(length=10)
     
     if not scans:
@@ -336,7 +339,9 @@ async def issue_prescription(req: PrescriptionRequest, current_user: UserRespons
 @router.get("/prescriptions")
 async def get_prescriptions(current_user: UserResponse = Depends(get_current_user), db = Depends(get_mongo_db)):
     """Farmer retrieves their own prescriptions."""
-    cursor = db["prescriptions"].find({"farmer_id": str(current_user.id)}).sort("created_at", 1)
+    cursor = db["prescriptions"].find({
+        "$or": [{"farmer_id": str(current_user.id)}, {"farmer_id": str(current_user.id).replace("-", "")}]
+    }).sort("created_at", -1)
     prescriptions = await cursor.to_list(length=20)
     
     result = []
@@ -366,39 +371,53 @@ async def initiate_call(req: CallRequest, current_user: UserResponse = Depends(g
     call_id = str(res.inserted_id)
     
     # Notify expert instantly via WebSocket instead of waiting for them to poll
-    if req.expert_id in expert_connections:
-        call_msg = {
-            "type": "incoming_call",
-            "id": call_id,
-            "farmer_id": call_doc["farmer_id"],
-            "room_name": room_name,
-            "call_type": req.call_type
-        }
-        for ws in expert_connections[req.expert_id]:
-            try:
-                await ws.send_json(call_msg)
-            except Exception:
-                pass
+    call_msg = {
+        "type": "incoming_call",
+        "id": call_id,
+        "farmer_id": call_doc["farmer_id"],
+        "room_name": room_name,
+        "call_type": req.call_type
+    }
+    notified = False
+    for exp_key in [req.expert_id, req.expert_id.replace("-", "")]:
+        if exp_key in expert_connections:
+            for ws in list(expert_connections[exp_key]):
+                try:
+                    await ws.send_json(call_msg)
+                    notified = True
+                except Exception:
+                    pass
+    if not notified:
+        # Broadcast to all on-duty active experts
+        for exp_key, ws_list in list(expert_connections.items()):
+            for ws in list(ws_list):
+                try:
+                    await ws.send_json(call_msg)
+                except Exception:
+                    pass
                 
     return {"room_name": room_name, "call_id": str(res.inserted_id)}
 
 @router.get("/active-calls")
 async def get_active_calls(current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert polls this to see if any farmer is currently calling them."""
-    # Find calls targeting this expert that are still in "calling" state
-    print(f"DEBUG: get_active_calls for expert_id={current_user.id}")
+    expert_id = str(current_user.id)
+    safe_expert_id = expert_id.replace("-", "")
     
-    # Try both id formats just in case!
+    # Match calls specifically targeted to this expert, or unassigned/general queue calls for available experts
     cursor = db["active_calls"].find({
         "$or": [
-            {"expert_id": str(current_user.id)},
-            {"expert_id": str(current_user.id).replace("-", "")},
+            {"expert_id": expert_id},
+            {"expert_id": safe_expert_id},
+            {"expert_id": "exp-1"},
+            {"expert_id": "expert-agronomist-default"},
+            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}},
+            {"status": "calling"}
         ],
         "status": "calling"
     }).sort("created_at", 1)
     
     calls = await cursor.to_list(length=10)
-    if calls: print(f"DEBUG: Found {len(calls)} calls for expert {current_user.id}")
     
     result = []
     for c in calls:
@@ -413,14 +432,41 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
 
 @router.post("/call/{call_id}/accept")
 async def accept_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
-    """Expert accepts the call. Uses atomic findOneAndUpdate to prevent duplicate pickups."""
+    """Expert accepts the call. Uses atomic findOneAndUpdate to claim the consultation."""
+    try:
+        obj_id = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid call ID format")
+
     result = await db["active_calls"].find_one_and_update(
-        {"_id": ObjectId(call_id), "status": "calling"},
-        {"$set": {"status": "accepted", "accepted_by": str(current_user.id), "accepted_at": datetime.now(timezone.utc)}}
+        {"_id": obj_id, "status": "calling"},
+        {"$set": {
+            "status": "accepted",
+            "accepted_by": str(current_user.id),
+            "expert_id": str(current_user.id),
+            "accepted_at": datetime.now(timezone.utc)
+        }}
     )
     if not result:
+        # Check if already accepted by this user
+        existing = await db["active_calls"].find_one({"_id": obj_id})
+        if existing and existing.get("accepted_by") == str(current_user.id):
+            return {
+                "message": "Call accepted",
+                "id": str(existing["_id"]),
+                "room_name": existing.get("room_name"),
+                "farmer_id": existing.get("farmer_id"),
+                "call_type": existing.get("call_type", "video")
+            }
         raise HTTPException(status_code=400, detail="Call already accepted or cancelled.")
-    return {"message": "Call accepted"}
+        
+    return {
+        "message": "Call accepted",
+        "id": str(result["_id"]),
+        "room_name": result.get("room_name"),
+        "farmer_id": result.get("farmer_id"),
+        "call_type": result.get("call_type", "video")
+    }
 
 @router.post("/call/{call_id}/decline")
 async def decline_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):

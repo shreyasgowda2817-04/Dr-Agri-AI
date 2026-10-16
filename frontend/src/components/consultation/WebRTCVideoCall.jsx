@@ -121,15 +121,20 @@ export const WebRTCVideoCall = ({
 
       return stream;
     } catch (err) {
-      console.warn('getUserMedia error:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setPermissionError('Camera/Microphone permission denied. Please allow camera and microphone in your browser to start the call.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setPermissionError('No camera or microphone device found. Connecting in audio-only or spectator mode.');
-      } else {
-        setPermissionError(err.message || 'Could not access media devices.');
+      console.warn('getUserMedia camera error, falling back to audio only:', err);
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(audioStream);
+        setIsVideoMuted(true);
+        return audioStream;
+      } catch (audioErr) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setPermissionError('Camera/Microphone permission denied. Please allow camera and microphone in your browser.');
+        } else {
+          setPermissionError(err.message || 'Could not access media devices.');
+        }
+        return null;
       }
-      return null;
     }
   }, []);
 
@@ -157,13 +162,13 @@ export const WebRTCVideoCall = ({
 
       // Handle Remote Stream Tracks
       pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          setRemoteStream(event.streams[0]);
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = event.streams[0];
-          }
-          setConnectionStatus('connected');
+        let stream = event.streams && event.streams[0];
+        if (!stream) {
+          stream = new MediaStream();
+          stream.addTrack(event.track);
         }
+        setRemoteStream(stream);
+        setConnectionStatus('connected');
       };
 
       // Handle ICE Candidates
@@ -194,31 +199,51 @@ export const WebRTCVideoCall = ({
         });
       }
 
-      // Connect Signaling WebSocket
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const defaultWsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : 'dr-agri-ai.onrender.com';
-      const wsHost = import.meta.env.VITE_WS_HOST || defaultWsHost;
-      const wsUrl = `${wsProtocol}//${wsHost}/api/v1/consultations/ws/call/${roomName}?client_id=${currentUser?.id || 'anon'}&role=${isExpert ? 'expert' : 'farmer'}`;
+      // Connect Signaling WebSocket using unified URL resolution
+      const resolveWsUrl = () => {
+        const path = `/api/v1/consultations/ws/call/${roomName}?client_id=${currentUser?.id || 'anon'}&role=${isExpert ? 'expert' : 'farmer'}`;
+        if (import.meta.env.VITE_WS_HOST) {
+          const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          return `${proto}//${import.meta.env.VITE_WS_HOST}${path}`;
+        }
+        const apiUrl = import.meta.env.VITE_API_URL;
+        if (apiUrl && (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))) {
+          try {
+            const parsed = new URL(apiUrl);
+            const proto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${proto}//${parsed.host}${path}`;
+          } catch (e) {}
+        }
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const defaultHost = isLocal ? 'localhost:8000' : 'dr-agri-ai.onrender.com';
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${proto}//${defaultHost}${path}`;
+      };
 
-      const socket = new WebSocket(wsUrl);
+      const socket = new WebSocket(resolveWsUrl());
       ws.current = socket;
+
+      let pingTimer = null;
 
       socket.onopen = () => {
         console.log(`Connected to WebRTC signaling room: ${roomName}`);
         setConnectionStatus((prev) => (prev === 'connected' ? 'connected' : 'waiting'));
+        try {
+          socket.send(JSON.stringify({ type: 'peer_ready', role: isExpert ? 'expert' : 'farmer' }));
+        } catch (e) {}
+        pingTimer = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            try { socket.send("ping"); } catch (e) {}
+          }
+        }, 10000);
       };
 
-      socket.onmessage = async (event) => {
-        if (!isMounted) return;
+      const createAndSendOffer = async () => {
         try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'peer_joined') {
-            setConnectionStatus('connected');
-            // We are the caller / existing peer: create SDP offer
-            if (pc.createOffer) {
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
+          if (pc.createOffer) {
+            const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+            await pc.setLocalDescription(offer);
+            if (socket.readyState === WebSocket.OPEN) {
               socket.send(
                 JSON.stringify({
                   type: 'offer',
@@ -226,44 +251,69 @@ export const WebRTCVideoCall = ({
                 })
               );
             }
+          }
+        } catch (err) {
+          console.warn("createOffer error:", err);
+        }
+      };
+
+      socket.onmessage = async (event) => {
+        if (!isMounted) return;
+        try {
+          if (event.data === "pong") return;
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'peer_joined' || data.type === 'peer_ready') {
+            setConnectionStatus('connected');
+            // Caller / Initiator creates the offer
+            if (!isExpert) {
+              await createAndSendOffer();
+            }
           } else if (data.type === 'offer') {
-            // Received offer: set remote description and create SDP answer
-            if (pc.setRemoteDescription) {
+            if (pc.setRemoteDescription && data.sdp) {
               await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
 
               // Process any queued candidates
               while (iceCandidateQueue.current.length > 0) {
                 const candidate = iceCandidateQueue.current.shift();
-                await pc.addIceCandidate(candidate);
+                try {
+                  await pc.addIceCandidate(candidate);
+                } catch (e) {}
               }
 
               const answer = await pc.createAnswer();
               await pc.setLocalDescription(answer);
-              socket.send(
-                JSON.stringify({
-                  type: 'answer',
-                  sdp: pc.localDescription,
-                })
-              );
+              if (socket.readyState === WebSocket.OPEN) {
+                socket.send(
+                  JSON.stringify({
+                    type: 'answer',
+                    sdp: pc.localDescription,
+                  })
+                );
+              }
               setConnectionStatus('connected');
             }
           } else if (data.type === 'answer') {
-            // Received answer: set remote description
-            if (pc.setRemoteDescription) {
+            if (pc.setRemoteDescription && data.sdp) {
               await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
               while (iceCandidateQueue.current.length > 0) {
                 const candidate = iceCandidateQueue.current.shift();
-                await pc.addIceCandidate(candidate);
+                try {
+                  await pc.addIceCandidate(candidate);
+                } catch (e) {}
               }
               setConnectionStatus('connected');
             }
           } else if (data.type === 'ice_candidate') {
             if (data.candidate) {
-              const candidate = new RTCIceCandidate(data.candidate);
-              if (pc.remoteDescription && pc.remoteDescription.type) {
-                await pc.addIceCandidate(candidate);
-              } else {
-                iceCandidateQueue.current.push(candidate);
+              try {
+                if (pc.remoteDescription && pc.remoteDescription.type) {
+                  await pc.addIceCandidate(data.candidate);
+                } else {
+                  iceCandidateQueue.current.push(data.candidate);
+                }
+              } catch (e) {
+                console.warn("addIceCandidate warning:", e);
               }
             }
           } else if (data.type === 'chat_message') {
@@ -286,6 +336,7 @@ export const WebRTCVideoCall = ({
 
       socket.onclose = () => {
         console.log('Signaling WebSocket closed');
+        if (pingTimer) clearInterval(pingTimer);
       };
     };
 
@@ -317,6 +368,22 @@ export const WebRTCVideoCall = ({
       }
     };
   }, [roomName, callType, initLocalMedia, isExpert, currentUser?.id, remoteDisplayName]);
+
+  // Bind and safely play remote video stream
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play?.().catch((e) => console.log('Autoplay handled:', e));
+    }
+  }, [remoteStream]);
+
+  // Bind and safely play local video stream
+  useEffect(() => {
+    if (localVideoRef.current && localStream && !isVideoMuted) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play?.().catch((e) => console.log('Autoplay local handled:', e));
+    }
+  }, [localStream, isVideoMuted]);
 
   // Audio Mute Toggle
   const toggleAudio = () => {

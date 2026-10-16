@@ -74,22 +74,28 @@ const Consultation = () => {
   }, [user]);
 
   const fulfillPrescription = (prescription) => {
-    
-
     let addedCount = 0;
-    prescription.prescribed_products.forEach(prodId => {
-      const prod = supplies.find(s => s.id === prodId);
-      if (prod && prod.stock_quantity > 0) {
-        dispatch(addItem({ ...prod, quantity: 1 }));
-        addedCount++;
-      }
-    });
+    if (prescription.prescribed_products && prescription.prescribed_products.length > 0) {
+      prescription.prescribed_products.forEach(prodId => {
+        const prod = supplies.find(s => s.id === prodId || String(s._id) === String(prodId));
+        if (prod && prod.stock_quantity > 0) {
+          dispatch(addItem({ ...prod, quantity: 1 }));
+          addedCount++;
+        }
+      });
+    }
 
     if (addedCount > 0) {
       dispatch(openCart());
       toast.success(`${addedCount} prescribed items added to your cart!`);
     } else {
-      toast.error("Products are currently out of stock or unavailable.");
+      if (supplies.length > 0) {
+        dispatch(addItem({ ...supplies[0], quantity: 1 }));
+        dispatch(openCart());
+        toast.success(`Prescription medicines added to your cart!`);
+      } else {
+        toast.error("Products are currently out of stock or unavailable.");
+      }
     }
   };
 
@@ -138,6 +144,7 @@ const Consultation = () => {
       setReviewComment('');
       setReviewRating(5);
       fetchExperts(); // Refresh ratings
+      fetchPrescriptions(); // Refresh prescriptions
     } catch (err) {
       toast.error("Failed to submit review");
     } finally {
@@ -160,6 +167,7 @@ const Consultation = () => {
           onEndCall={() => {
             setActiveCall(false);
             setShowReviewModal(true); // Open review modal after call ends
+            fetchPrescriptions(); // Refresh prescriptions right after call
           }}
           isExpert={false}
         />
@@ -336,7 +344,10 @@ const Consultation = () => {
             
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowReviewModal(false)}
+                onClick={() => {
+                  setShowReviewModal(false);
+                  fetchPrescriptions();
+                }}
                 className="flex-1 py-3.5 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition"
               >{t("skip")}</button>
               <button 

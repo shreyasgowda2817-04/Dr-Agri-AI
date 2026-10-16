@@ -52,7 +52,7 @@ class MockCollection:
                     return dict(d)
         return None
 
-    async def find_one_and_update(self, filter_q, update_q):
+    async def find_one_and_update(self, filter_q, update_q, **kwargs):
         for d in self.docs:
             match = True
             for k, v in filter_q.items():

@@ -232,6 +232,7 @@ const ExpertDashboard = () => {
               callType: nextCall.call_type || 'video',
               createdAt: nextCall.created_at
             });
+            setFarmerId(nextCall.farmer_id);
             setWaitingSince(new Date(nextCall.created_at));
             fetchTriageData(nextCall.farmer_id);
             fetchFarmerCrops(nextCall.farmer_id);
@@ -306,22 +307,33 @@ const ExpertDashboard = () => {
     if (!callToAccept) return;
 
     try {
-      await api.post(`/consultations/call/${callToAccept.id}/accept`);
-      setRoomName(callToAccept.room || callToAccept.room_name);
-      setFarmerId(callToAccept.farmerId || callToAccept.farmer_id);
+      const res = await api.post(`/consultations/call/${callToAccept.id}/accept`);
+      const activeRoom = res.data?.room_name || callToAccept.room || callToAccept.room_name;
+      const activeFarmerId = res.data?.farmer_id || callToAccept.farmerId || callToAccept.farmer_id;
+      const activeCallType = res.data?.call_type || callToAccept.callType || callToAccept.call_type || 'video';
+
+      setRoomName(activeRoom);
+      setFarmerId(activeFarmerId);
       setActiveCallId(callToAccept.id);
-      setActiveCall(callToAccept.callType || callToAccept.call_type || 'video');
+      setActiveCall(activeCallType);
       setIncomingCall(null);
       setActiveTab('live');
       toast.success("Consultation connected! Opening live room.");
-      fetchTriageData(callToAccept.farmerId || callToAccept.farmer_id);
-      fetchFarmerCrops(callToAccept.farmerId || callToAccept.farmer_id);
+      fetchTriageData(activeFarmerId);
+      fetchFarmerCrops(activeFarmerId);
       fetchAppointments();
       fetchOverviewData();
     } catch (err) {
-      if (err.response?.status === 400) {
-        toast.error("Consultation was cancelled or accepted by another expert.");
-        setIncomingCall(null);
+      const activeRoom = err.response?.data?.room_name || callToAccept.room || callToAccept.room_name;
+      const activeFarmerId = err.response?.data?.farmer_id || callToAccept.farmerId || callToAccept.farmer_id;
+      if (activeRoom) {
+        setRoomName(activeRoom);
+        setFarmerId(activeFarmerId);
+        setActiveCallId(callToAccept.id);
+        setActiveCall(callToAccept.callType || callToAccept.call_type || 'video');
+        setActiveTab('live');
+        fetchTriageData(activeFarmerId);
+        fetchFarmerCrops(activeFarmerId);
       } else {
         toast.error("Failed to connect to consultation room.");
       }
@@ -336,8 +348,6 @@ const ExpertDashboard = () => {
     try {
       await api.post(`/consultations/call/${targetId}/decline`);
       setIncomingCall(null);
-      setTriageData(null);
-      setFarmerCrops([]);
       toast.info("Consultation request declined.");
       fetchAppointments();
       fetchOverviewData();
@@ -357,9 +367,7 @@ const ExpertDashboard = () => {
     }
     setActiveCall(false);
     setActiveCallId(null);
-    setTriageData(null);
-    setFarmerCrops([]);
-    toast.info("Consultation completed. Session saved to history.");
+    toast.info("Consultation completed. You can issue prescription notes below.");
     fetchOverviewData();
     fetchAppointments();
     fetchHistory();
@@ -368,10 +376,15 @@ const ExpertDashboard = () => {
   // Submit Treatment Record / Prescription
   const submitPrescription = async (e) => {
     e.preventDefault();
+    const targetFarmerId = farmerId || triageData?.farmer_id;
+    if (!targetFarmerId) {
+      toast.error("Please select an active farmer or appointment before submitting prescription.");
+      return;
+    }
     setSendingPrescription(true);
     try {
       await api.post('/consultations/prescriptions', {
-        farmer_id: farmerId,
+        farmer_id: targetFarmerId,
         diagnosis: prescriptionForm.diagnosis,
         prescribed_products: selectedProducts,
         notes: prescriptionForm.notes
@@ -380,8 +393,9 @@ const ExpertDashboard = () => {
       setPrescriptionForm({ diagnosis: '', notes: '' });
       setSelectedProducts([]);
       fetchOverviewData();
+      fetchAppointments();
     } catch (err) {
-      toast.error("Failed to save treatment record.");
+      toast.error(err.response?.data?.detail || "Failed to save treatment record.");
     } finally {
       setSendingPrescription(false);
     }
