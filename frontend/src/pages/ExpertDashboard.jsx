@@ -264,6 +264,110 @@ const ExpertDashboard = () => {
     return () => { isPolling = false; };
   }, [user]);
 
+  // Real-time Push WebSocket for instant incoming consultation alerts
+  useEffect(() => {
+    if (!user?.id) return;
+    let ws = null;
+    let pingInterval = null;
+    let isMounted = true;
+
+    const connectExpertWs = () => {
+      try {
+        const path = `/api/v1/consultations/ws/experts/${user.id}`;
+        let wsUrl;
+        if (import.meta.env.VITE_WS_HOST) {
+          const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${proto}//${import.meta.env.VITE_WS_HOST}${path}`;
+        } else if (import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http://') || import.meta.env.VITE_API_URL.startsWith('https://'))) {
+          try {
+            const parsed = new URL(import.meta.env.VITE_API_URL);
+            const proto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${proto}//${parsed.host}${path}`;
+          } catch (e) {}
+        }
+        if (!wsUrl) {
+          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${proto}//${isLocal ? 'localhost:8000' : 'dr-agri-ai.onrender.com'}${path}`;
+        }
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          console.log(`Expert WebSocket connected for user ${user.id}`);
+          pingInterval = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              try { ws.send("ping"); } catch (e) {}
+            }
+          }, 15000);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            if (event.data === "pong") return;
+            const data = JSON.parse(event.data);
+            if (data.type === 'incoming_call' && !activeCallRef.current) {
+              setIncomingCall({
+                id: data.id,
+                room: data.room_name,
+                farmerId: data.farmer_id,
+                farmerName: data.farmer_name || 'Farmer',
+                callType: data.call_type || 'video',
+                createdAt: new Date().toISOString()
+              });
+              setFarmerId(data.farmer_id);
+              setWaitingSince(new Date());
+              setQueueLength((prev) => Math.max(prev, 1));
+              fetchTriageData(data.farmer_id);
+              fetchFarmerCrops(data.farmer_id);
+              // Audio notification chime if supported
+              try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.4);
+              } catch (e) {}
+              toast.info(`Incoming consultation from ${data.farmer_name || 'Farmer'}!`, { autoClose: 6000 });
+            } else if (data.type === 'call_cancelled') {
+              if (incomingCallRef.current?.id === data.id) {
+                setIncomingCall(null);
+                setTriageData(null);
+                setFarmerCrops([]);
+                toast.info('The farmer cancelled the call.');
+              }
+            }
+          } catch (e) {}
+        };
+
+        ws.onerror = () => {};
+        ws.onclose = () => {
+          if (pingInterval) clearInterval(pingInterval);
+        };
+      } catch (err) {
+        console.warn("Could not connect expert WS:", err);
+      }
+    };
+
+    connectExpertWs();
+
+    return () => {
+      isMounted = false;
+      if (pingInterval) clearInterval(pingInterval);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, [user?.id]);
+
   // Wait time counter
   const [waitTimeStr, setWaitTimeStr] = useState('0:00');
   useEffect(() => {
@@ -539,6 +643,25 @@ const ExpertDashboard = () => {
         </div>
       </div>
 
+      {/* Offline Alert Banner */}
+      {!(overview?.is_available ?? true) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 text-amber-900 shadow-sm">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-xs sm:text-sm font-bold">You are currently OFFLINE</p>
+              <p className="text-[11px] sm:text-xs text-amber-700">Farmers see you as unavailable. Switch your status to Online to receive live calls.</p>
+            </div>
+          </div>
+          <button
+            onClick={toggleAvailabilityQuick}
+            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shrink-0 transition shadow-sm"
+          >
+            Go Online Now
+          </button>
+        </div>
+      )}
+
       {/* ─── High-Impact KPI Statistics Row ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-100 shadow-sm hover:shadow-md transition">
@@ -655,7 +778,7 @@ const ExpertDashboard = () => {
                 <div className="absolute inset-0 bg-gray-950/85 backdrop-blur-md"></div>
 
                 <AnimatePresence>
-                  {incomingCall && triageData ? (
+                  {incomingCall ? (
                     <motion.div 
                       initial={{ scale: 0.9, opacity: 0, y: 20 }}
                       animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -684,16 +807,18 @@ const ExpertDashboard = () => {
                       <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/5 space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("farmer")}</span>
-                          <span className="text-sm text-white font-bold">{triageData.farmer_name}</span>
+                          <span className="text-sm text-white font-bold">{triageData?.farmer_name || incomingCall.farmerName || 'Farmer'}</span>
                         </div>
                         <div className="flex justify-between items-center border-t border-white/5 pt-2.5">
                           <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("detected_issue")}</span>
-                          <span className="text-sm text-amber-400 font-bold">{triageData.most_common_disease?.replace(/___/g, ' ')}</span>
+                          <span className="text-sm text-amber-400 font-bold">
+                            {triageData?.most_common_disease ? triageData.most_common_disease.replace(/___/g, ' ') : (loadingTriage ? 'Loading AI triage analysis...' : 'General Agronomy Consultation')}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center border-t border-white/5 pt-2.5">
                           <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("ai_confidence")}</span>
                           <span className="text-sm text-emerald-400 font-bold">
-                            {(triageData.average_confidence * 100).toFixed(0)}% Match
+                            {triageData?.average_confidence ? `${(triageData.average_confidence * 100).toFixed(0)}% Match` : (loadingTriage ? 'Analyzing...' : 'Verified Farmer')}
                           </span>
                         </div>
                       </div>

@@ -15,6 +15,7 @@ const Consultation = () => {
   const [activeCall, setActiveCall] = useState(false);
   const [callType, setCallType] = useState('video');
   const [roomName, setRoomName] = useState('');
+  const [selectedExpertName, setSelectedExpertName] = useState('');
   const [experts, setExperts] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [supplies, setSupplies] = useState([]);
@@ -31,8 +32,6 @@ const Consultation = () => {
   const dispatch = useDispatch();
 
   const fetchExperts = async () => {
-    
-
     try {
       const res = await api.get('/consultations/experts');
       setExperts(res.data);
@@ -45,8 +44,6 @@ const Consultation = () => {
 
   useEffect(() => {
     const fetchPrescriptions = async () => {
-      
-
       try {
         const res = await api.get('/consultations/prescriptions');
         setPrescriptions(res.data);
@@ -56,8 +53,6 @@ const Consultation = () => {
     };
 
     const fetchSupplies = async () => {
-      
-
       try {
         const res = await api.get('/marketplace/supplies');
         setSupplies(res.data);
@@ -101,15 +96,14 @@ const Consultation = () => {
 
   const [isCalling, setIsCalling] = useState(false);
 
-  const startCall = async (expertId, type = 'video') => {
-    
-
+  const startCall = async (expertId, type = 'video', expertName = '') => {
     if (!user) {
       toast.error("Please log in to consult with an expert");
       return;
     }
 
     setIsCalling(true);
+    setSelectedExpertName(expertName || 'Dr. Agri AI Specialist');
     // Call the backend to initiate a real session!
     try {
       const res = await api.post('/consultations/call', { expert_id: expertId, call_type: type });
@@ -117,7 +111,7 @@ const Consultation = () => {
       setReviewCallId(res.data.call_id);
       setCallType(type);
       setActiveCall(true);
-      toast.success(`Ringing the expert for a ${type} call...`);
+      toast.success(`Ringing ${expertName || 'the specialist'} for a ${type} call...`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to connect to expert");
@@ -127,8 +121,6 @@ const Consultation = () => {
   };
 
   const submitReview = async () => {
-    
-
     if (!reviewCallId) {
       setShowReviewModal(false);
       return;
@@ -186,7 +178,7 @@ const Consultation = () => {
             name: user?.name || 'Farmer',
             role: 'farmer'
           }}
-          peerName="Dr. Agri AI Specialist"
+          peerName={selectedExpertName || "Dr. Agri AI Specialist"}
           onEndCall={handleEndCall}
           isExpert={false}
         />
@@ -228,9 +220,24 @@ const Consultation = () => {
               className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col"
             >
               <div className="flex items-start gap-4 mb-4">
-                <img src={expert.img} alt={expert.name} className="w-16 h-16 rounded-full object-cover border-2 border-green-100" />
+                <div className="relative">
+                  <img src={expert.img} alt={expert.name} className="w-16 h-16 rounded-full object-cover border-2 border-emerald-100" />
+                  <span
+                    className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                      expert.is_available ? 'bg-emerald-500' : 'bg-gray-400'
+                    }`}
+                    title={expert.is_available ? 'Online' : 'Offline'}
+                  />
+                </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900">{expert.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg text-gray-900">{expert.name}</h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      expert.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {expert.is_available ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
                   <p className="text-sm text-green-600 font-medium">{expert.title}</p>
                   <div className="flex items-center gap-1 mt-1 text-yellow-500">
                     <Star size={14} className="fill-current" />
@@ -247,14 +254,14 @@ const Consultation = () => {
               <div className="mt-auto grid grid-cols-2 gap-3">
                 <button 
                   disabled={isCalling}
-                  onClick={() => startCall(expert.id, 'audio')}
+                  onClick={() => startCall(expert.id, 'audio', expert.name)}
                   className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-sm hover:shadow-md ${isCalling ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
                   <PhoneCall size={18} /> {isCalling ? 'Connecting...' : 'Voice'}
                 </button>
                 <button 
                   disabled={isCalling}
-                  onClick={() => startCall(expert.id, 'video')}
+                  onClick={() => startCall(expert.id, 'video', expert.name)}
                   className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md hover:shadow-lg ${isCalling ? 'bg-blue-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                 >
                   <Video size={18} /> {isCalling ? 'Connecting...' : 'Video'}

@@ -45,8 +45,8 @@ async def get_current_user(
         raise credentials_exception
         
     # Ensure id field is set for the response model
-    if "id" not in user_dict:
-        user_dict["id"] = str(user_dict["_id"])
+    if not user_dict.get("id"):
+        user_dict["id"] = str(user_dict.get("_id", user_id))
         
     return UserResponse.model_validate(user_dict)
 

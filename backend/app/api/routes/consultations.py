@@ -104,6 +104,7 @@ class ExpertResponse(BaseModel):
     price: float
     lang: str
     img: str
+    is_available: bool = True
 
 class TriageSummaryResponse(BaseModel):
     farmer_id: str
@@ -171,6 +172,7 @@ async def get_experts(db = Depends(get_mongo_db)):
     for e in experts:
         expert_id = e.get("id") or str(e.get("_id"))
         e["id"] = expert_id
+        profile = e.get("expert_profile", {})
         
         # Calculate real average rating from database
         pipeline = [
@@ -184,11 +186,12 @@ async def get_experts(db = Depends(get_mongo_db)):
         expert_list.append({
             "id": expert_id,
             "name": e.get("name") or "Agronomy Specialist",
-            "title": "Agronomy Expert",
+            "title": profile.get("title") or "Agronomy Expert",
             "rating": round(avg_rating, 1),
             "img": f"https://ui-avatars.com/api/?name={(e.get('name') or 'Expert').replace(' ', '+')}&background=065f46&color=fff",
-            "price": 0.0,
-            "lang": e.get("languages", "English, Hindi, Local")
+            "price": float(profile.get("fee_per_consultation", 0.0)),
+            "lang": e.get("languages", "English, Hindi, Local"),
+            "is_available": profile.get("is_available", True)
         })
 
     # If no expert registered yet, check admins or supply verified Dr. Swaminathan
@@ -196,14 +199,16 @@ async def get_experts(db = Depends(get_mongo_db)):
         admins = await db["users"].find({"role": {"$in": ["ADMIN", "SUPER_ADMIN"]}}).to_list(length=5)
         for a in admins:
             aid = str(a.get("id") or a.get("_id"))
+            a_profile = a.get("expert_profile", {})
             expert_list.append({
                 "id": aid,
                 "name": a.get("name") or "Chief Agronomist",
-                "title": "Senior Agronomy Specialist",
+                "title": a_profile.get("title") or "Senior Agronomy Specialist",
                 "rating": 5.0,
                 "img": f"https://ui-avatars.com/api/?name={(a.get('name') or 'Agronomist').replace(' ', '+')}&background=047857&color=fff",
-                "price": 0.0,
-                "lang": "English, Hindi, Kannada"
+                "price": float(a_profile.get("fee_per_consultation", 0.0)),
+                "lang": "English, Hindi, Kannada",
+                "is_available": a_profile.get("is_available", True)
             })
 
     if not expert_list:
@@ -214,7 +219,8 @@ async def get_experts(db = Depends(get_mongo_db)):
             "rating": 4.9,
             "img": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
             "price": 0.0,
-            "lang": "English, Hindi, Kannada, Telugu"
+            "lang": "English, Hindi, Kannada, Telugu",
+            "is_available": True
         })
 
     return expert_list
@@ -426,7 +432,8 @@ async def get_active_calls(current_user: UserResponse = Depends(RequireRole([Use
             {"expert_id": safe_expert_id},
             {"expert_id": "exp-1"},
             {"expert_id": "expert-agronomist-default"},
-            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}}
+            {"expert_id": {"$in": ["exp-1", "default", "general", "all", ""]}},
+            {"status": "calling"}
         ],
         "status": "calling",
         "created_at": {"$gte": cutoff}
@@ -454,7 +461,7 @@ async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_cur
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid call ID format")
 
-    await db["active_calls"].update_one(
+    call = await db["active_calls"].find_one_and_update(
         {"_id": obj_id, "status": "calling"},
         {"$set": {
             "status": "cancelled",
@@ -462,6 +469,15 @@ async def cancel_call(call_id: str, current_user: UserResponse = Depends(get_cur
             "cancelled_at": datetime.now(timezone.utc)
         }}
     )
+    if call and call.get("room_name") in call_room_connections:
+        for ws in list(call_room_connections[call["room_name"]]):
+            try:
+                await ws.send_json({
+                    "type": "call_cancelled",
+                    "reason": "Call was cancelled by the caller."
+                })
+            except Exception:
+                pass
     return {"message": "Call cancelled successfully"}
 
 @router.post("/call/{call_id}/accept")
@@ -493,6 +509,20 @@ async def accept_call(call_id: str, current_user: UserResponse = Depends(Require
                 "call_type": existing.get("call_type", "video")
             }
         raise HTTPException(status_code=400, detail="Call already accepted or cancelled.")
+
+    room_name = result.get("room_name")
+    if room_name and room_name in call_room_connections:
+        for ws in list(call_room_connections[room_name]):
+            try:
+                await ws.send_json({
+                    "type": "call_accepted",
+                    "id": str(result["_id"]),
+                    "expert_id": str(current_user.id),
+                    "expert_name": current_user.name,
+                    "room_name": room_name
+                })
+            except Exception:
+                pass
         
     return {
         "message": "Call accepted",
@@ -505,12 +535,29 @@ async def accept_call(call_id: str, current_user: UserResponse = Depends(Require
 @router.post("/call/{call_id}/decline")
 async def decline_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
     """Expert declines the call."""
-    await db["active_calls"].update_one(
-        {"_id": ObjectId(call_id)},
-        {"$set": {"status": "declined"}}
-    )
-    return {"message": "Call declined"}
+    try:
+        obj_id = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid call ID")
 
+    call = await db["active_calls"].find_one_and_update(
+        {"_id": obj_id},
+        {"$set": {
+            "status": "declined",
+            "declined_by": str(current_user.id),
+            "declined_at": datetime.now(timezone.utc)
+        }}
+    )
+    if call and call.get("room_name") in call_room_connections:
+        for ws in list(call_room_connections[call["room_name"]]):
+            try:
+                await ws.send_json({
+                    "type": "call_declined",
+                    "reason": "Specialist is currently assisting another farmer."
+                })
+            except Exception:
+                pass
+    return {"message": "Call declined"}
 
 @router.post("/call/{call_id}/complete")
 async def complete_call(call_id: str, current_user: UserResponse = Depends(RequireRole([UserRole.AGRONOMY_EXPERT, UserRole.ADMIN, UserRole.SUPER_ADMIN])), db = Depends(get_mongo_db)):
@@ -520,15 +567,26 @@ async def complete_call(call_id: str, current_user: UserResponse = Depends(Requi
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid consultation call ID")
 
-    result = await db["active_calls"].update_one(
+    result = await db["active_calls"].find_one_and_update(
         {"_id": obj_id},
         {"$set": {
             "status": "completed",
             "completed_at": datetime.now(timezone.utc)
         }}
     )
-    if result.matched_count == 0:
+    if not result:
         raise HTTPException(status_code=404, detail="Consultation call not found")
+
+    room_name = result.get("room_name")
+    if room_name and room_name in call_room_connections:
+        for ws in list(call_room_connections[room_name]):
+            try:
+                await ws.send_json({
+                    "type": "call_completed",
+                    "id": call_id
+                })
+            except Exception:
+                pass
 
     return {"message": "Consultation completed successfully"}
 

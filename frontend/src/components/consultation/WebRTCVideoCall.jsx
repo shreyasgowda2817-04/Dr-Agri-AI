@@ -18,7 +18,11 @@ import {
   Volume2,
   VolumeX,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  CheckCircle2,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -27,7 +31,17 @@ const ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' }
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    {
+      urls: [
+        'stun:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelay',
+      credential: 'openrelay'
+    }
   ]
 };
 
@@ -49,8 +63,21 @@ export const WebRTCVideoCall = ({
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [facingMode, setFacingMode] = useState('user');
   const [callDuration, setCallDuration] = useState(0);
-  const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, waiting, disconnected
+
+  // Explicit WebRTC Call State:
+  // 'requesting' | 'ringing' | 'accepted' | 'connecting' | 'connected' | 'reconnecting' | 'declined' | 'ended' | 'failed'
+  const [callState, setCallState] = useState('requesting');
+  const [peerConnectionState, setPeerConnectionState] = useState('new');
+  const [iceConnectionState, setIceConnectionState] = useState('new');
+  const [isSignalingOpen, setIsSignalingOpen] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [hasRemoteAudio, setHasRemoteAudio] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('Initializing media devices...');
   const [permissionError, setPermissionError] = useState(null);
+
+  // Derived connectionStatus for backward-compatibility with existing tests
+  const connectionStatus = callState === 'connected' ? 'connected' : callState === 'connecting' ? 'connecting' : callState === 'reconnecting' ? 'disconnected' : 'waiting';
 
   // In-call chat
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -71,6 +98,7 @@ export const WebRTCVideoCall = ({
   const originalVideoTrackRef = useRef(null);
   const iceCandidateQueue = useRef([]);
   const durationTimerRef = useRef(null);
+  const isNegotiating = useRef(false);
 
   const displayName = currentUser?.displayName || (isExpert ? (currentUser?.name?.startsWith('Dr.') ? currentUser.name : `Dr. ${currentUser?.name || 'Agronomist'}`) : (currentUser?.name || 'Farmer'));
   const remoteDisplayName = peerName || (isExpert ? 'Farmer' : 'Dr. Agri AI Specialist');
@@ -85,10 +113,10 @@ export const WebRTCVideoCall = ({
   // 1. Initialize Local Media Stream
   const initLocalMedia = useCallback(async (isAudioOnly = false, facing = 'user') => {
     setPermissionError(null);
+    setStatusMessage('Accessing camera & microphone...');
     try {
       if (!navigator?.mediaDevices?.getUserMedia) {
-        // Fallback for environments without mediaDevices (e.g., test runner)
-        setConnectionStatus('connected');
+        setCallState('connected');
         return null;
       }
 
@@ -112,6 +140,9 @@ export const WebRTCVideoCall = ({
 
       if (localVideoRef.current && !isAudioOnly) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.defaultMuted = true;
+        localVideoRef.current.muted = true;
+        localVideoRef.current.play?.().catch(() => {});
       }
 
       const videoTrack = stream.getVideoTracks()[0];
@@ -119,6 +150,7 @@ export const WebRTCVideoCall = ({
         originalVideoTrackRef.current = videoTrack;
       }
 
+      setStatusMessage('Local media ready. Connecting to secure signaling...');
       return stream;
     } catch (err) {
       console.warn('getUserMedia camera error, falling back to audio only:', err);
@@ -126,13 +158,15 @@ export const WebRTCVideoCall = ({
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         setLocalStream(audioStream);
         setIsVideoMuted(true);
+        setStatusMessage('Camera busy or unavailable. Audio consultation active.');
         return audioStream;
       } catch (audioErr) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setPermissionError('Camera/Microphone permission denied. Please allow camera and microphone in your browser.');
+          setPermissionError('Camera/Microphone permission denied. Please allow camera and microphone in your browser address bar.');
         } else {
           setPermissionError(err.message || 'Could not access media devices.');
         }
+        setCallState('failed');
         return null;
       }
     }
@@ -160,34 +194,71 @@ export const WebRTCVideoCall = ({
       })(ICE_SERVERS);
       peerConnection.current = pc;
 
+      // Track connection states
+      pc.onconnectionstatechange = () => {
+        if (!isMounted) return;
+        const state = pc.connectionState;
+        setPeerConnectionState(state);
+        console.log('WebRTC connectionState:', state);
+        if (state === 'connected') {
+          setCallState('connected');
+          setStatusMessage('Peer connection established.');
+        } else if (state === 'connecting') {
+          setCallState((prev) => (prev === 'connected' ? 'connected' : 'connecting'));
+          setStatusMessage('Negotiating peer connection...');
+        } else if (state === 'disconnected') {
+          setCallState('reconnecting');
+          setStatusMessage('Peer disconnected. Attempting to reconnect...');
+        } else if (state === 'failed') {
+          setCallState('failed');
+          setStatusMessage('Peer connection failed. Check firewall/network settings.');
+          toast.error('Media peer connection failed. Please check network.');
+        } else if (state === 'closed') {
+          setCallState('ended');
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (!isMounted) return;
+        const iceState = pc.iceConnectionState;
+        setIceConnectionState(iceState);
+        console.log('WebRTC iceConnectionState:', iceState);
+        if (iceState === 'connected' || iceState === 'completed') {
+          setCallState('connected');
+        } else if (iceState === 'disconnected') {
+          setCallState('reconnecting');
+        } else if (iceState === 'failed') {
+          setCallState('failed');
+        }
+      };
+
       // Handle Remote Stream Tracks
       pc.ontrack = (event) => {
+        if (!isMounted) return;
+        console.log('WebRTC remote track event:', event.track.kind);
+        if (event.track.kind === 'video') setHasRemoteVideo(true);
+        if (event.track.kind === 'audio') setHasRemoteAudio(true);
+
         let stream = event.streams && event.streams[0];
         if (!stream) {
           stream = new MediaStream();
           stream.addTrack(event.track);
         }
         setRemoteStream(stream);
-        setConnectionStatus('connected');
+        setCallState('connected');
       };
 
       // Handle ICE Candidates
       pc.onicecandidate = (event) => {
         if (event.candidate && ws.current && ws.current.readyState === WebSocket.OPEN) {
-          ws.current.send(
-            JSON.stringify({
-              type: 'ice_candidate',
-              candidate: event.candidate,
-            })
-          );
-        }
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-          setConnectionStatus('connected');
-        } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-          setConnectionStatus('disconnected');
+          try {
+            ws.current.send(
+              JSON.stringify({
+                type: 'ice_candidate',
+                candidate: event.candidate,
+              })
+            );
+          } catch (e) {}
         }
       };
 
@@ -225,22 +296,13 @@ export const WebRTCVideoCall = ({
 
       let pingTimer = null;
 
-      socket.onopen = () => {
-        console.log(`Connected to WebRTC signaling room: ${roomName}`);
-        setConnectionStatus((prev) => (prev === 'connected' ? 'connected' : 'waiting'));
-        try {
-          socket.send(JSON.stringify({ type: 'peer_ready', role: isExpert ? 'expert' : 'farmer' }));
-        } catch (e) {}
-        pingTimer = setInterval(() => {
-          if (socket.readyState === WebSocket.OPEN) {
-            try { socket.send("ping"); } catch (e) {}
-          }
-        }, 10000);
-      };
-
       const createAndSendOffer = async () => {
+        if (isNegotiating.current) return;
+        isNegotiating.current = true;
         try {
-          if (pc.createOffer) {
+          if (pc.createOffer && pc.signalingState !== 'closed') {
+            setCallState('connecting');
+            setStatusMessage('Creating encrypted SDP offer...');
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
             await pc.setLocalDescription(offer);
             if (socket.readyState === WebSocket.OPEN) {
@@ -254,7 +316,25 @@ export const WebRTCVideoCall = ({
           }
         } catch (err) {
           console.warn("createOffer error:", err);
+        } finally {
+          isNegotiating.current = false;
         }
+      };
+
+      socket.onopen = () => {
+        if (!isMounted) return;
+        console.log(`Connected to WebRTC signaling room: ${roomName}`);
+        setIsSignalingOpen(true);
+        setCallState('ringing');
+        setStatusMessage(`Connected to room. Waiting for ${remoteDisplayName} to answer...`);
+        try {
+          socket.send(JSON.stringify({ type: 'peer_ready', role: isExpert ? 'expert' : 'farmer' }));
+        } catch (e) {}
+        pingTimer = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            try { socket.send("ping"); } catch (e) {}
+          }
+        }, 10000);
       };
 
       socket.onmessage = async (event) => {
@@ -263,21 +343,26 @@ export const WebRTCVideoCall = ({
           if (event.data === "pong") return;
           const data = JSON.parse(event.data);
 
-          if (data.type === 'peer_joined' || data.type === 'peer_ready') {
-            setConnectionStatus('connected');
-            // Caller / Initiator creates the offer
+          if (data.type === 'peer_joined' || data.type === 'peer_ready' || data.type === 'call_accepted') {
+            setCallState('accepted');
+            setStatusMessage(`${remoteDisplayName} joined. Negotiating peer connection...`);
+            // Only initiator (farmer) creates the offer, with brief delay to ensure remote peer's media is initialized
             if (!isExpert) {
-              await createAndSendOffer();
+              setTimeout(() => {
+                createAndSendOffer();
+              }, 400);
             }
           } else if (data.type === 'offer') {
             if (pc.setRemoteDescription && data.sdp) {
+              setCallState('connecting');
+              setStatusMessage('Received offer. Generating SDP answer...');
               await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
 
               // Process any queued candidates
               while (iceCandidateQueue.current.length > 0) {
                 const candidate = iceCandidateQueue.current.shift();
                 try {
-                  await pc.addIceCandidate(candidate);
+                  await pc.addIceCandidate(new RTCIceCandidate(candidate));
                 } catch (e) {}
               }
 
@@ -291,24 +376,23 @@ export const WebRTCVideoCall = ({
                   })
                 );
               }
-              setConnectionStatus('connected');
             }
           } else if (data.type === 'answer') {
             if (pc.setRemoteDescription && data.sdp) {
+              setStatusMessage('SDP answer applied. Checking ICE candidate connectivity...');
               await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
               while (iceCandidateQueue.current.length > 0) {
                 const candidate = iceCandidateQueue.current.shift();
                 try {
-                  await pc.addIceCandidate(candidate);
+                  await pc.addIceCandidate(new RTCIceCandidate(candidate));
                 } catch (e) {}
               }
-              setConnectionStatus('connected');
             }
           } else if (data.type === 'ice_candidate') {
             if (data.candidate) {
               try {
                 if (pc.remoteDescription && pc.remoteDescription.type) {
-                  await pc.addIceCandidate(data.candidate);
+                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                 } else {
                   iceCandidateQueue.current.push(data.candidate);
                 }
@@ -321,9 +405,22 @@ export const WebRTCVideoCall = ({
             if (!isChatOpen) {
               setUnreadCount((prev) => prev + 1);
             }
+          } else if (data.type === 'call_declined') {
+            setCallState('declined');
+            setStatusMessage(data.reason || 'Specialist declined the call.');
+            toast.info(data.reason || `${remoteDisplayName} is unavailable and declined the call.`);
+          } else if (data.type === 'call_cancelled') {
+            setCallState('ended');
+            setStatusMessage('Call was cancelled.');
+            toast.info('The call was cancelled by the caller.');
+          } else if (data.type === 'call_completed') {
+            setCallState('ended');
+            toast.info('Consultation completed.');
+            if (onEndCall) onEndCall();
           } else if (data.type === 'peer_left') {
-            toast.info(`${remoteDisplayName} has left the consultation.`);
-            setConnectionStatus('waiting');
+            toast.info(`${remoteDisplayName} has disconnected.`);
+            setCallState('reconnecting');
+            setStatusMessage(`${remoteDisplayName} disconnected.`);
           }
         } catch (err) {
           console.warn('Signaling message handling error:', err);
@@ -332,10 +429,12 @@ export const WebRTCVideoCall = ({
 
       socket.onerror = (err) => {
         console.warn('Signaling WebSocket error:', err);
+        setIsSignalingOpen(false);
       };
 
       socket.onclose = () => {
         console.log('Signaling WebSocket closed');
+        setIsSignalingOpen(false);
         if (pingTimer) clearInterval(pingTimer);
       };
     };
@@ -587,6 +686,20 @@ export const WebRTCVideoCall = ({
             {formatDuration(callDuration)}
           </div>
 
+          {/* Diagnostics Panel Toggle */}
+          <button
+            onClick={() => setShowDiagnostics((prev) => !prev)}
+            title="Toggle WebRTC Diagnostics Panel"
+            className={`px-2.5 py-1 rounded-lg border text-xs font-mono flex items-center gap-1.5 transition ${
+              showDiagnostics
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300 border-white/10'
+            }`}
+          >
+            <Activity size={13} className={isSignalingOpen ? 'text-emerald-400' : 'text-amber-400'} />
+            <span className="hidden sm:inline">Diagnostics</span>
+          </button>
+
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
@@ -607,6 +720,66 @@ export const WebRTCVideoCall = ({
           </button>
         </div>
       </div>
+
+      {/* ─── WebRTC Diagnostics Overlay Panel ─── */}
+      {showDiagnostics && (
+        <div className="absolute top-14 left-4 right-4 sm:right-auto sm:w-96 bg-gray-900/95 backdrop-blur-xl border border-emerald-500/30 rounded-2xl p-4 z-40 text-xs shadow-2xl text-gray-300 font-mono space-y-2">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2 text-white">
+            <span className="font-bold flex items-center gap-1.5 text-emerald-400">
+              <Activity size={14} /> WebRTC Diagnostics
+            </span>
+            <button
+              onClick={() => setShowDiagnostics(false)}
+              className="text-gray-400 hover:text-white p-0.5 rounded"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div>
+              <span className="text-gray-500 block">Room ID:</span>
+              <span className="text-white truncate block">{roomName}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Call State:</span>
+              <span className={`font-bold capitalize ${
+                callState === 'connected' ? 'text-emerald-400' : callState === 'failed' ? 'text-red-400' : 'text-amber-400'
+              }`}>{callState}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Signaling Gateway:</span>
+              <span className={isSignalingOpen ? 'text-emerald-400' : 'text-red-400'}>
+                {isSignalingOpen ? 'Connected (WS Open)' : 'Disconnected'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Peer Connection:</span>
+              <span className="text-white capitalize">{peerConnectionState}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">ICE State:</span>
+              <span className="text-white capitalize">{iceConnectionState}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Local Tracks:</span>
+              <span className="text-white">
+                {localStream?.getAudioTracks()?.length > 0 ? (isAudioMuted ? 'Mic Muted' : 'Mic Live') : 'No Mic'},{' '}
+                {localStream?.getVideoTracks()?.length > 0 ? (isVideoMuted ? 'Cam Off' : 'Cam Live') : 'No Cam'}
+              </span>
+            </div>
+            <div className="col-span-2">
+              <span className="text-gray-500 block">Remote Tracks:</span>
+              <span className="text-white">
+                Audio: {hasRemoteAudio ? 'Received' : 'Waiting'} • Video: {hasRemoteVideo ? 'Received' : 'Waiting'}
+              </span>
+            </div>
+            <div className="col-span-2 border-t border-white/10 pt-1.5">
+              <span className="text-gray-500 block">Last Status:</span>
+              <span className="text-gray-300 break-words">{statusMessage}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Permission Alert Banner ─── */}
       {permissionError && (
@@ -645,24 +818,70 @@ export const WebRTCVideoCall = ({
                   {remoteDisplayName.slice(0, 2).toUpperCase()}
                 </span>
               </div>
-              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-gray-950 animate-pulse"></span>
+              <span className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-gray-950 ${
+                callState === 'connected' ? 'bg-emerald-500' : callState === 'declined' || callState === 'failed' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'
+              }`}></span>
             </div>
 
             <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-2">
-              {connectionStatus === 'connected'
+              {callState === 'connected'
                 ? `Connected with ${remoteDisplayName}`
+                : callState === 'connecting'
+                ? `Connecting to ${remoteDisplayName}...`
+                : callState === 'accepted'
+                ? `${remoteDisplayName} accepted! Establishing audio & video...`
+                : callState === 'declined'
+                ? `${remoteDisplayName} is unavailable in the field`
+                : callState === 'failed'
+                ? 'Call connection failed'
+                : callState === 'reconnecting'
+                ? `Reconnecting with ${remoteDisplayName}...`
                 : `Waiting for ${remoteDisplayName}...`}
             </h3>
 
             <p className="text-xs sm:text-sm text-gray-400 max-w-md leading-relaxed mb-6">
-              {connectionStatus === 'connected'
+              {callState === 'connected'
                 ? 'Audio and secure video encryption are active. If video does not appear, the participant may have disabled their camera.'
-                : 'Dr Agri AI has reserved this encrypted channel. The consultation will automatically connect as soon as the other participant arrives.'}
+                : callState === 'accepted'
+                ? 'Direct WebRTC peer handshake in progress. Setting up camera and microphone pipelines.'
+                : callState === 'declined'
+                ? 'The specialist declined or is assisting an urgent field case. Please try again or book a scheduled appointment.'
+                : callState === 'failed'
+                ? 'Could not establish media link. Please verify internet access and camera permissions.'
+                : isExpert
+                ? 'Farmer has initiated the consultation. Click Accept to join the live video session.'
+                : 'Dr Agri AI has reserved this encrypted channel. The consultation will automatically connect as soon as the specialist answers.'}
             </p>
 
-            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-4 py-1.5 rounded-full text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              {connectionStatus === 'connected' ? 'Secure Peer Connection Active' : 'Signaling Synced • Ready'}
+            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold border ${
+              callState === 'connected'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                : callState === 'connecting' || callState === 'accepted'
+                ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                : callState === 'declined' || callState === 'failed'
+                ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                callState === 'connected'
+                  ? 'bg-emerald-400 animate-ping'
+                  : callState === 'declined' || callState === 'failed'
+                  ? 'bg-red-400'
+                  : 'bg-emerald-400 animate-ping'
+              }`}></span>
+              {callState === 'connected'
+                ? 'Secure Peer Connection Active'
+                : callState === 'connecting'
+                ? 'Negotiating ICE • Exchanging SDP'
+                : callState === 'accepted'
+                ? 'Accepted • Establishing Media'
+                : callState === 'declined'
+                ? 'Specialist Unavailable'
+                : callState === 'failed'
+                ? 'Connection Error'
+                : callState === 'reconnecting'
+                ? 'Reconnecting Signal'
+                : 'Signaling Synced • Ready'}
             </div>
           </div>
         )}
@@ -674,6 +893,11 @@ export const WebRTCVideoCall = ({
             autoPlay
             playsInline
             muted
+            onLoadedMetadata={(e) => {
+              e.currentTarget.defaultMuted = true;
+              e.currentTarget.muted = true;
+              e.currentTarget.play?.().catch(() => {});
+            }}
             className={`w-full h-full object-cover transform -scale-x-100 ${
               isVideoMuted ? 'hidden' : 'block'
             }`}
