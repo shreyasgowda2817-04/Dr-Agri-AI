@@ -2582,7 +2582,9 @@ const resources = {
   }
 };
 
-const savedLanguage = localStorage.getItem("selectedLanguage") || "en";
+const savedLanguage = (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') 
+  ? (window.localStorage.getItem("selectedLanguage") || "en") 
+  : "en";
 
 i18n
   .use(initReactI18next)

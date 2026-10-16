@@ -62,6 +62,31 @@ export const fetchUser = createAsyncThunk(
 );
 
 // Logout user: revokes session in backend database, clears cookies, and resets state
+const getStoredItem = (key) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+      return window.localStorage.getItem(key);
+    }
+  } catch (e) {}
+  return null;
+};
+
+const setStoredItem = (key, val) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
+      window.localStorage.setItem(key, val);
+    }
+  } catch (e) {}
+};
+
+const removeStoredItem = (key) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
+      window.localStorage.removeItem(key);
+    }
+  } catch (e) {}
+};
+
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { dispatch }) => {
@@ -70,15 +95,15 @@ export const logoutUser = createAsyncThunk(
     } catch (err) {
       console.warn("Server logout request error:", err);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      removeStoredItem('token');
+      removeStoredItem('user');
       dispatch(authSlice.actions.logout());
     }
   }
 );
 
-const savedToken = localStorage.getItem('token');
-const savedUserStr = localStorage.getItem('user');
+const savedToken = getStoredItem('token');
+const savedUserStr = getStoredItem('user');
 let savedUser = null;
 try {
   savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -100,13 +125,13 @@ const authSlice = createSlice({
     loginSuccess: (state, action) => {
       const payload = action.payload;
       if (typeof payload === 'string') {
-        localStorage.setItem('token', payload);
+        setStoredItem('token', payload);
         state.isAuthenticated = true;
       } else if (payload && payload.access_token) {
-        localStorage.setItem('token', payload.access_token);
+        setStoredItem('token', payload.access_token);
         if (payload.user) {
           state.user = payload.user;
-          localStorage.setItem('user', JSON.stringify(payload.user));
+          setStoredItem('user', JSON.stringify(payload.user));
         }
         state.isAuthenticated = true;
       }
@@ -114,15 +139,15 @@ const authSlice = createSlice({
       state.error = null;
     },
     logout: (state) => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      removeStoredItem('token');
+      removeStoredItem('user');
       state.user = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
     },
     setTokenFromOAuth: (state, action) => {
-      localStorage.setItem('token', action.payload);
+      setStoredItem('token', action.payload);
       state.isAuthenticated = true;
       state.loading = false;
     },
@@ -136,7 +161,7 @@ const authSlice = createSlice({
       .addCase(restoreSession.fulfilled, (state, action) => {
         state.user = action.payload.user;
         if (action.payload.user) {
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
+          setStoredItem('user', JSON.stringify(action.payload.user));
         }
         state.isAuthenticated = true;
         state.loading = false;
@@ -146,8 +171,8 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.loading = false;
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        removeStoredItem('token');
+        removeStoredItem('user');
       })
       // fetchUser
       .addCase(fetchUser.fulfilled, (state, action) => {
