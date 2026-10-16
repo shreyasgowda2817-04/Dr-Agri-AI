@@ -629,7 +629,7 @@ const ExpertDashboard = () => {
 
                 <div className="flex-1 w-full h-full relative">
                   <JitsiMeeting
-                    domain="meet.jit.si"
+                    domain={import.meta.env.VITE_JITSI_DOMAIN || 'meet.ffmuc.net'}
                     roomName={roomName}
                     spinner={() => (
                       <div className="flex flex-col items-center justify-center h-full w-full bg-[#111827] text-white">
@@ -639,9 +639,21 @@ const ExpertDashboard = () => {
                       </div>
                     )}
                     configOverwrite={{ 
+                      prejoinPageEnabled: false,
+                      prejoinConfig: { enabled: false },
+                      disableDeepLinking: true,
+                      enableClosePage: false,
                       startWithAudioMuted: false,
                       startWithVideoMuted: activeCall === 'audio',
-                      startScreenSharing: false
+                      disableModeratorIndicator: true,
+                      startScreenSharing: false,
+                      enableEmailInStats: false
+                    }}
+                    interfaceConfigOverwrite={{
+                      DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                      SHOW_JITSI_WATERMARK: false,
+                      SHOW_WATERMARK_FOR_GUESTS: false,
+                      SHOW_POWERED_BY: false
                     }}
                     userInfo={{ displayName: `Dr. ${user?.name || 'Expert'}` }}
                     onApiReady={(externalApi) => {

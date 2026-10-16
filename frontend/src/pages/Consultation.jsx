@@ -149,7 +149,7 @@ const Consultation = () => {
     return (
       <div className="w-full h-[85vh] min-h-[400px] bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border-2 sm:border-4 border-gray-800">
         <JitsiMeeting
-          domain="meet.jit.si"
+          domain={import.meta.env.VITE_JITSI_DOMAIN || 'meet.ffmuc.net'}
           roomName={roomName}
           spinner={() => (
             <div className="flex flex-col items-center justify-center h-full min-h-[350px] w-full bg-gray-900 text-white rounded-2xl p-4 text-center">
@@ -159,6 +159,10 @@ const Consultation = () => {
             </div>
           )}
           configOverwrite={{
+            prejoinPageEnabled: false,
+            prejoinConfig: { enabled: false },
+            disableDeepLinking: true,
+            enableClosePage: false,
             startWithAudioMuted: false,
             startWithVideoMuted: callType === 'audio',
             disableModeratorIndicator: true,
@@ -166,7 +170,10 @@ const Consultation = () => {
             enableEmailInStats: false
           }}
           interfaceConfigOverwrite={{
-            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_POWERED_BY: false
           }}
           userInfo={{
             displayName: user ? user.name : 'Farmer'
