@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationListener from '../NotificationListener';
 import { useSelector, useDispatch } from 'react-redux';
@@ -13,17 +13,30 @@ import Footer from './Footer';
 import GlobalSearch from './GlobalSearch';
 import NotificationDropdown from './NotificationDropdown';
 
-
 const DashboardLayout = () => {
   const { t } = useTranslation();
-  
+  const location = useLocation();
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Desktop defaults to open, mobile/tablet defaults to closed
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
+
   const { items } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const { i18n } = useTranslation();
   const [isLangOpen, setIsLangOpen] = useState(false);
+
+  // Auto-close drawer on route change on mobile
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   const handleLanguageChange = async (newLang) => {
     localStorage.setItem("selectedLanguage", newLang);
@@ -40,27 +53,29 @@ const DashboardLayout = () => {
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans relative transition-colors duration-200">
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans relative transition-colors duration-200 overflow-x-hidden w-full max-w-full">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <NotificationListener />
       <CartSidebar />
 
       <div 
-        className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'pl-64' : 'pl-20'}`}
+        className={`flex-1 flex flex-col min-w-0 w-full max-w-full transition-all duration-300 ${
+          isSidebarOpen ? 'lg:pl-64' : 'lg:pl-20'
+        }`}
       >
         {/* Top Navbar */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 h-20 flex items-center justify-between px-8 sticky top-0 z-30 shadow-sm transition-colors">
-          <div className="flex-1 flex items-center gap-4">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 h-16 sm:h-20 flex items-center justify-between px-3 sm:px-6 lg:px-8 sticky top-0 z-30 shadow-sm transition-colors w-full">
+          <div className="flex-1 flex items-center gap-2 sm:gap-4 min-w-0 mr-2 sm:mr-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition shrink-0"
               aria-label="Toggle Sidebar"
             >
-              <Menu size={24} />
+              <Menu size={22} className="sm:w-6 sm:h-6" />
             </button>
             <GlobalSearch />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-4 shrink-0">
             <NotificationDropdown />
 
             {/* Language Selector */}
@@ -129,8 +144,8 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        <main className="flex-grow flex flex-col pt-4">
-          <div className="container mx-auto px-8 py-8 flex-grow">
+        <main className="flex-grow flex flex-col pt-2 sm:pt-4 min-w-0 w-full max-w-full">
+          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex-grow min-w-0">
             <Outlet />
           </div>
         </main>

@@ -261,27 +261,29 @@ const Deliveries = () => {
   const pathCoordinates = activePoints.map(p => [p.lat, p.lng]);
 
   return (
-    <div className="max-w-[1600px] mx-auto py-8 px-4 h-[90vh] flex flex-col">
+    <div className="max-w-[1600px] mx-auto py-4 sm:py-8 px-2 sm:px-4 min-h-[calc(100vh-5rem)] flex flex-col min-w-0">
 
       {/* ─── Premium Header ─── */}
-      <div className="bg-gray-900 rounded-3xl p-6 md:p-8 mb-6 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center text-white relative overflow-hidden">
+      <div className="bg-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 mb-4 sm:mb-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center text-white relative overflow-hidden gap-4">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 transform translate-x-1/3 -translate-y-1/2"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 transform -translate-x-1/2 translate-y-1/2"></div>
         
         <div className="relative z-10">
-          <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
-            <Truck className="w-8 h-8 text-blue-400" />{t("logistics_command_ce")}</h1>
-          <p className="text-gray-400 mt-2 font-medium">{t("ai_optimized_farm_ga")}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-3 tracking-tight">
+            <Truck className="w-7 h-7 sm:w-8 h-8 text-blue-400 shrink-0" />
+            <span>{t("logistics_command_ce")}</span>
+          </h1>
+          <p className="text-sm sm:text-base text-gray-400 mt-1 font-medium">{t("ai_optimized_farm_ga")}</p>
         </div>
         
-        <div className="relative z-10 mt-6 md:mt-0 flex gap-4">
-          <div className="bg-gray-800/50 backdrop-blur border border-gray-700 px-4 py-2 rounded-xl flex items-center gap-3">
-            <div className="text-right">
+        <div className="relative z-10 w-full lg:w-auto flex flex-col sm:flex-row gap-3">
+          <div className="bg-gray-800/50 backdrop-blur border border-gray-700 px-4 py-2 rounded-xl flex items-center justify-around sm:justify-start gap-4">
+            <div className="text-center sm:text-right">
               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t("pending")}</p>
               <p className="text-xl font-black text-white">{activePoints.length}</p>
             </div>
             <div className="w-px h-8 bg-gray-700"></div>
-            <div className="text-left">
+            <div className="text-center sm:text-left">
               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t("delivered")}</p>
               <p className="text-xl font-black text-emerald-400">{routePoints.length - activePoints.length}</p>
             </div>
@@ -289,7 +291,7 @@ const Deliveries = () => {
 
           <button 
             onClick={toggleOfflineMode}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg ${
+            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm sm:text-base ${
               isOffline 
               ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-orange-500/20 hover:shadow-orange-500/40' 
               : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20 hover:shadow-emerald-500/40'
@@ -303,27 +305,27 @@ const Deliveries = () => {
 
       {syncQueue.length > 0 && (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} 
-          className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-between">
+          className="mb-4 sm:mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 font-bold text-orange-600">
             <AlertCircle size={20} />
             {syncQueue.length}{t("offline_deliveries_p")}</div>
           {!isOffline && (
-            <button onClick={syncOfflineData} className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl font-bold transition shadow-md shadow-orange-600/20">{t("sync_to_cloud_now")}</button>
+            <button onClick={syncOfflineData} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-xl font-bold transition shadow-md shadow-orange-600/20">{t("sync_to_cloud_now")}</button>
           )}
         </motion.div>
       )}
 
-      <div className="grid lg:grid-cols-12 gap-6 flex-1 min-h-[500px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 flex-1 min-h-0">
         
         {/* ─── Route Sequence List ─── */}
-        <div className="lg:col-span-4 flex flex-col h-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+        <div className="lg:col-span-4 flex flex-col h-[380px] sm:h-[450px] lg:h-auto bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h3 className="font-extrabold text-gray-900 flex items-center gap-2">
               <Navigation size={20} className="text-blue-600" />{t("optimal_sequence")}</h3>
             <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">{t("ai_sorted")}</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
             {loading ? (
                <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>
             ) : routePoints.length === 0 ? (
@@ -370,7 +372,7 @@ const Deliveries = () => {
         </div>
 
         {/* ─── Premium Map ─── */}
-        <div className="lg:col-span-8 rounded-3xl overflow-hidden border border-gray-200 shadow-xl relative bg-gray-100 z-0">
+        <div className="lg:col-span-8 h-[360px] sm:h-[450px] lg:h-auto min-h-[320px] rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200 shadow-xl relative bg-gray-100 z-0">
           <MapContainer 
             center={activePoints.length > 0 ? [activePoints[0].lat, activePoints[0].lng] : defaultCenter} 
             zoom={13} 

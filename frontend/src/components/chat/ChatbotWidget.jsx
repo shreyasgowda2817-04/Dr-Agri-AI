@@ -223,17 +223,17 @@ const ChatbotWidget = () => {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 max-w-[calc(100vw-2rem)]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="bg-white w-80 sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden mb-4 flex flex-col h-[500px]"
+            className="bg-white w-[calc(100vw-2rem)] max-w-sm sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden mb-3 sm:mb-4 flex flex-col h-[75vh] max-h-[500px]"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-600 to-green-700 p-4 text-white flex justify-between items-center shadow-md">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-700 p-3.5 sm:p-4 text-white flex justify-between items-center shadow-md">
               <div>
                 <h3 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-yellow-300"/>{t("agriversion_ai")}</h3>
                 <p className="text-xs text-green-100 font-medium">{t("proactive_farm_intel")}</p>

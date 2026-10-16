@@ -455,58 +455,60 @@ const Admin = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-2 sm:px-4 lg:px-6 w-full min-w-0 overflow-hidden">
       {/* ─── Header ─── */}
-      <div className="bg-gradient-to-r from-gray-900 to-indigo-900 rounded-3xl p-8 text-white mb-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-gray-900 to-indigo-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white mb-6 sm:mb-8 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-extrabold flex items-center gap-3 mb-2">
-            <ShieldCheck className="w-8 h-8 text-indigo-400" />{t("admin_command_center")}</h1>
-          <p className="text-indigo-200">{t("system_overview___in")}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-3 mb-2">
+            <ShieldCheck className="w-7 h-7 sm:w-8 h-8 text-indigo-400 shrink-0" />
+            <span className="truncate">{t("admin_command_center")}</span>
+          </h1>
+          <p className="text-sm sm:text-base text-indigo-200">{t("system_overview___in")}</p>
         </div>
         
         {/* Tabs */}
-        <div className="flex flex-wrap bg-white/10 rounded-2xl p-1 gap-1 backdrop-blur-md">
+        <div className="w-full lg:w-auto flex overflow-x-auto lg:flex-wrap scrollbar-none bg-white/10 rounded-xl sm:rounded-2xl p-1 gap-1 backdrop-blur-md">
           <button 
             onClick={() => setActiveTab('users')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'users' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'users' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
           >
             <Users size={16} />{t("users")}</button>
           <button 
             onClick={() => setActiveTab('products')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'products' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'products' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
           >
             <Package size={16} />{t("products")}</button>
 
           <button 
             onClick={() => setActiveTab('schemes')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'schemes' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'schemes' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
           >
             <ShieldCheck size={16} />{t("govt_schemes")}</button>
           <button 
             onClick={() => setActiveTab('organizations')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'organizations' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'organizations' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
           >
             <Building size={16} />{t("fpos")}</button>
           <button 
             onClick={() => setActiveTab('experts')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'experts' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'experts' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
           >
             <Activity size={16} />{t("experts___consults")}</button>
           
           {/* External Navigation Links disguised as tabs */}
           <button 
             onClick={() => setActiveTab('inventory')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'inventory' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'inventory' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
           >
             <ClipboardList size={16} />{t("inventory_logs")}</button>
           <button 
             onClick={() => setActiveTab('cms')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'cms' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'cms' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
           >
             <FileText size={16} />{t("content_cms")}</button>
           <button 
             onClick={() => setActiveTab('ads')}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'ads' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'ads' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
           >
             <Megaphone size={16} /> Sponsored Ads</button>
         </div>

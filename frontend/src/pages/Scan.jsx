@@ -267,7 +267,7 @@ const Scan = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
+    <div className="w-full max-w-full pb-8 sm:pb-12 relative overflow-hidden">
       <HistorySidebar 
         isOpen={isHistoryOpen} 
         onClose={() => setIsHistoryOpen(false)} 
@@ -279,16 +279,16 @@ const Scan = () => {
         }}
       />
 
-      <div className="max-w-[1400px] mx-auto">
+      <div className="max-w-[1400px] mx-auto w-full">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4"
+          className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4"
         >
           <div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">{t("crop_disease")}<span className="text-indigo-600">{t("intelligence")}</span>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">{t("crop_disease")}<span className="text-indigo-600 dark:text-indigo-400">{t("intelligence")}</span>
             </h1>
-            <p className="mt-3 text-lg text-gray-500 max-w-2xl font-medium">{t("upload_an_image_of_a")}</p>
+            <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-2xl font-medium">{t("upload_an_image_of_a")}</p>
           </div>
           <button
             onClick={() => setIsHistoryOpen(true)}

@@ -207,14 +207,14 @@ const ExpertDashboard = () => {
   };
 
   return (
-    <div className="h-[90vh] flex gap-6 max-w-[1600px] mx-auto p-4">
+    <div className="min-h-[85vh] lg:h-[88vh] flex flex-col lg:flex-row gap-4 sm:gap-6 max-w-[1600px] mx-auto p-2 sm:p-4 w-full max-w-full overflow-hidden">
       {/* Left Column: Video Room / Waiting Queue */}
-      <div className="flex-1 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl relative flex flex-col">
+      <div className="flex-1 bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl relative flex flex-col min-h-[360px] sm:min-h-[450px] lg:min-h-0 min-w-0">
         
         {/* Queue Status Header */}
-        <div className="absolute top-4 right-4 z-30 bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-4 py-1.5 flex items-center gap-2 text-white shadow-sm">
+        <div className="absolute top-4 right-4 z-30 bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 sm:px-4 py-1.5 flex items-center gap-2 text-white shadow-sm">
           <Users size={14} className={queueLength > 0 ? "text-emerald-400" : "text-gray-400"} />
-          <span className="text-xs font-bold tracking-wide">
+          <span className="text-[11px] sm:text-xs font-bold tracking-wide">
             {queueLength === 0 ? "No farmers waiting" : 
              queueLength === 1 ? "1 farmer waiting" : 
              `${queueLength} farmers waiting`}
@@ -255,48 +255,48 @@ const ExpertDashboard = () => {
                   initial={{ scale: 0.9, opacity: 0, y: 20 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.9, opacity: 0, y: -20 }}
-                  className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl z-20 w-full max-w-md flex flex-col relative overflow-hidden"
+                  className="bg-white/10 backdrop-blur-xl border border-white/20 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl z-20 w-full max-w-md flex flex-col relative overflow-hidden mx-3"
                 >
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500 animate-pulse"></div>
                   
-                  <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 ${incomingCall.callType === 'audio' ? 'bg-blue-500' : 'bg-emerald-500'} rounded-2xl flex items-center justify-center shadow-lg`}>
-                        {incomingCall.callType === 'audio' ? <PhoneCall className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${incomingCall.callType === 'audio' ? 'bg-blue-500' : 'bg-emerald-500'} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0`}>
+                        {incomingCall.callType === 'audio' ? <PhoneCall className="w-5 h-5 sm:w-6 sm:h-6 text-white" /> : <Video className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">{t("farmer_consultation_")}</h3>
-                        <p className="text-sm text-emerald-300 font-medium">{incomingCall.callType === 'audio' ? 'Voice Request' : 'Video Request'}{t("__wait_")}{waitTimeStr}</p>
+                        <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t("farmer_consultation_")}</h3>
+                        <p className="text-xs sm:text-sm text-emerald-300 font-medium">{incomingCall.callType === 'audio' ? 'Voice Request' : 'Video Request'}{t("__wait_")}{waitTimeStr}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-black/30 rounded-2xl p-4 mb-6 border border-white/5 space-y-3">
+                  <div className="bg-black/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-white/5 space-y-2 sm:space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("farmer")}</span>
                       <span className="text-sm text-white font-medium">{triageData.farmer_name}</span>
                     </div>
-                    <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                    <div className="flex justify-between items-center border-t border-white/5 pt-2 sm:pt-3">
                       <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("detected_issue")}</span>
                       <span className="text-sm text-amber-400 font-bold">{triageData.most_common_disease.replace(/___/g, ' ')}</span>
                     </div>
-                    <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                    <div className="flex justify-between items-center border-t border-white/5 pt-2 sm:pt-3">
                       <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t("ai_confidence")}</span>
                       <span className="text-sm text-emerald-400 font-bold">{(triageData.average_confidence * 100).toFixed(0)}{t("__match")}</span>
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 sm:gap-3">
                     <button 
                       onClick={declineCall}
-                      className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 border border-white/10"
+                      className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 sm:py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 sm:gap-2 border border-white/10 text-xs sm:text-sm"
                     >
-                      <X size={18} />{t("decline")}</button>
+                      <X size={16} />{t("decline")}</button>
                     <button 
                       onClick={acceptCall}
-                      className="flex-[2] bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center gap-2"
+                      className="flex-[2] bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 sm:py-3.5 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
                     >
-                      {incomingCall.callType === 'audio' ? <PhoneCall size={18} /> : <Video size={18} />}{t("accept_consultation")}</button>
+                      {incomingCall.callType === 'audio' ? <PhoneCall size={16} /> : <Video size={16} />}{t("accept_consultation")}</button>
                   </div>
                 </motion.div>
               )}
@@ -305,13 +305,13 @@ const ExpertDashboard = () => {
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="z-10 flex flex-col items-center text-center max-w-sm"
+                  className="z-10 flex flex-col items-center text-center max-w-sm px-4"
                 >
-                  <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6 border border-gray-700">
-                    <Activity size={32} className="text-emerald-500/50" />
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-4 sm:mb-6 border border-gray-700">
+                    <Activity size={28} className="text-emerald-500/50" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">{t("no_farmers_are_waiti")}</h3>
-                  <p className="text-gray-400">{t("when_a_farmer_reques")}</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{t("no_farmers_are_waiti")}</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm">{t("when_a_farmer_reques")}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -320,7 +320,7 @@ const ExpertDashboard = () => {
       </div>
 
       {/* Right Column: AI Triage Sidebar */}
-      <div className="w-[450px] flex flex-col gap-6">
+      <div className="w-full lg:w-[380px] xl:w-[450px] flex flex-col gap-4 sm:gap-6 shrink-0 min-w-0">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">

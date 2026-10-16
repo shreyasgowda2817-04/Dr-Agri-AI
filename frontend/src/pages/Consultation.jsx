@@ -147,15 +147,15 @@ const Consultation = () => {
 
   if (activeCall) {
     return (
-      <div className="w-full h-[85vh] bg-gray-900 rounded-xl overflow-hidden shadow-2xl border-4 border-gray-800">
+      <div className="w-full h-[85vh] min-h-[400px] bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border-2 sm:border-4 border-gray-800">
         <JitsiMeeting
           domain="meet.jit.si"
           roomName={roomName}
           spinner={() => (
-            <div className="flex flex-col items-center justify-center h-[500px] w-full bg-gray-900 text-white rounded-2xl">
+            <div className="flex flex-col items-center justify-center h-full min-h-[350px] w-full bg-gray-900 text-white rounded-2xl p-4 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mb-4"></div>
-              <p className="text-lg font-bold">{t("connecting_to_secure")}</p>
-              <p className="text-sm text-gray-400 mt-2 text-center">{t("initializing_end_to_")}<br/>{t("this_may_take_a_few_")}</p>
+              <p className="text-base sm:text-lg font-bold">{t("connecting_to_secure")}</p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-2">{t("initializing_end_to_")}<br/>{t("this_may_take_a_few_")}</p>
             </div>
           )}
           configOverwrite={{
@@ -187,17 +187,17 @@ const Consultation = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-800 rounded-3xl p-8 md:p-12 text-white mb-12 shadow-xl flex flex-col md:flex-row items-center justify-between">
-        <div className="max-w-2xl">
-          <h1 className="text-4xl font-extrabold mb-4 flex items-center gap-3">
-            <Video className="w-10 h-10 text-blue-300" />{t("live_expert_consulta")}</h1>
-          <p className="text-xl text-blue-100 mb-6 leading-relaxed">{t("don_t_guess__speak_f")}</p>
-          <div className="flex gap-4">
-            <span className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
-              <Clock size={16} />{t("available_24_7")}</span>
-            <span className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
-              <Calendar size={16} />{t("book_instantly")}</span>
+    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-3 sm:px-6 w-full min-w-0 overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 text-white mb-8 sm:mb-12 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="max-w-2xl text-center md:text-left">
+          <h1 className="text-2xl sm:text-4xl font-extrabold mb-3 sm:mb-4 flex items-center justify-center md:justify-start gap-2 sm:gap-3">
+            <Video className="w-8 h-8 sm:w-10 sm:h-10 text-blue-300 shrink-0" />{t("live_expert_consulta")}</h1>
+          <p className="text-sm sm:text-xl text-blue-100 mb-4 sm:mb-6 leading-relaxed">{t("don_t_guess__speak_f")}</p>
+          <div className="flex flex-wrap justify-center md:justify-start gap-2 sm:gap-4">
+            <span className="flex items-center gap-1.5 sm:gap-2 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
+              <Clock size={14} className="sm:w-4 sm:h-4" />{t("available_24_7")}</span>
+            <span className="flex items-center gap-1.5 sm:gap-2 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
+              <Calendar size={14} className="sm:w-4 sm:h-4" />{t("book_instantly")}</span>
           </div>
         </div>
         <div className="hidden md:block">
@@ -207,7 +207,7 @@ const Consultation = () => {
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t("available_experts_no")}</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">{t("available_experts_no")}</h2>
 
       {loading ? (
         <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>

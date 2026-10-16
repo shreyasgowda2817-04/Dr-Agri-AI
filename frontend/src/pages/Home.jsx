@@ -79,7 +79,7 @@ const Home = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-[1.1] text-gray-900 dark:text-white"
+              className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 sm:mb-8 leading-[1.1] text-gray-900 dark:text-white"
             >{t("the_software_for")}<br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-400">{t("modern_agriculture_")}</span>
             </motion.h1>
@@ -88,42 +88,42 @@ const Home = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed font-medium"
+              className="text-base sm:text-xl text-gray-600 dark:text-gray-400 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed font-medium"
             >{t("detect_crop_diseases")}</motion.p>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col sm:flex-row justify-center gap-4"
+              className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 w-full sm:w-auto"
             >
-              <Link to={user ? "/dashboard" : "/login"} className="bg-emerald-500 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-emerald-200 dark:shadow-emerald-900/20 hover:bg-emerald-600 hover:-translate-y-1 transition-all">{t("get_start")}</Link>
-              <a href="#features" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-1 transition-all flex items-center justify-center gap-2">{t("explore_platform")}</a>
+              <Link to={user ? "/dashboard" : "/login"} className="bg-emerald-500 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-xl shadow-emerald-200 dark:shadow-emerald-900/20 hover:bg-emerald-600 hover:-translate-y-1 transition-all text-center">{t("get_start")}</Link>
+              <a href="#features" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-1 transition-all flex items-center justify-center gap-2">{t("explore_platform")}</a>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Bento Box Features */}
-      <section id="features" className="py-24 bg-gray-50 dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800">
+      <section id="features" className="py-16 sm:py-24 bg-gray-50 dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-16">
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">{t("enterprise_grade_int")}</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl font-medium">{t("built_for_commercial")}</p>
+          <div className="mb-10 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-3 sm:mb-4">{t("enterprise_grade_int")}</h2>
+            <p className="text-base sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl font-medium">{t("built_for_commercial")}</p>
           </div>
           
-          <div className="grid md:grid-cols-4 gap-6 auto-rows-[280px]">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 md:auto-rows-[280px]">
             {/* Large Card 1 */}
-            <div className="md:col-span-2 md:row-span-2 bg-white dark:bg-gray-950 rounded-3xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all">
+            <div className="md:col-span-2 md:row-span-2 bg-white dark:bg-gray-950 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all">
               <div className="relative z-10 flex flex-col h-full justify-between">
                 <div>
-                  <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800">
-                    <Activity className="text-blue-500 w-7 h-7" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 border border-blue-100 dark:border-blue-800">
+                    <Activity className="text-blue-500 w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">{t("ai_computer_vision")}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-lg font-medium leading-relaxed max-w-md">{t("our_pytorch_powered_")}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4 tracking-tight">{t("ai_computer_vision")}</h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-lg font-medium leading-relaxed max-w-md">{t("our_pytorch_powered_")}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-4 sm:mt-0">
                   <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg uppercase tracking-wider">{t("pytorch")}</span>
                   <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg uppercase tracking-wider">{t("98__accuracy")}</span>
                 </div>
@@ -132,34 +132,34 @@ const Home = () => {
             </div>
 
             {/* Medium Card 1 */}
-            <div className="md:col-span-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-8 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all">
+            <div className="md:col-span-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all">
               <div className="relative z-10 flex flex-col h-full justify-between">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4">
-                  <Store className="text-white w-6 h-6" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4">
+                  <Store className="text-white w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white mb-2 tracking-tight">{t("integrated_e_commerc")}</h3>
-                  <p className="text-green-50 font-medium">{t("when_a_disease_is_fo")}</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-white mb-2 tracking-tight">{t("integrated_e_commerc")}</h3>
+                  <p className="text-green-50 font-medium text-sm sm:text-base">{t("when_a_disease_is_fo")}</p>
                 </div>
               </div>
             </div>
 
             {/* Small Card 1 */}
-            <div className="md:col-span-1 bg-white dark:bg-gray-950 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden hover:border-purple-400 transition-colors">
-              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
-                <TrendingUp className="text-purple-500 w-6 h-6" />
+            <div className="md:col-span-1 bg-white dark:bg-gray-950 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden hover:border-purple-400 transition-colors">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
+                <TrendingUp className="text-purple-500 w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">{t("iot_telemetry")}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t("connect_soil_moistur")}</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">{t("iot_telemetry")}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">{t("connect_soil_moistur")}</p>
             </div>
 
             {/* Small Card 2 */}
-            <div className="md:col-span-1 bg-white dark:bg-gray-950 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden hover:border-amber-400 transition-colors">
-              <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
-                <Zap className="text-amber-500 w-6 h-6" />
+            <div className="md:col-span-1 bg-white dark:bg-gray-950 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden hover:border-amber-400 transition-colors">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
+                <Zap className="text-amber-500 w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">{t("ai_support")}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t("24_7_fine_tuned_llm_")}</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">{t("ai_support")}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">{t("24_7_fine_tuned_llm_")}</p>
             </div>
           </div>
         </div>

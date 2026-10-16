@@ -114,16 +114,16 @@ const Support = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <MessageSquare className="text-indigo-600" />{t("support_helpdesk")}</h1>
+    <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6 w-full min-w-0 overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <MessageSquare className="text-indigo-600 shrink-0" />{t("support_helpdesk")}</h1>
         {!activeTicket && !showCreate && (
           <button 
             onClick={() => setShowCreate(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition"
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm text-sm"
           >
-            <PlusCircle size={20} />{t("new_ticket")}</button>
+            <PlusCircle size={18} />{t("new_ticket")}</button>
         )}
       </div>
 
@@ -285,44 +285,46 @@ const Support = () => {
               <p className="text-gray-500">{t("you_don_t_have_any_a")}</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-500">
-                  <th className="p-4 font-semibold">{t("subject")}</th>
-                  <th className="p-4 font-semibold">{t("status")}</th>
-                  <th className="p-4 font-semibold">{t("priority")}</th>
-                  <th className="p-4 font-semibold">{t("last_updated")}</th>
-                  <th className="p-4 font-semibold text-right">{t("action")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tickets.map(ticket => (
-                  <tr key={ticket.id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => setActiveTicket(ticket)}>
-                    <td className="p-4">
-                      <p className="font-bold text-gray-900">{ticket.subject}</p>
-                      <p className="text-sm text-gray-500 line-clamp-1">{ticket.description}</p>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(ticket.status)}`}>
-                        {ticket.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm font-medium text-gray-600">{ticket.priority}</span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center text-sm text-gray-500 gap-1">
-                        <Clock size={14} />
-                        {new Date(ticket.updated_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">{t("view_thread")}</button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-500">
+                    <th className="p-4 font-semibold">{t("subject")}</th>
+                    <th className="p-4 font-semibold">{t("status")}</th>
+                    <th className="p-4 font-semibold">{t("priority")}</th>
+                    <th className="p-4 font-semibold">{t("last_updated")}</th>
+                    <th className="p-4 font-semibold text-right">{t("action")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {tickets.map(ticket => (
+                    <tr key={ticket.id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => setActiveTicket(ticket)}>
+                      <td className="p-4">
+                        <p className="font-bold text-gray-900">{ticket.subject}</p>
+                        <p className="text-sm text-gray-500 line-clamp-1">{ticket.description}</p>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(ticket.status)}`}>
+                          {ticket.status}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm font-medium text-gray-600">{ticket.priority}</span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center text-sm text-gray-500 gap-1">
+                          <Clock size={14} />
+                          {new Date(ticket.updated_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <button className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">{t("view_thread")}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

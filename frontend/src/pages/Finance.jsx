@@ -320,49 +320,49 @@ const Finance = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto pb-12">
+    <div className="w-full max-w-7xl mx-auto pb-8 sm:pb-12 overflow-hidden">
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{t("financial_ledger")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">{t("financial_ledger")}</h1>
           <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 uppercase tracking-widest text-xs">{t("enterprise_b2b_accou")}</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-2 sm:gap-3 w-full md:w-auto">
           <button 
             onClick={handleGenerateDossier}
             disabled={generatingDossier}
-            className="flex-1 md:flex-none bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition disabled:opacity-50"
+            className="flex-1 md:flex-none text-xs sm:text-sm bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 px-3 sm:px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition disabled:opacity-50"
           >
             {generatingDossier ? (
-              <span className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+              <span className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
             ) : (
-              <FileText size={18} />
+              <FileText size={16} />
             )}{t("download_report")}</button>
           <button 
             onClick={() => setShowModal(true)}
-            className="flex-1 md:flex-none bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition shadow-lg shadow-gray-900/20 dark:shadow-white/10"
+            className="flex-1 md:flex-none text-xs sm:text-sm bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 sm:px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 hover:scale-[1.02] transition shadow-lg shadow-gray-900/20 dark:shadow-white/10"
           >
-            <Plus size={18} />{t("transaction")}</button>
+            <Plus size={16} />{t("transaction")}</button>
         </div>
       </div>
 
       {/* Stats row */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
         <StatCard 
-          icon={<TrendingDown className="w-6 h-6 text-red-500" />} 
+          icon={<TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />} 
           title={t("operating_expenses")} 
           value={`₹${summary?.total_expenses?.toFixed(2) || '0.00'}`} 
           color="red" 
         />
         <StatCard 
-          icon={<TrendingUp className="w-6 h-6 text-emerald-500" />} 
+          icon={<TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />} 
           title={t("gross_revenue")} 
           value={`₹${summary?.total_revenue?.toFixed(2) || '0.00'}`} 
           color="emerald" 
         />
         <StatCard 
-          icon={<IndianRupee className="w-6 h-6 text-blue-500" />} 
+          icon={<IndianRupee className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />} 
           title={t("net_profit_ytd")} 
           value={`₹${summary?.net_profit?.toFixed(2) || '0.00'}`} 
           color={summary?.net_profit >= 0 ? "blue" : "red"} 

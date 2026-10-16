@@ -108,26 +108,26 @@ const PaywallModal = ({ onClose }) => {
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 dark:border-gray-800"
+          className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-y-auto max-h-[90vh] border border-gray-100 dark:border-gray-800"
         >
           {/* Header */}
-          <div className="bg-gradient-to-br from-emerald-500 to-green-700 dark:from-emerald-900/80 dark:to-green-950 p-8 text-white text-center relative border-b border-emerald-400 dark:border-emerald-800">
+          <div className="bg-gradient-to-br from-emerald-500 to-green-700 dark:from-emerald-900/80 dark:to-green-950 p-6 sm:p-8 text-white text-center relative border-b border-emerald-400 dark:border-emerald-800">
             <button
               onClick={onClose}
               className="absolute top-4 right-4 text-white/70 hover:text-white transition"
             >
               <X size={20} />
             </button>
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 dark:bg-black/20 rounded-2xl mb-4 shadow-inner">
-              <Zap className="text-yellow-300 dark:text-yellow-400" size={32} />
+            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/20 dark:bg-black/20 rounded-2xl mb-3 sm:mb-4 shadow-inner">
+              <Zap className="text-yellow-300 dark:text-yellow-400" size={28} />
             </div>
-            <h2 className="text-2xl font-black mb-1">{t("upgrade_to_pro")}</h2>
-            <p className="text-green-100 dark:text-green-200 text-sm font-medium">{t("you_ve_reached_your_")}</p>
+            <h2 className="text-xl sm:text-2xl font-black mb-1">{t("upgrade_to_pro")}</h2>
+            <p className="text-green-100 dark:text-green-200 text-xs sm:text-sm font-medium">{t("you_ve_reached_your_")}</p>
           </div>
 
           {/* Plan Comparison */}
-          <div className="p-8">
-            <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="p-5 sm:p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 sm:mb-8">
               {/* Free */}
               <div className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-4 border border-gray-200 dark:border-gray-800">
                 <p className="font-bold text-gray-500 dark:text-gray-400 text-sm mb-3 uppercase tracking-wide">{t("free")}</p>

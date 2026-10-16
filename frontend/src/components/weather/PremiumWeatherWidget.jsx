@@ -70,57 +70,60 @@ const PremiumWeatherWidget = ({ weather, locationName }) => {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6 mb-8 font-sans">
+    <div className="w-full max-w-full flex flex-col gap-6 mb-8 font-sans overflow-hidden">
 
       {/* Top Section: Hero Visual + Forecast Column */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 w-full max-w-full">
         
         {/* HERO SECTION */}
-        <div className={`flex-1 weather-container shadow-xl min-h-[360px] flex flex-col p-8 ${getWeatherBackgroundClass(code, isDay)} relative isolate`}>
+        <div className={`w-full max-w-full flex-1 weather-container shadow-xl min-h-[300px] sm:min-h-[360px] flex flex-col p-4 sm:p-6 md:p-8 ${getWeatherBackgroundClass(code, isDay)} relative isolate rounded-2xl overflow-hidden`}>
           <WeatherVisuals code={code} isDay={isDay} />
           
-          <div className="z-10 flex flex-col h-full justify-between">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-8xl font-light tracking-tighter drop-shadow-md">
+          <div className="z-10 flex flex-col h-full justify-between gap-6">
+            <div className="flex justify-between items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-5xl sm:text-7xl md:text-8xl font-light tracking-tighter drop-shadow-md">
                   {Math.round(current.temperature_2m)}°
                 </h3>
-                <p className="text-2xl font-medium mt-2 drop-shadow-sm">
+                <p className="text-xl sm:text-2xl font-medium mt-1 sm:mt-2 drop-shadow-sm truncate">
                   {getConditionString(code)}
                 </p>
-                <div className="flex items-center gap-1.5 mt-2 opacity-80 text-sm">
-                  <MapPin size={14} />
-                  <span>{locationName}</span>
+                <div className="flex items-center gap-1.5 mt-1 sm:mt-2 opacity-80 text-xs sm:text-sm truncate">
+                  <MapPin size={14} className="shrink-0" />
+                  <span className="truncate">{locationName}</span>
                 </div>
               </div>
-              <WeatherIcon code={code} size={84} className="opacity-90 drop-shadow-xl" />
+              <div className="shrink-0">
+                <WeatherIcon code={code} size={56} className="opacity-90 drop-shadow-xl sm:hidden" />
+                <WeatherIcon code={code} size={84} className="opacity-90 drop-shadow-xl hidden sm:block" />
+              </div>
             </div>
             
             {/* Stats Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 bg-black/20 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-              <div className="flex flex-col">
-                <span className="text-xs text-white/70 font-medium uppercase tracking-wider mb-1">{t("humidity")}</span>
-                <span className="font-semibold text-lg">{current.relative_humidity_2m}%</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-auto bg-black/25 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 w-full">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] sm:text-xs text-white/75 font-medium uppercase tracking-wider mb-0.5 truncate">{t("humidity")}</span>
+                <span className="font-semibold text-base sm:text-lg">{current.relative_humidity_2m}%</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-white/70 font-medium uppercase tracking-wider mb-1">{t("wind")}</span>
-                <span className="font-semibold text-lg">{current.wind_speed_10m}{t("km_h")}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] sm:text-xs text-white/75 font-medium uppercase tracking-wider mb-0.5 truncate">{t("wind")}</span>
+                <span className="font-semibold text-base sm:text-lg">{current.wind_speed_10m} {t("km_h")}</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-white/70 font-medium uppercase tracking-wider mb-1">{t("feels_like")}</span>
-                <span className="font-semibold text-lg">{Math.round(current.apparent_temperature)}°</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] sm:text-xs text-white/75 font-medium uppercase tracking-wider mb-0.5 truncate">{t("feels_like")}</span>
+                <span className="font-semibold text-base sm:text-lg">{Math.round(current.apparent_temperature)}°</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-white/70 font-medium uppercase tracking-wider mb-1">{t("rain_chance")}</span>
-                <span className="font-semibold text-lg">{daily.precipitation_probability_max?.[0] || 0}%</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] sm:text-xs text-white/75 font-medium uppercase tracking-wider mb-0.5 truncate">{t("rain_chance")}</span>
+                <span className="font-semibold text-base sm:text-lg">{daily.precipitation_probability_max?.[0] || 0}%</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 7-DAY FORECAST LIST */}
-        <div className="lg:w-80 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm flex flex-col">
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">{t("7_day_forecast")}</h4>
+        <div className="w-full lg:w-80 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 sm:p-6 shadow-sm flex flex-col max-w-full">
+          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 uppercase tracking-wider">{t("7_day_forecast")}</h4>
           <div className="flex-1 flex flex-col justify-between space-y-2">
             {daily.time?.slice(0, 7).map((date, idx) => {
               const dCode = daily.weather_code[idx];
@@ -129,17 +132,17 @@ const PremiumWeatherWidget = ({ weather, locationName }) => {
               const dayName = idx === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
               
               return (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800/50 last:border-0">
-                  <span className={`w-14 font-medium ${idx === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800/50 last:border-0 gap-2">
+                  <span className={`w-12 sm:w-14 text-sm font-medium shrink-0 ${idx === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300'}`}>
                     {dayName}
                   </span>
-                  <WeatherIcon code={dCode} size={20} className="text-gray-700 dark:text-gray-300" />
-                  <div className="flex items-center gap-3 justify-end w-32">
-                    <span className="text-sm text-gray-500 font-medium w-6 text-right">{min}°</span>
-                    <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative min-w-[50px]">
+                  <WeatherIcon code={dCode} size={20} className="text-gray-700 dark:text-gray-300 shrink-0" />
+                  <div className="flex items-center gap-2 sm:gap-3 justify-end flex-1 max-w-[130px] sm:max-w-none sm:w-32 min-w-0">
+                    <span className="text-xs sm:text-sm text-gray-500 font-medium w-5 sm:w-6 text-right shrink-0">{min}°</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative min-w-[36px] sm:min-w-[50px]">
                       <div className="absolute top-0 bottom-0 left-[20%] right-[20%] bg-gradient-to-r from-emerald-400 to-amber-400 rounded-full"></div>
                     </div>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white w-6 text-right">{max}°</span>
+                    <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white w-5 sm:w-6 text-right shrink-0">{max}°</span>
                   </div>
                 </div>
               );
@@ -149,28 +152,28 @@ const PremiumWeatherWidget = ({ weather, locationName }) => {
       </div>
 
       {/* AGRICULTURAL ADVISORY */}
-      <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5">
+      <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-2xl p-4 sm:p-6 shadow-sm relative overflow-hidden w-full max-w-full">
+        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
           <Sprout size={120} />
         </div>
         
-        <h4 className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold mb-4">
-          <Sprout size={20} />{t("farm_weather_advisor")}</h4>
+        <h4 className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold mb-4 text-sm sm:text-base">
+          <Sprout size={20} className="shrink-0" />{t("farm_weather_advisor")}</h4>
         
-        <div className="grid md:grid-cols-3 gap-6 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 relative z-10">
           <div>
             <div className="text-xs font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-wider mb-1">{t("irrigation")}</div>
-            <div className="font-semibold text-gray-900 dark:text-white">{irrigationNeed}</div>
+            <div className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{irrigationNeed}</div>
           </div>
           <div>
             <div className="text-xs font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-wider mb-1">{t("crop_risk")}</div>
-            <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-white">
-              {riskLevel !== 'Low' && <AlertTriangle size={14} className="text-amber-500" />} {riskLevel}
+            <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
+              {riskLevel !== 'Low' && <AlertTriangle size={14} className="text-amber-500 shrink-0" />} {riskLevel}
             </div>
           </div>
           <div>
             <div className="text-xs font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-wider mb-1">{t("advisory")}</div>
-            <div className="font-medium text-gray-800 dark:text-gray-200">{farmAdvisory}</div>
+            <div className="font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">{farmAdvisory}</div>
           </div>
         </div>
       </div>

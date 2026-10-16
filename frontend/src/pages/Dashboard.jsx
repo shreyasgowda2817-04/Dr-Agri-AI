@@ -109,71 +109,71 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 overflow-x-hidden">
+    <div className="w-full max-w-7xl mx-auto py-2 sm:py-6 overflow-hidden">
 
       {/* Cinematic Banner Header */}
-      <div className="mb-8 w-full h-64 md:h-80 rounded-2xl overflow-hidden relative shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="mb-6 sm:mb-8 w-full min-h-[16rem] sm:h-72 md:h-80 rounded-2xl overflow-hidden relative shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
         <img 
           src="/dashboard-banner.jpg" 
           alt="Smart Farm Dashboard Banner" 
           className="absolute inset-0 w-full h-full object-cover object-[center_25%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/20 to-gray-900/80"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/85 via-gray-900/30 to-gray-900/90"></div>
         
-        {/* Top of Banner: {t('overview')} & Button */}
-        <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {/* Top of Banner: Overview & Button */}
+        <div className="relative z-10 p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight drop-shadow-sm">
                 {t('overview')}
               </h1>
               {weather?.current && (
-                <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm mt-1">
+                <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shadow-sm">
                   {(() => {
                     const code = weather.current.weather_code || 0;
-                    if ([0].includes(code)) return <Sun size={16} className="text-amber-400" />;
-                    if ([1,2,3].includes(code)) return <CloudSun size={16} className="text-amber-400" />;
-                    if ([45,48].includes(code)) return <CloudFog size={16} className="text-gray-300" />;
-                    if ([51,53,55,56,57].includes(code)) return <CloudDrizzle size={16} className="text-blue-300" />;
-                    if ([61,63,65,66,67,80,81,82].includes(code)) return <CloudRain size={16} className="text-blue-400" />;
-                    if ([71,73,75,77,85,86].includes(code)) return <Snowflake size={16} className="text-blue-200" />;
-                    if ([95,96,99].includes(code)) return <CloudLightning size={16} className="text-purple-400" />;
-                    return <Cloud size={16} className="text-gray-300" />;
+                    if ([0].includes(code)) return <Sun size={15} className="text-amber-400" />;
+                    if ([1,2,3].includes(code)) return <CloudSun size={15} className="text-amber-400" />;
+                    if ([45,48].includes(code)) return <CloudFog size={15} className="text-gray-300" />;
+                    if ([51,53,55,56,57].includes(code)) return <CloudDrizzle size={15} className="text-blue-300" />;
+                    if ([61,63,65,66,67,80,81,82].includes(code)) return <CloudRain size={15} className="text-blue-400" />;
+                    if ([71,73,75,77,85,86].includes(code)) return <Snowflake size={15} className="text-blue-200" />;
+                    if ([95,96,99].includes(code)) return <CloudLightning size={15} className="text-purple-400" />;
+                    return <Cloud size={15} className="text-gray-300" />;
                   })()}
-                  <span className="text-white font-bold text-sm">{Math.round(weather.current.temperature_2m)}{t("_c")}</span>
+                  <span className="text-white font-bold text-xs sm:text-sm">{Math.round(weather.current.temperature_2m)}{t("_c")}</span>
                 </div>
               )}
             </div>
-            <p className="text-gray-200 text-sm mt-1 drop-shadow-sm font-medium">
+            <p className="text-gray-200 text-xs sm:text-sm mt-1 drop-shadow-sm font-medium">
               {t('welcome')} {user?.name}. {t('heres_whats_happening')}
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Link to="/scan" className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg border border-emerald-500/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link to="/scan" className="w-full sm:w-auto justify-center bg-emerald-600 text-white px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg border border-emerald-500/50 backdrop-blur-sm">
               <Zap size={16} />{t("new_ai_scan")}</Link>
           </div>
         </div>
 
         {/* Bottom of Banner */}
-        <div className="relative z-10 p-6 md:p-8 flex justify-between items-end mt-auto">
+        <div className="relative z-10 p-4 sm:p-6 md:p-8 flex justify-between items-end mt-auto">
           <div className="text-white">
-            <p className="text-sm font-bold tracking-wider text-emerald-300 mb-1 drop-shadow-md uppercase">{t("dr_agri_1_0")}</p>
-            <h2 className="text-2xl md:text-3xl font-semibold drop-shadow-md tracking-tight">{t('live_crop_monitoring')}</h2>
+            <p className="text-xs font-bold tracking-wider text-emerald-300 mb-0.5 drop-shadow-md uppercase">{t("dr_agri_1_0")}</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold drop-shadow-md tracking-tight">{t('live_crop_monitoring')}</h2>
           </div>
         </div>
       </div>
 
       {/* Proactive Copilot Insight */}
-      <div className="mb-8 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100/50 dark:border-emerald-800/50 rounded-xl p-5 flex items-start gap-4">
-        <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100 dark:border-gray-700">
-          <ShieldCheck size={20} className="text-emerald-600 dark:text-emerald-400" />
+      <div className="mb-6 sm:mb-8 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100/50 dark:border-emerald-800/50 rounded-xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100 dark:border-gray-700">
+          <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400 sm:w-5 sm:h-5" />
         </div>
-        <div className="w-full">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{t('ai_intelligence_brief')}</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+        <div className="w-full min-w-0">
+          <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100">{t('ai_intelligence_brief')}</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mt-1">
             {loadingTelemetry ? (
-              <span className="animate-pulse bg-gray-200 dark:bg-gray-700 h-4 w-64 block rounded"></span>
+              <span className="animate-pulse bg-gray-200 dark:bg-gray-700 h-4 w-48 sm:w-64 block rounded"></span>
             ) : healthScore ? (
               healthScore.score < 700 ? (
                 "Crop health has dipped below the 70% threshold. Recommended to schedule an expert drone scan to identify isolated stress factors."
@@ -186,44 +186,44 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard isLoading={loadingHealth} title={t('overall_risk_tier')} value={healthScore?.score >= 750 ? t('prime') : healthScore?.score >= 600 ? "Standard" : "Subprime"} trend={t('b2b_rating')} icon={<Activity className="text-emerald-500" />} />
         <StatCard isLoading={loadingHistory} title={t('disease_alerts')} value={diseasesFound.toString()} trend={diseasesFound > 0 ? t('action_req') : "All Clear"} icon={<AlertTriangle className="text-amber-500" />} isAlert={diseasesFound > 0} />
         <StatCard isLoading={loadingFinance} title={t("total_revenue")} value={`₹${finance?.total_revenue || '0.00'}`} trend={t('real_time')} icon={<IndianRupee className="text-purple-500" />} />
         <StatCard isLoading={loadingFarms} title={t('active_farms')} value={farms.length.toString() || "0"} trend={t('connected')} icon={<Target className="text-blue-500" />} />
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         
         {/* Farm {t('health_score')} Gauge */}
-        <div className="md:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm flex flex-col">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm flex flex-col min-w-0">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
             <HeartPulse size={18} className="text-rose-500" />{t("health_score")}</h2>
           
           <div className="flex-1 flex flex-col items-center justify-center">
             {loadingHealth ? (
               <div className="animate-pulse flex flex-col items-center w-full">
-                <div className="w-40 h-40 border-[12px] border-gray-200 dark:border-gray-700 rounded-full mb-4"></div>
+                <div className="w-36 h-36 sm:w-40 sm:h-40 border-[10px] sm:border-[12px] border-gray-200 dark:border-gray-700 rounded-full mb-4"></div>
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
               </div>
             ) : healthScore ? (
               <>
-                <div className="relative w-40 h-40 flex items-center justify-center rounded-full border-[12px] shadow-inner dark:shadow-black/20 mb-4"
+                <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center rounded-full border-[10px] sm:border-[12px] shadow-inner dark:shadow-black/20 mb-4"
                      style={{ borderColor: healthScore.score >= 750 ? '#10B981' : healthScore.score >= 600 ? '#F59E0B' : '#EF4444' }}>
                   <div className="text-center">
-                    <span className="text-4xl font-black text-gray-900 dark:text-white">{healthScore.score}</span>
-                    <span className="block text-xs font-bold text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wider">{t("out_of_1000")}</span>
+                    <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">{healthScore.score}</span>
+                    <span className="block text-[10px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wider">{t("out_of_1000")}</span>
                   </div>
                 </div>
                 
-                <div className="w-full mt-4 space-y-2">
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("score_factors")}</p>
+                <div className="w-full mt-2 sm:mt-4 space-y-2">
+                  <p className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("score_factors")}</p>
                   {healthScore.details.map((detail, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-sm">
+                    <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                       {detail.includes('+') ? (
-                        <CheckCircle size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                        <CheckCircle size={15} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                       ) : (
-                        <AlertTriangle size={16} className="text-rose-500 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle size={15} className="text-rose-500 flex-shrink-0 mt-0.5" />
                       )}
                       <span className="text-gray-700 dark:text-gray-300 leading-tight">{detail}</span>
                     </div>
@@ -240,15 +240,15 @@ const Dashboard = () => {
         </div>
 
         {/* Main Analytics Chart */}
-        <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('crop_health_index')}</h2>
-            <select className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg py-1.5 px-3 outline-none">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm min-w-0">
+          <div className="flex justify-between items-center mb-4 sm:mb-6 gap-2">
+            <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">{t('crop_health_index')}</h2>
+            <select className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg py-1 px-2.5 sm:py-1.5 sm:px-3 outline-none shrink-0">
               <option>{t("last_7_days")}</option>
               <option>{t("last_30_days")}</option>
             </select>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-64 sm:h-72 w-full min-w-0">
             {loadingHistory ? (
               <div className="w-full h-full bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
             ) : (

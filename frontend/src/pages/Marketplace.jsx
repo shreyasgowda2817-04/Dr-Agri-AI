@@ -643,28 +643,28 @@ const Marketplace = () => {
               </button>
 
               {/* Left Side: Product Image & Gallery */}
-              <div className="w-full md:w-[45%] bg-gray-50 flex flex-col p-8 border-b md:border-b-0 md:border-r border-gray-100">
-                <div className="flex-1 flex items-center justify-center relative group overflow-hidden rounded-2xl bg-white p-4 shadow-sm border border-gray-100 min-h-[300px]">
+              <div className="w-full md:w-[45%] bg-gray-50 flex flex-col p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 shrink-0">
+                <div className="flex-1 flex items-center justify-center relative group overflow-hidden rounded-2xl bg-white p-4 shadow-sm border border-gray-100 min-h-[180px] sm:min-h-[220px] md:min-h-[300px]">
                   {selectedProduct.image_url ? (
-                    <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-auto object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                    <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-auto max-h-48 md:max-h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-700 ease-in-out" />
                   ) : (
-                    <span className="text-8xl">{CATEGORIES.find(c => c.value === selectedProduct.category)?.icon || '📦'}</span>
+                    <span className="text-6xl sm:text-8xl">{CATEGORIES.find(c => c.value === selectedProduct.category)?.icon || '📦'}</span>
                   )}
                   <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 border border-gray-100">
                     <Search size={12} />{t("hover_to_zoom")}</div>
                 </div>
 
                 {selectedProduct.image_url && (
-                  <div className="flex gap-3 mt-6">
-                    <button className="w-16 h-16 rounded-xl border-2 border-green-500 p-1 bg-white shadow-sm hover:scale-105 transition"><img src={selectedProduct.image_url} className="w-full h-full object-cover rounded-lg" /></button>
-                    <button className="w-16 h-16 rounded-xl border border-gray-200 p-1 bg-white hover:border-gray-300 opacity-60 hover:opacity-100 hover:scale-105 transition"><img src={selectedProduct.image_url} className="w-full h-full object-cover rounded-lg grayscale" /></button>
+                  <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
+                    <button className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border-2 border-green-500 p-1 bg-white shadow-sm hover:scale-105 transition"><img src={selectedProduct.image_url} className="w-full h-full object-cover rounded-lg" /></button>
+                    <button className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-gray-200 p-1 bg-white hover:border-gray-300 opacity-60 hover:opacity-100 hover:scale-105 transition"><img src={selectedProduct.image_url} className="w-full h-full object-cover rounded-lg grayscale" /></button>
                   </div>
                 )}
               </div>
 
               {/* Right Side: Product Details */}
-              <div className="relative w-full md:w-[55%] bg-white h-full flex flex-col">
-                <div className="flex-1 overflow-y-auto p-8 pb-[200px] custom-scrollbar">
+              <div className="relative w-full md:w-[55%] bg-white h-full flex flex-col min-w-0">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-[180px] sm:pb-[200px] custom-scrollbar">
                   
                   <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 px-3 py-1.5 rounded-full mb-4">
                     <span className="text-emerald-600">✨</span>

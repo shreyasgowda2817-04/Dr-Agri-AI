@@ -200,24 +200,31 @@ const Agronomy = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-73px)] w-full bg-gray-50 dark:bg-gray-950 transition-colors overflow-hidden relative">
+    <div className="flex h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] w-full bg-gray-50 dark:bg-gray-950 transition-colors overflow-hidden relative">
 
       {/* Overlay to close sidebar when clicking outside */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-20"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-20"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* ─── LEFT SIDEBAR (History Drawer) ─── */}
-      <div className={`${isSidebarOpen ? 'w-64 md:w-80 border-r translate-x-0' : 'w-0 border-r-0 -translate-x-full'} absolute left-0 top-0 z-30 h-full transition-all duration-300 shrink-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden shadow-2xl`}>
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/50 min-w-[16rem]">
+      <div className={`${isSidebarOpen ? 'w-72 max-w-[85vw] md:w-80 border-r translate-x-0' : 'w-0 border-r-0 -translate-x-full'} absolute left-0 top-0 z-30 h-full transition-all duration-300 shrink-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden shadow-2xl`}>
+        <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/50 flex items-center gap-2">
           <button 
             onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2.5 rounded-xl font-bold hover:scale-[1.02] transition shadow-md"
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2 sm:py-2.5 rounded-xl font-bold text-sm hover:scale-[1.02] transition shadow-md"
           >
-            <Plus size={18} />{t("new_chat")}</button>
+            <Plus size={18} />{t("new_chat")}
+          </button>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden p-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          >
+            <X size={18} />
+          </button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -296,45 +303,43 @@ const Agronomy = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden max-w-full">
         
         {/* Header */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-4 px-6 flex justify-between items-center z-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-3 sm:p-4 px-3 sm:px-6 flex justify-between items-center z-10 shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 -ml-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 md:border-transparent md:shadow-none"
+              className="p-1.5 sm:p-2 -ml-1 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 md:border-transparent md:shadow-none shrink-0"
               title="Show Chat History & New Chat"
             >
-              <Menu size={20} />
+              <Menu size={18} className="sm:w-5 sm:h-5" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-              <Sparkles size={20} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+              <Sparkles size={16} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h1 className="text-xl font-black text-gray-900 dark:text-white leading-tight">{t("dr_agri_ai")}</h1>
-              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden sm:block">{t("context_aware_agrono")}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-black text-gray-900 dark:text-white leading-tight truncate">{t("dr_agri_ai")}</h1>
+              <p className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden sm:block truncate">{t("context_aware_agrono")}</p>
             </div>
           </div>
           
-          <div className="relative group">
+          <div className="relative group shrink-0">
             <select 
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold py-2 pl-4 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition"
+              className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-bold py-1.5 sm:py-2 pl-2.5 sm:pl-4 pr-7 sm:pr-10 rounded-xl border border-gray-200 dark:border-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition"
             >
               <option value="en-US">{t("english")}</option>
               <option value="hi-IN">{t("________hindi_")}</option>
               <option value="kn-IN">{t("_______kannada_")}</option>
               <option value="te-IN">{t("telugu")}</option>
               <option value="ta-IN">{t("tamil")}</option>
-              
-
             </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
         </div>
         
         {/* Weather Banner */}
         {!weatherLoading && weatherData ? (
-          <div className="max-w-full bg-emerald-50/50 dark:bg-emerald-900/10 border-b border-emerald-100 dark:border-emerald-900/30 px-6 py-2.5 flex items-center justify-between text-xs font-medium text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-nowrap shrink-0 hide-scrollbar">
+          <div className="max-w-full bg-emerald-50/50 dark:bg-emerald-900/10 border-b border-emerald-100 dark:border-emerald-900/30 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between text-xs font-medium text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-nowrap shrink-0 scrollbar-none">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-1.5"><MapPin size={14} className="text-emerald-500" /> <span>{weatherData.location_name}</span></div>
               <div className="flex items-center gap-1.5"><Thermometer size={14} className="text-orange-500" /> <span>{weatherData.temperature}{t("_c__feels")}{weatherData.feels_like}{t("_c_")}</span></div>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import {
   Settings,
   LogOut,
   Menu,
+  X,
   ShieldCheck,
   Scan,
   Sprout,
@@ -37,8 +39,42 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
+  // Close drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, setIsOpen]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      if (isOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
+  };
+
   const handleLogout = async (e) => {
     e.preventDefault();
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
     await dispatch(logoutUser());
     navigate('/login');
   };
@@ -68,89 +104,126 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   });
 
   return (
-    <aside 
-      className={`h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed left-0 top-0 z-50 shadow-sm transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}
-    >
-      <div className={`p-6 border-b border-gray-100 dark:border-gray-700 flex items-center ${isOpen ? 'justify-between' : 'justify-center'}`}>
-        <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition cursor-pointer">
-          <div className="bg-green-100 p-2 rounded-xl flex-shrink-0">
-            <Leaf className="w-6 h-6 text-green-600" />
-          </div>
-          {isOpen && (
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white">{t("dr_agri_ai")}</span>
+    <>
+      {/* Mobile Backdrop */}
+      <div 
+        className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-xl lg:shadow-sm transition-all duration-300 ease-in-out w-72 max-w-[85vw] ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 ${isOpen ? 'lg:w-64' : 'lg:w-20'}`}
+      >
+        <div className={`p-5 sm:p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between ${!isOpen ? 'lg:justify-center' : ''}`}>
+          <Link 
+            to="/dashboard" 
+            onClick={handleNavClick}
+            className="flex items-center space-x-3 hover:opacity-80 transition cursor-pointer min-w-0"
+          >
+            <div className="bg-green-100 dark:bg-green-900/40 p-2 rounded-xl flex-shrink-0">
+              <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className={`flex items-center gap-1.5 ${!isOpen ? 'lg:hidden' : 'flex'}`}>
+              <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white truncate">{t("dr_agri_ai")}</span>
               {(user?.is_premium || user?.tier === 'pro') && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm flex-shrink-0">
                   PRO
                 </span>
               )}
             </div>
-          )}
-        </Link>
-      </div>
+          </Link>
 
-      <nav className={`flex-1 overflow-y-auto py-6 ${isOpen ? 'px-4' : 'px-2'} space-y-1`}>
-        {visibleNavItems.map((item) => {
-          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-          
-          return (
+          {/* Close button on mobile */}
+          <button 
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:hidden transition"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className={`flex-1 overflow-y-auto py-4 sm:py-6 ${isOpen ? 'px-3 sm:px-4' : 'px-2 lg:px-2'} space-y-1`}>
+          {visibleNavItems.map((item) => {
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            
+            return (
+              <Link 
+                key={item.path} 
+                to={item.path} 
+                onClick={handleNavClick}
+                title={!isOpen ? item.name : ""}
+                className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  isOpen ? 'px-3 sm:px-4' : 'px-3 sm:px-4 lg:justify-center lg:px-0'
+                } ${
+                  isActive 
+                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 shadow-sm' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'
+                }`}
+              >
+                <div className={`flex-shrink-0 ${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {item.icon}
+                </div>
+                <span className={`${!isOpen ? 'lg:hidden' : ''} truncate`}>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-3 sm:p-4 border-t border-gray-100 dark:border-gray-700 space-y-1">
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <Link 
-              key={item.path} 
-              to={item.path} 
-              title={!isOpen ? item.name : ""}
-              className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${isOpen ? 'px-4' : 'justify-center'} ${
-                isActive 
-                  ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 shadow-sm' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'
+              to="/admin" 
+              onClick={handleNavClick}
+              title={!isOpen ? "Admin Panel" : ""}
+              className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${
+                isOpen ? 'px-3 sm:px-4' : 'px-3 sm:px-4 lg:justify-center lg:px-0'
+              } ${
+                location.pathname === '/admin' 
+                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-300' 
+                  : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-900 dark:hover:text-purple-300'
               }`}
             >
-              <div className={`${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                {item.icon}
-              </div>
-              {isOpen && <span>{item.name}</span>}
+              <ShieldCheck size={20} className="text-purple-500 flex-shrink-0" />
+              <span className={`${!isOpen ? 'lg:hidden' : ''} truncate`}>{t('admin_panel')}</span>
             </Link>
-          );
-        })}
-      </nav>
-
-      <div className={`p-4 border-t border-gray-100 dark:border-gray-700 space-y-1`}>
-        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+          )}
           <Link 
-            to="/admin" 
-            title={!isOpen ? "Admin Panel" : ""}
-            className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${isOpen ? 'px-4' : 'justify-center'} ${
-              location.pathname === '/admin' 
-                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-300' 
-                : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-900 dark:hover:text-purple-300'
+            to="/settings" 
+            onClick={handleNavClick}
+            title={!isOpen ? "Settings" : ""}
+            className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${
+              isOpen ? 'px-3 sm:px-4' : 'px-3 sm:px-4 lg:justify-center lg:px-0'
+            } ${
+              location.pathname === '/settings' 
+                ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' 
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
-            <ShieldCheck size={20} className="text-purple-500" />
-            {isOpen && <span>{t('admin_panel')}</span>}
+            <Settings size={20} className="text-gray-400 flex-shrink-0" />
+            <span className={`${!isOpen ? 'lg:hidden' : ''} truncate`}>{t('settings')}</span>
           </Link>
-        )}
-        <Link 
-          to="/settings" 
-          title={!isOpen ? "Settings" : ""}
-          className={`flex items-center space-x-3 py-3 rounded-xl font-medium transition-all duration-200 ${isOpen ? 'px-4' : 'justify-center'} ${
-            location.pathname === '/settings' 
-              ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' 
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <Settings size={20} className="text-gray-400" />
-          {isOpen && <span>{t('settings')}</span>}
-        </Link>
-        <button 
-          onClick={handleLogout}
-          title={!isOpen ? "Logout" : ""}
-          className={`w-full flex items-center space-x-3 py-3 rounded-xl font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 ${isOpen ? 'px-4' : 'justify-center'}`}
-        >
-          <LogOut size={20} />
-          {isOpen && <span>{t('logout')}</span>}
-        </button>
-      </div>
+          <button 
+            type="button"
+            onClick={handleLogout}
+            title={!isOpen ? "Logout" : ""}
+            className={`w-full flex items-center space-x-3 py-3 rounded-xl font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 ${
+              isOpen ? 'px-3 sm:px-4' : 'px-3 sm:px-4 lg:justify-center lg:px-0'
+            }`}
+          >
+            <LogOut size={20} className="flex-shrink-0" />
+            <span className={`${!isOpen ? 'lg:hidden' : ''} truncate`}>{t('logout')}</span>
+          </button>
+        </div>
 
-    </aside>
+      </aside>
+    </>
   );
 };
 

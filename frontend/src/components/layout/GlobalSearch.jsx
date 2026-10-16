@@ -93,19 +93,21 @@ const GlobalSearch = () => {
     <>
       {/* Trigger Button in Header */}
       <button 
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2 px-4 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition w-64 shadow-sm"
+        className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2 px-2.5 sm:px-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition w-full max-w-[130px] xs:max-w-[170px] sm:max-w-xs md:w-64 shadow-sm min-w-0"
+        aria-label="Open search dialog"
       >
-        <Search size={16} />
-        <span className="flex-1 text-left">{t("search_dr_agri___")}</span>
-        <kbd className="hidden sm:inline-flex items-center gap-1 font-sans text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 shadow-sm font-bold">
+        <Search size={16} className="shrink-0 text-gray-400" />
+        <span className="flex-1 text-left truncate">{t("search_dr_agri___")}</span>
+        <kbd className="hidden sm:inline-flex items-center gap-1 font-sans text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 shadow-sm font-bold shrink-0">
           <span className="text-xs">⌘</span>{t("k")}</kbd>
       </button>
 
       {/* Command K Modal Overlay */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] sm:pt-[20vh] px-4">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] sm:pt-[15vh] px-3 sm:px-4">
             
             {/* Backdrop */}
             <motion.div 
@@ -122,7 +124,7 @@ const GlobalSearch = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[70vh]"
+              className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[70vh]"
             >
               
               {/* Search Input Area */}

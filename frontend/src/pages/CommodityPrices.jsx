@@ -108,61 +108,61 @@ const CommodityPrices = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+    <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 overflow-hidden">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 sm:gap-6 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-1 sm:mb-2">
             Real-Time Market Predictor
           </h1>
-          <p className="text-gray-500 font-medium text-lg">
+          <p className="text-gray-500 font-medium text-sm sm:text-base">
             ML Forecasting powered by official agricultural data.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handlePredict} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      <form onSubmit={handlePredict} className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 items-end">
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">State</label>
+          <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">State</label>
           <select 
-            className="w-full border-gray-300 rounded-xl px-4 py-3 bg-gray-50 font-medium focus:ring-indigo-500"
+            className="w-full border-gray-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 font-medium text-sm focus:ring-indigo-500"
             value={state} onChange={(e) => setState(e.target.value)}
           >
             {Object.keys(catalog).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">District</label>
+          <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">District</label>
           <select 
-            className="w-full border-gray-300 rounded-xl px-4 py-3 bg-gray-50 font-medium focus:ring-indigo-500"
+            className="w-full border-gray-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 font-medium text-sm focus:ring-indigo-500"
             value={district} onChange={(e) => setDistrict(e.target.value)}
           >
             {catalog[state] && Object.keys(catalog[state]).map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">Market (Mandi)</label>
+          <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">Market (Mandi)</label>
           <select 
-            className="w-full border-gray-300 rounded-xl px-4 py-3 bg-gray-50 font-medium focus:ring-indigo-500"
+            className="w-full border-gray-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 font-medium text-sm focus:ring-indigo-500"
             value={market} onChange={(e) => setMarket(e.target.value)}
           >
             {catalog[state] && catalog[state][district] && Object.keys(catalog[state][district]).map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">Crop</label>
+          <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">Crop</label>
           <select 
-            className="w-full border-gray-300 rounded-xl px-4 py-3 bg-gray-50 font-medium focus:ring-indigo-500"
+            className="w-full border-gray-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 font-medium text-sm focus:ring-indigo-500"
             value={crop} onChange={(e) => setCrop(e.target.value)}
           >
             {catalog[state] && catalog[state][district] && catalog[state][district][market] && catalog[state][district][market].map(c => <option key={c} value={c}>{c}</option>)}
             <option value="ABC">Test Fake Crop (ABC)</option>
           </select>
         </div>
-        <div>
+        <div className="sm:col-span-2 lg:col-span-1">
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 sm:py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
           >
             <Brain size={18} />
             {loading ? "Forecasting..." : "Predict"}
@@ -171,43 +171,43 @@ const CommodityPrices = () => {
       </form>
 
       {forecast && (
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* Metadata Card */}
-          <div className="col-span-1 flex flex-col gap-6">
-            <div className={`rounded-3xl p-6 text-white relative overflow-hidden shadow-xl
+          <div className="col-span-1 flex flex-col gap-4 sm:gap-6">
+            <div className={`rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white relative overflow-hidden shadow-xl
               ${forecast.action_color === 'red' ? 'bg-gradient-to-br from-red-500 to-red-700' : 
                 forecast.action_color === 'green' ? 'bg-gradient-to-br from-green-500 to-green-700' : 
                 forecast.action_color === 'orange' ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 
                 'bg-gradient-to-br from-blue-500 to-blue-700'}`}
             >
-              <h2 className="text-3xl font-black mb-2">{forecast.recommendation}</h2>
-              <p className="text-white/90 text-md leading-relaxed font-medium mb-6">
+              <h2 className="text-2xl sm:text-3xl font-black mb-2">{forecast.recommendation}</h2>
+              <p className="text-white/90 text-sm sm:text-md leading-relaxed font-medium mb-4 sm:mb-6">
                 {forecast.message}
               </p>
               
-              <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex flex-col gap-2 border border-white/20">
+              <div className="bg-white/20 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-2 border border-white/20">
                 <div className="flex justify-between items-center">
-                  <p className="text-white/80 text-sm font-bold uppercase">Latest Price</p>
-                  <p className="text-xl font-black">₹{forecast.latestMarketPrice}</p>
+                  <p className="text-white/80 text-xs sm:text-sm font-bold uppercase">Latest Price</p>
+                  <p className="text-lg sm:text-xl font-black">₹{forecast.latestMarketPrice}</p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-white/80 text-sm font-bold uppercase">{forecast.horizonDays}-Day Forecast</p>
-                  <p className="text-xl font-black flex items-center gap-1">
+                  <p className="text-white/80 text-xs sm:text-sm font-bold uppercase">{forecast.horizonDays}-Day Forecast</p>
+                  <p className="text-lg sm:text-xl font-black flex items-center gap-1">
                     ₹{forecast.predictedPrice}
                     {forecast.predictedPrice > forecast.latestMarketPrice ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
                   </p>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-white/20">
                   <p className="text-white/80 text-xs font-bold uppercase">Confidence Range</p>
-                  <p className="text-sm font-bold text-white/90">₹{forecast.predictionRange.low} - ₹{forecast.predictionRange.high}</p>
+                  <p className="text-xs sm:text-sm font-bold text-white/90">₹{forecast.predictionRange.low} - ₹{forecast.predictionRange.high}</p>
                 </div>
               </div>
             </div>
 
             {/* Source Information */}
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col gap-4">
-               <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2 border-b pb-3"><Database size={18} className="text-indigo-500"/> Data Source Transparency</h3>
-               <div className="text-sm font-medium text-gray-600 flex flex-col gap-2">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex flex-col gap-3 sm:gap-4">
+               <h3 className="font-bold text-gray-900 text-base sm:text-lg flex items-center gap-2 border-b pb-3"><Database size={18} className="text-indigo-500"/> Data Source Transparency</h3>
+               <div className="text-xs sm:text-sm font-medium text-gray-600 flex flex-col gap-2">
                  <div className="flex justify-between"><span className="text-gray-400">Source:</span> <span>{forecast.dataSource}</span></div>
                  <div className="flex justify-between"><span className="text-gray-400">Market:</span> <span>{forecast.market}</span></div>
                  <div className="flex justify-between"><span className="text-gray-400">Last Updated:</span> <span>{forecast.latestMarketPriceDate}</span></div>
@@ -218,18 +218,18 @@ const CommodityPrices = () => {
           </div>
 
           {/* Chart Area */}
-          <div className="col-span-2 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-gray-900 flex items-center gap-2 text-lg">
-                <DollarSign className="text-indigo-500" />Price Trajectory: {forecast.crop} ({forecast.unit})
+          <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-sm min-w-0 overflow-hidden">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2 text-base sm:text-lg truncate">
+                <DollarSign className="text-indigo-500 shrink-0" />Price Trajectory: {forecast.crop} ({forecast.unit})
               </h2>
-              <div className="flex items-center gap-4 text-sm font-bold text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-800"></span>Historical</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-indigo-500"></span>Predicted</span>
+              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-bold text-gray-500 shrink-0">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-800"></span>Historical</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>Predicted</span>
               </div>
             </div>
             
-            <div className="h-[400px]">
+            <div className="h-[280px] sm:h-[350px] md:h-[400px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={forecast.chart_data} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />

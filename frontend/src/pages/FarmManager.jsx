@@ -229,7 +229,7 @@ const FarmManager = () => {
   const totalCrops = farms.reduce((acc, f) => acc + (f.crops?.length || 0), 0);
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-73px)] w-full overflow-hidden bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="flex flex-col md:flex-row h-auto md:h-[calc(100vh-6rem)] w-full overflow-hidden bg-gray-50 dark:bg-gray-950 transition-colors rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, id: null })}
@@ -241,13 +241,13 @@ const FarmManager = () => {
       />
 
       {/* ─── LEFT SIDEBAR (List View) ─── */}
-      <div className="w-full md:w-[400px] xl:w-[450px] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full z-10 shadow-xl overflow-hidden shrink-0">
+      <div className="w-full md:w-[360px] lg:w-[420px] bg-white dark:bg-gray-900 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 flex flex-col h-auto max-h-[50vh] md:max-h-none md:h-full z-10 shadow-sm overflow-hidden shrink-0">
         
         {/* Header */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-              <MapPin className="text-emerald-500" />{t("gps_manager")}</h1>
+        <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <MapPin className="text-emerald-500 shrink-0" />{t("gps_manager")}</h1>
             <button
               onClick={openAddModal}
               className="bg-emerald-500 text-white p-2 rounded-xl hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
@@ -329,11 +329,11 @@ const FarmManager = () => {
       </div>
 
       {/* ─── RIGHT AREA (Interactive Map) ─── */}
-      <div className="flex-1 relative bg-gray-200 dark:bg-gray-800 z-0 h-[40vh] md:h-full">
+      <div className="flex-1 relative bg-gray-200 dark:bg-gray-800 z-0 h-[320px] sm:h-[400px] md:h-full min-h-[280px] w-full">
         {/* Map Overlay Controls */}
-        <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
-          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300">
-            <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>{t("telemetry_active")}</div>
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-[400] flex flex-col gap-2">
+          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur rounded-xl p-2.5 sm:p-3 shadow-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300">
+            <div className="flex items-center gap-2 mb-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>{t("telemetry_active")}</div>
             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"></span>{t("soil_moisture_normal")}</div>
           </div>
         </div>
@@ -376,26 +376,26 @@ const FarmManager = () => {
       {/* ── Add / Edit Modal ── */}
       <AnimatePresence>
         {showModal && (
-          <motion.div className="fixed inset-0 z-[500] flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="fixed inset-0 z-[500] flex items-center justify-center p-3 sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setShowModal(false)} />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+              className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-auto"
             >
-              <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-between items-center rounded-t-3xl shrink-0 z-10">
-                <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{editingFarm ? 'Edit Farm Parameters' : 'Register New Farm Plot'}</h3>
+              <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-3.5 sm:py-4 flex justify-between items-center rounded-t-2xl sm:rounded-t-3xl shrink-0 z-10">
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white tracking-tight">{editingFarm ? 'Edit Farm Parameters' : 'Register New Farm Plot'}</h3>
                 <button onClick={() => setShowModal(false)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition"><X size={20} /></button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
                 {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField label="Farm Name *" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. North Field" />
                   <FormField label="Area (Acres) *" value={form.area_acres} onChange={v => setForm(p => ({ ...p, area_acres: v }))} placeholder="e.g. 5.5" type="number" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField label="Primary Crop" value={form.crop} onChange={v => setForm(p => ({ ...p, crop: v }))} placeholder="e.g. Tomato, Wheat" />
                   <div>
                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t("status")}</label>

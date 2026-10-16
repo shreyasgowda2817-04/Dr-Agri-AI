@@ -71,12 +71,12 @@ const AuthLayout = () => {
       </div>
 
       {/* Right side: Form (Outlet) */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-24 bg-white relative">
-        <div className="absolute top-8 left-8 lg:hidden">
-          <Link to="/" className="flex items-center gap-2 text-green-700 font-bold">
-            <Leaf className="w-6 h-6" />{t("dr_agri")}</Link>
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-4 py-12 sm:p-8 lg:p-16 xl:p-24 bg-white relative min-w-0">
+        <div className="absolute top-4 left-4 sm:top-8 sm:left-8 lg:hidden">
+          <Link to="/" className="flex items-center gap-2 text-green-700 font-bold text-sm sm:text-base">
+            <Leaf className="w-5 h-5 sm:w-6 sm:h-6" />{t("dr_agri")}</Link>
         </div>
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md mt-6 sm:mt-0">
           <Outlet />
         </div>
       </div>

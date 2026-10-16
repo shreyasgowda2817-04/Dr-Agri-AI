@@ -169,24 +169,24 @@ const CropManager = () => {
       />
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Leaf className="text-green-600" />{t("crop_manager")}</h1>
-          <p className="text-gray-500 mt-1">{t("track_every_crop_acr")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <Leaf className="text-green-600 shrink-0" />{t("crop_manager")}</h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">{t("track_every_crop_acr")}</p>
         </div>
         <button
           onClick={openAdd}
-          className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 transition shadow-md shadow-green-100"
+          className="w-full sm:w-auto justify-center bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 transition shadow-md shadow-green-100 text-sm"
         >
           <Plus size={18} />{t("register_crop")}</button>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b border-gray-200 mb-6">
+      <div className="flex space-x-2 border-b border-gray-200 mb-6 overflow-x-auto pb-0.5">
         <button
           onClick={() => setActiveTab('crops')}
-          className={`pb-3 px-4 font-bold flex items-center gap-2 border-b-2 transition ${
+          className={`pb-3 px-3 sm:px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition shrink-0 ${
             activeTab === 'crops'
               ? 'border-green-600 text-green-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -195,7 +195,7 @@ const CropManager = () => {
           <Sprout size={18} />{t("my_crops")}</button>
         <button
           onClick={() => setActiveTab('calendar')}
-          className={`pb-3 px-4 font-bold flex items-center gap-2 border-b-2 transition ${
+          className={`pb-3 px-3 sm:px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition shrink-0 ${
             activeTab === 'calendar'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -211,7 +211,7 @@ const CropManager = () => {
       ) : (
         <>
           {/* Filter Bar */}
-          <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
+          <div className="flex gap-2 sm:gap-3 mb-6 overflow-x-auto pb-1 max-w-full">
         <FilterPill label="All Farms" active={filterFarm === ''} onClick={() => setFilterFarm('')} />
         {farms.map(f => (
           <FilterPill key={f.id} label={f.name} active={filterFarm === f.id} onClick={() => setFilterFarm(f.id)} />
@@ -222,14 +222,14 @@ const CropManager = () => {
       {loading ? (
         <p className="text-center py-20 text-gray-400">{t("loading_crops___")}</p>
       ) : crops.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 p-4">
           <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-gray-600 mb-2">{t("no_crops_registered_")}</h3>
-          <p className="text-gray-400 mb-6">{t("register_crops_to_tr")}</p>
-          <button onClick={openAdd} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition">{t("__register_first_cro")}</button>
+          <p className="text-gray-400 mb-6 text-sm">{t("register_crops_to_tr")}</p>
+          <button onClick={openAdd} className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">{t("__register_first_cro")}</button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {crops.map(crop => {
             const harvestDays = daysUntilHarvest(crop.expected_harvest_date);
             return (

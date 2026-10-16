@@ -35,20 +35,20 @@ const AnalysisCard = ({ result, ui }) => {
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 opacity-50" />
 
-      <div className="flex justify-between items-start mb-6">
-        <div>
+      <div className="flex justify-between items-start mb-6 gap-3">
+        <div className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 mb-3">
             <CheckCircle size={14} /> {ui.analysisTitle}
           </span>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight leading-tight break-words">
             {(result.disease_name || 'Unknown').replace(/___/g, ' ')}
           </h2>
-          <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">
+          <p className="text-xs sm:text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest truncate">
             {ui.cropLabel} {result.crop_name || 'Unknown'}
           </p>
         </div>
         
-        <div className="w-24 h-24 relative">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 relative shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

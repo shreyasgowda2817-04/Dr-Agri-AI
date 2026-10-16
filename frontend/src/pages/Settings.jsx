@@ -420,13 +420,34 @@ const Settings = () => {
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-73px)] text-gray-900 dark:text-gray-100">
-      <div className="flex flex-col md:flex-row gap-8">
+    <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6 lg:px-8 min-h-[calc(100vh-73px)] text-gray-900 dark:text-gray-100 min-w-0">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Settings</h1>
+      </div>
+
+      {/* ─── MOBILE HORIZONTAL TABS BAR (< md) ─── */}
+      <div className="md:hidden overflow-x-auto scrollbar-none flex gap-2 pb-3 mb-4 -mx-3 px-3">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 transition-all ${
+              activeTab === tab.id
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
         
-        {/* ─── LEFT SIDEBAR ─── */}
-        <div className="w-full md:w-64 shrink-0">
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-8 tracking-tight">Settings</h1>
-          <nav className="space-y-8">
+        {/* ─── DESKTOP LEFT SIDEBAR (>= md) ─── */}
+        <div className="hidden md:block w-64 shrink-0">
+          <nav className="space-y-6">
             {Object.entries(groupedTabs).map(([group, tabs]) => (
               <div key={group}>
                 <h3 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-3">{group}</h3>

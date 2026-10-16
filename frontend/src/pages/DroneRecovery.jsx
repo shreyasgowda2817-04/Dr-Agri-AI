@@ -161,19 +161,21 @@ const DroneRecovery = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-3 sm:px-6 w-full min-w-0 overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <Camera className="w-8 h-8 text-teal-600" />{t("drone_recovery_monit")}</h1>
-          <p className="text-gray-500 mt-1 font-medium">{t("track_field_health_a")}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <Camera className="w-7 h-7 sm:w-8 h-8 text-teal-600 shrink-0" />
+            <span className="truncate">{t("drone_recovery_monit")}</span>
+          </h1>
+          <p className="text-sm sm:text-base text-gray-500 mt-1 font-medium">{t("track_field_health_a")}</p>
         </div>
         
-        <div className="flex gap-4 items-center">
+        <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <select 
             value={selectedFarm} 
             onChange={(e) => setSelectedFarm(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-gray-700 shadow-sm focus:ring-2 focus:ring-teal-500 outline-none"
+            className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-gray-700 shadow-sm focus:ring-2 focus:ring-teal-500 outline-none text-sm"
           >
             <option value="">{t("select_farm___")}</option>
             {farms.map(f => (
@@ -181,8 +183,8 @@ const DroneRecovery = () => {
             ))}
           </select>
           
-          <label className="bg-teal-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-teal-700 transition shadow-lg shadow-teal-200 cursor-pointer">
-            <Plane size={20} />{t("deploy_drone")}<input type="file" className="hidden" accept="image/*" onChange={handleUploadAndDeploy} />
+          <label className="bg-teal-600 text-white px-5 sm:px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition shadow-lg shadow-teal-200 cursor-pointer text-sm">
+            <Plane size={18} />{t("deploy_drone")}<input type="file" className="hidden" accept="image/*" onChange={handleUploadAndDeploy} />
           </label>
         </div>
       </div>
@@ -366,33 +368,33 @@ const DroneRecovery = () => {
               </div>
 
               {/* Progress Visualizer */}
-              <div className="p-8 border-b border-gray-800 bg-black flex justify-between relative">
+              <div className="p-4 sm:p-8 border-b border-gray-800 bg-black flex justify-between relative overflow-x-auto scrollbar-none">
                 {/* Connecting Line */}
-                <div className="absolute top-1/2 left-10 right-10 h-0.5 bg-gray-800 -translate-y-1/2 z-0" />
+                <div className="absolute top-1/2 left-8 sm:left-10 right-8 sm:right-10 h-0.5 bg-gray-800 -translate-y-1/2 z-0" />
                 <div 
-                  className="absolute top-1/2 left-10 h-0.5 bg-teal-500 -translate-y-1/2 z-0 transition-all duration-700" 
-                  style={{ width: `${(deployStep / 5) * 100}%`, maxWidth: 'calc(100% - 80px)' }}
+                  className="absolute top-1/2 left-8 sm:left-10 h-0.5 bg-teal-500 -translate-y-1/2 z-0 transition-all duration-700" 
+                  style={{ width: `${(deployStep / 5) * 100}%`, maxWidth: 'calc(100% - 60px)' }}
                 />
 
                 {/* Nodes */}
                 {[
-                  { id: 0, label: "Uplink", icon: <Wifi size={20} /> },
-                  { id: 1, label: "Takeoff", icon: <Plane size={20} /> },
-                  { id: 3, label: "Scanning", icon: <Camera size={20} /> },
-                  { id: 4, label: "Telemetry", icon: <Server size={20} /> },
-                  { id: 5, label: "Complete", icon: <CheckCircle size={20} /> },
+                  { id: 0, label: "Uplink", icon: <Wifi className="w-4 h-4 sm:w-5 sm:h-5" /> },
+                  { id: 1, label: "Takeoff", icon: <Plane className="w-4 h-4 sm:w-5 sm:h-5" /> },
+                  { id: 3, label: "Scanning", icon: <Camera className="w-4 h-4 sm:w-5 sm:h-5" /> },
+                  { id: 4, label: "Telemetry", icon: <Server className="w-4 h-4 sm:w-5 sm:h-5" /> },
+                  { id: 5, label: "Complete", icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> },
                 ].map((node, i) => {
                   const isActive = deployStep >= node.id;
                   const isCurrent = deployStep === node.id || (deployStep === 2 && node.id === 1);
                   return (
-                    <div key={i} className="relative z-10 flex flex-col items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
+                    <div key={i} className="relative z-10 flex flex-col items-center gap-1.5 sm:gap-3">
+                      <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
                         isActive ? 'bg-teal-900/50 border-teal-500 text-teal-400' : 'bg-gray-900 border-gray-700 text-gray-600'
                       } ${isCurrent ? 'shadow-[0_0_15px_rgba(20,184,166,0.5)]' : ''}`}>
                         {isCurrent && <div className="absolute inset-0 rounded-full border border-teal-400 animate-ping opacity-20" />}
                         {node.icon}
                       </div>
-                      <span className={`text-xs font-mono uppercase font-bold ${isActive ? 'text-teal-400' : 'text-gray-600'}`}>
+                      <span className={`text-[10px] sm:text-xs font-mono uppercase font-bold ${isActive ? 'text-teal-400' : 'text-gray-600'}`}>
                         {node.label}
                       </span>
                     </div>

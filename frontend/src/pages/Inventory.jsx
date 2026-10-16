@@ -192,21 +192,23 @@ const Inventory = () => {
   const totalValue = inventory.reduce((sum, item) => sum + (item.stock * (item.price_per_unit || 0)), 0);
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6 lg:px-8 w-full min-w-0 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
-            <Store className="w-10 h-10 text-indigo-600 bg-indigo-100 p-2 rounded-xl" />{t("warehouse_supply_cha")}</h1>
-          <p className="text-gray-500 mt-2 font-medium">{t("manage_stock_locatio")}</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+            <Store className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600 bg-indigo-100 p-1.5 sm:p-2 rounded-xl shrink-0" />
+            <span className="truncate">{t("warehouse_supply_cha")}</span>
+          </h1>
+          <p className="text-sm sm:text-base text-gray-500 mt-1 font-medium">{t("manage_stock_locatio")}</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-indigo-600 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center gap-2 text-sm sm:text-base shrink-0"
         >
-          <Plus size={20} />{t("add_new_sku")}</button>
+          <Plus size={18} />{t("add_new_sku")}</button>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
           <div className="flex justify-between items-center mb-4">
             <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600"><Package /></div>
