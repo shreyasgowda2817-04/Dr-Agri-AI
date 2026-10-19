@@ -2,11 +2,11 @@ import { useTranslation } from "react-i18next";
 import { Link } from 'react-router-dom';
 import { Sprout, Mail, Phone, MapPin } from 'lucide-react';
 
-const Footer = () => {
+const Footer = ({ className = '' }) => {
   const { t } = useTranslation();
 
   return (
-    <footer className="bg-gray-900 text-gray-300 border-t border-gray-800/80 w-full min-w-0 overflow-hidden">
+    <footer className={`hidden md:block bg-gray-900 text-gray-300 border-t border-gray-800/80 w-full min-w-0 overflow-hidden ${className}`}>
       {/* ================= MOBILE COMPACT VIEW (< sm) ================= */}
       <div className="block sm:hidden px-4 pt-3.5 pb-5 space-y-2.5">
         {/* Brand & Socials Row */}

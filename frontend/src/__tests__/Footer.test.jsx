@@ -41,4 +41,17 @@ describe('Footer Component', () => {
 
     expect(screen.getAllByText(/\+91 900 343 432/i).length).toBeGreaterThan(0);
   });
+
+  it('applies hidden on mobile and md:block on desktop (768px and above)', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>
+    );
+
+    const footerElement = container.querySelector('footer');
+    expect(footerElement).toBeTruthy();
+    expect(footerElement.classList.contains('hidden')).toBe(true);
+    expect(footerElement.classList.contains('md:block')).toBe(true);
+  });
 });
