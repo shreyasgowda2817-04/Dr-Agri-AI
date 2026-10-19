@@ -94,8 +94,9 @@ app.include_router(weather.router, prefix=f"{settings.API_V1_STR}/weather", tags
 app.include_router(inventory.router, prefix=f"{settings.API_V1_STR}/inventory", tags=["Warehouse Inventory"])
 app.include_router(cms.router, prefix=f"{settings.API_V1_STR}/cms", tags=["CMS"])
 app.include_router(support.router, prefix=f"{settings.API_V1_STR}/support", tags=["Support & Helpdesk"])
-from app.api.websockets import notifications
-app.include_router(notifications.router, tags=["WebSockets"])
+from app.api.websockets import notifications as ws_notifications
+app.include_router(ws_notifications.router, tags=["WebSockets"])
+app.include_router(ws_notifications.router, prefix=f"{settings.API_V1_STR}/notifications", tags=["WebSockets"])
 
 @app.get("/")
 def root():

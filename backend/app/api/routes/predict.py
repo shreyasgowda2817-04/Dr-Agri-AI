@@ -75,12 +75,15 @@ async def predict_disease(
                 prediction_result = {}
         except Exception as e:
             import traceback
-            with open("error.log", "w") as f:
-                f.write(traceback.format_exc())
-            raise HTTPException(status_code=500, detail=f"ML Inference Failed: {str(e)}")
+            print(f"ML Inference error, activating built-in fallback agronomist engine: {e}")
+            from app.services.ml_service import fallback_agronomy_inference
+            prediction_result = fallback_agronomy_inference(file_bytes, language=language)
     
         if user_dict:
-            await db["users"].update_one({"id": current_user.id}, {"$inc": {"scan_count": 1}})
+            try:
+                await db["users"].update_one({"id": current_user.id}, {"$inc": {"scan_count": 1}})
+            except Exception as inc_err:
+                print(f"User scan count increment warning: {inc_err}")
     
         # SAFELY map the AI schema to OLD frontend expectations to prevent crashing
         diag = prediction_result.get("diagnosis") or {}
