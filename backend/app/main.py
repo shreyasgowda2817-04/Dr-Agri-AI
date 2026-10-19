@@ -55,7 +55,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["set-cookie"],
+    expose_headers=["set-cookie", "X-Refresh-Token"],
 )
 
 # Authlib requires session middleware

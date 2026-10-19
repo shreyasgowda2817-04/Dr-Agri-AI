@@ -16,10 +16,23 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useSelector((state) => state.auth);
+
+  // Restore remembered email on initial mount
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem('rememberedEmail');
+      const savedRemember = localStorage.getItem('rememberMe');
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(savedRemember !== 'false');
+      }
+    } catch (e) {}
+  }, []);
 
   if (isAuthenticated) {
     const from = location.state?.from?.pathname || '/dashboard';
@@ -40,6 +53,16 @@ const Login = () => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       
+      try {
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', email.trim());
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberedEmail');
+          localStorage.setItem('rememberMe', 'false');
+        }
+      } catch (e) {}
+
       dispatch(loginSuccess(response.data));
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
@@ -59,7 +82,7 @@ const Login = () => {
       transition={{ duration: 0.4 }}
     >
       <div className="mb-10 text-center lg:text-left">
-        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">{t("welcome_back")}</h2>
+        <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">{t("Welcome Back")}</h2>
         <p className="text-gray-500 text-lg">{t("Enter Your Details")}</p>
       </div>
 
@@ -118,7 +141,12 @@ const Login = () => {
 
         <div className="flex items-center justify-between pt-1">
           <label className="flex items-center gap-2 cursor-pointer group">
-            <input type="checkbox" className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer" />
+            <input 
+              type="checkbox" 
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer accent-green-600" 
+            />
             <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition">{t("remember_me")}</span>
           </label>
           <Link to="/forgot-password" className="text-sm font-bold text-green-600 hover:text-green-700 transition">{t("forgot_password_")}</Link>
@@ -134,7 +162,7 @@ const Login = () => {
       </form>
 
       <div className="mt-8 flex items-center gap-4 before:h-px before:flex-1 before:bg-gray-200 after:h-px after:flex-1 after:bg-gray-200">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("or_continue_with")}</span>
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("or continue with")}</span>
       </div>
 
       <div className="mt-6">
@@ -150,7 +178,7 @@ const Login = () => {
           </svg>{t("google")}</a>
       </div>
 
-      <p className="mt-10 text-center text-gray-500 font-medium">{t("don_t_have_an_accoun")}<Link to="/register" className="text-green-600 font-bold hover:text-green-700 transition">{t("register_here")}</Link>
+      <p className="mt-10 text-center text-gray-500 font-medium">{t("don't have an accoun")}<Link to="/register" className="text-green-600 font-bold hover:text-green-700 transition">{t("register here")}</Link>
       </p>
     </motion.div>
   );

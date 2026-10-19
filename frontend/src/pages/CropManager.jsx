@@ -173,7 +173,7 @@ const CropManager = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
             <Leaf className="text-green-600 shrink-0" />{t("crop_manager")}</h1>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1">{t("track_every_crop_acr")}</p>
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">{t("")}</p>
         </div>
         <button
           onClick={openAdd}

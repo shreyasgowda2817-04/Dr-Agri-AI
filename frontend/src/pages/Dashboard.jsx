@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { 
   CloudRain, Activity, IndianRupee, Target, Bell, ArrowRight,
   Zap, Calendar, Package, TrendingUp, AlertTriangle, ShieldCheck, HeartPulse, CheckCircle,
-  Sun, CloudSun, Cloud, CloudLightning, Snowflake, CloudFog, CloudDrizzle, Droplets, Wind, MapPin, Thermometer, Umbrella, CloudOff
+  Sun, CloudSun, Cloud, CloudLightning, Snowflake, CloudFog, CloudDrizzle, Droplets, Wind, MapPin, Thermometer, Umbrella, CloudOff,
+  Scan, Store, Video, Landmark, Sprout, Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SmartFarmAlerts from '../components/dashboard/SmartFarmAlerts';
@@ -108,11 +109,182 @@ const Dashboard = () => {
     { name: 'Sun', health: healthScore?.score ? Math.round(healthScore.score / 10) : 90, risk: healthScore?.score ? 100 - Math.round(healthScore.score / 10) : 10 }
   ];
 
+  const renderWeatherIcon = (code = 0, size = 14) => {
+    if ([0].includes(code)) return <Sun size={size} className="text-amber-400 shrink-0" />;
+    if ([1, 2, 3].includes(code)) return <CloudSun size={size} className="text-amber-400 shrink-0" />;
+    if ([45, 48].includes(code)) return <CloudFog size={size} className="text-gray-300 shrink-0" />;
+    if ([51, 53, 55, 56, 57].includes(code)) return <CloudDrizzle size={size} className="text-blue-300 shrink-0" />;
+    if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return <CloudRain size={size} className="text-blue-400 shrink-0" />;
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return <Snowflake size={size} className="text-blue-200 shrink-0" />;
+    if ([95, 96, 99].includes(code)) return <CloudLightning size={size} className="text-purple-400 shrink-0" />;
+    return <Cloud size={size} className="text-gray-300 shrink-0" />;
+  };
+
+  const mobileQuickActions = [
+    {
+      label: 'AI Scan',
+      path: '/scan',
+      icon: <Scan size={20} className="text-emerald-600 dark:text-emerald-400" />,
+      bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+      iconBorder: 'border-emerald-200/70 dark:border-emerald-800/50',
+      borderColor: 'border-emerald-100/90 dark:border-gray-700/80',
+    },
+    {
+      label: 'Add Expense',
+      path: '/finance',
+      icon: <IndianRupee size={20} className="text-purple-600 dark:text-purple-400" />,
+      bgColor: 'bg-purple-50 dark:bg-purple-950/60',
+      iconBorder: 'border-purple-200/70 dark:border-purple-800/50',
+      borderColor: 'border-purple-100/90 dark:border-gray-700/80',
+    },
+    {
+      label: 'Buy Products',
+      path: '/marketplace',
+      icon: <Store size={20} className="text-amber-600 dark:text-amber-400" />,
+      bgColor: 'bg-amber-50 dark:bg-amber-950/60',
+      iconBorder: 'border-amber-200/70 dark:border-amber-800/50',
+      borderColor: 'border-amber-100/90 dark:border-gray-700/80',
+    },
+    {
+      label: 'Consult Expert',
+      path: '/consult',
+      icon: <Video size={20} className="text-blue-600 dark:text-blue-400" />,
+      bgColor: 'bg-blue-50 dark:bg-blue-950/60',
+      iconBorder: 'border-blue-200/70 dark:border-blue-800/50',
+      borderColor: 'border-blue-100/90 dark:border-gray-700/80',
+    },
+    {
+      label: 'Govt Schemes',
+      path: '/schemes',
+      icon: <Landmark size={20} className="text-rose-600 dark:text-rose-400" />,
+      bgColor: 'bg-rose-50 dark:bg-rose-950/60',
+      iconBorder: 'border-rose-200/70 dark:border-rose-800/50',
+      borderColor: 'border-rose-100/90 dark:border-gray-700/80',
+    },
+    {
+      label: 'My Farm',
+      path: '/farm',
+      icon: <Sprout size={20} className="text-teal-600 dark:text-teal-400" />,
+      bgColor: 'bg-teal-50 dark:bg-teal-950/60',
+      iconBorder: 'border-teal-200/70 dark:border-teal-800/50',
+      borderColor: 'border-teal-100/90 dark:border-gray-700/80',
+    },
+  ];
+
   return (
     <div className="w-full max-w-7xl mx-auto py-2 sm:py-6 overflow-hidden">
 
-      {/* Cinematic Banner Header */}
-      <div className="mb-6 sm:mb-8 w-full min-h-[16rem] sm:h-72 md:h-80 rounded-2xl overflow-hidden relative shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
+      {/* ─── MOBILE-ONLY ILLUSTRATIVE HERO BANNER (< 768px) ─── */}
+      <div className="block md:hidden mb-4 sm:mb-6 w-full rounded-2xl sm:rounded-3xl overflow-hidden relative shadow-lg border border-emerald-900/20 dark:border-emerald-800/40 bg-gray-950">
+        {/* Agriculture Farm Landscape & Farmer Illustration Background */}
+        <img 
+          src="/dr_agri_banner.png" 
+          alt="Dr Agri AI Farmer and Crop Field" 
+          className="absolute inset-0 w-full h-full object-cover object-[78%_center] select-none"
+        />
+        
+        {/* Subtle Dark Gradient Overlay for Maximum Readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/80 to-gray-900/35"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-950/95 via-gray-950/70 to-transparent"></div>
+
+        {/* Ambient Top Glow */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+        {/* Content Container */}
+        <div className="relative z-10 p-4 xs:p-5 flex flex-col justify-between min-h-[250px] xs:min-h-[265px]">
+          
+          {/* Top Row: Brand Tag & Compact Weather Overlay */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 bg-emerald-950/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-emerald-500/30 text-[11px] font-bold text-emerald-300 shadow-xs">
+              <Sparkles size={12} className="text-emerald-400" />
+              <span>Dr. Agri AI</span>
+              <span className="text-emerald-500/60">•</span>
+              <span className="text-emerald-200/90 font-medium">Smart Farm</span>
+            </div>
+
+            {/* Compact Weather Overlay */}
+            {loadingTelemetry ? (
+              <div className="inline-flex items-center gap-1.5 bg-black/55 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[11px] text-gray-300 animate-pulse">
+                <Cloud size={13} className="text-gray-400" />
+                <span>Locating...</span>
+              </div>
+            ) : weather?.current ? (
+              <div className="inline-flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shadow-xs text-white">
+                {renderWeatherIcon(weather.current.weather_code, 13)}
+                <span className="font-extrabold text-xs">{Math.round(weather.current.temperature_2m)}{t('_c')}</span>
+                <span className="text-white/30 text-[10px]">•</span>
+                <span className="text-emerald-300 text-[11px] font-medium truncate max-w-[95px] xs:max-w-[125px] flex items-center gap-0.5">
+                  <MapPin size={10} className="shrink-0 text-emerald-400" />
+                  {isGpsActive ? gpsLocationName : (user?.location || 'My Farm')}
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bottom Area: Welcome Message, AI Scan Description & "Scan Now" Button */}
+          <div className="mt-3 xs:mt-4 space-y-2">
+            <div>
+              <p className="text-emerald-400 text-xs font-bold tracking-wide uppercase flex items-center gap-1">
+                <span>{t('welcome')}, {user?.name ? user.name.split(' ')[0] : 'Farmer'}</span>
+                <span className="inline-block animate-pulse">🌾</span>
+              </p>
+              <h2 className="text-xl xs:text-2xl font-black text-white tracking-tight leading-tight mt-0.5 drop-shadow-xs">
+                {t('live_crop_monitoring')}
+              </h2>
+            </div>
+
+            <p className="text-gray-200 text-xs xs:text-sm font-medium leading-relaxed max-w-[270px] xs:max-w-xs drop-shadow-xs">
+              Instant AI disease diagnosis & health insights for your crops.
+            </p>
+
+            <div className="pt-1.5 flex items-center gap-2.5 flex-wrap">
+              <Link 
+                to="/scan" 
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-white px-5 py-2.5 rounded-xl text-xs xs:text-sm font-bold shadow-lg shadow-emerald-950/60 border border-emerald-400/30 transition-all duration-150"
+              >
+                <Zap size={16} className="text-white fill-white/20" />
+                <span>Scan Now</span>
+                <ArrowRight size={14} className="text-emerald-100" />
+              </Link>
+              <span className="text-[11px] text-emerald-200/80 font-medium hidden xs:inline">
+                Instant crop triage
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── MOBILE-ONLY QUICK ACTION BUTTONS (< 768px) ─── */}
+      <div className="block md:hidden mb-5 sm:mb-6">
+        <div className="flex items-center justify-between mb-2.5 px-0.5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <Sparkles size={13} className="text-emerald-500" />
+            <span>{t('quick_actions') || 'Quick Actions'}</span>
+          </h3>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Fast Access</span>
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 xs:gap-2.5">
+          {mobileQuickActions.map((action) => (
+            <Link
+              key={action.label}
+              to={action.path}
+              className={`group relative flex flex-col items-center justify-center p-2 xs:p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-gray-800/95 border ${action.borderColor} shadow-xs hover:shadow-md active:scale-95 transition-all duration-150 text-center min-h-[82px] xs:min-h-[88px] overflow-hidden`}
+              aria-label={action.label}
+            >
+              <div className={`w-9 h-9 xs:w-10 xs:h-10 rounded-xl ${action.bgColor} ${action.iconBorder} border flex items-center justify-center mb-1.5 transition-transform group-hover:scale-105 shrink-0 shadow-2xs`}>
+                {action.icon}
+              </div>
+              <span className="text-[11px] xs:text-xs font-bold text-gray-800 dark:text-gray-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight text-center truncate w-full px-0.5">
+                {action.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── DESKTOP & TABLET BANNER HEADER (>= 768px) - Strictly Unchanged ─── */}
+      <div className="hidden md:flex mb-6 sm:mb-8 w-full min-h-[16rem] sm:h-72 md:h-80 rounded-2xl overflow-hidden relative shadow-sm border border-gray-200 dark:border-gray-700 flex-col justify-between">
         <img 
           src="/dashboard-banner.jpg" 
           alt="Smart Farm Dashboard Banner" 

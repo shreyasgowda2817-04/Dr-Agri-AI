@@ -164,7 +164,7 @@ const Onboarding = () => {
               >
                 <div>
                   <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">{t("crop_configuration")}</h1>
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t("select_the_primary_c")}</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t("select the primary crop")}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

@@ -102,7 +102,7 @@ async def auth_google_callback(request: Request, db = Depends(get_mongo_db)):
     default_front = f"https://{os.environ['VERCEL_URL']}" if os.environ.get("VERCEL_URL") else getattr(settings, "FRONTEND_URL", "http://localhost:5173")
     frontend_url = request.session.get("oauth_frontend_url") or default_front
     
-    redirect_resp = RedirectResponse(url=f"{frontend_url}/dashboard?token={access_token}")
+    redirect_resp = RedirectResponse(url=f"{frontend_url}/dashboard?token={access_token}&refresh_token={refresh_token}")
     redirect_resp.set_cookie(
         key="refresh_token",
         value=refresh_token,

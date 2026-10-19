@@ -59,7 +59,7 @@ const TrackOrder = () => {
             <ShieldCheck size={32} />
           </div>
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{t("food_provenance_trac")}</h1>
-          <p className="mt-3 text-lg text-gray-500">{t("track_your_order_s_j")}</p>
+          <p className="mt-3 text-lg text-gray-500">{t("track your order")}</p>
         </div>
 
         {/* Search Box */}
@@ -68,7 +68,7 @@ const TrackOrder = () => {
           <input
             type="text"
             className="flex-1 bg-transparent border-none outline-none text-lg font-medium text-gray-900 placeholder-gray-400"
-            placeholder="Enter Order Reference (e.g., ORD-A1B2C3D4)"
+            placeholder="Enter Order Number (e.g., ORD-A1B2C3D4)"
             value={trackingId}
             onChange={e => setTrackingId(e.target.value)}
             onKeyPress={e => e.key === 'Enter' && handleSearch()}
@@ -117,7 +117,7 @@ const TrackOrder = () => {
 
             {/* Timeline */}
             <div className="p-8">
-              <h3 className="font-bold text-gray-900 mb-8 uppercase tracking-widest text-sm">{t("provenance_timeline")}</h3>
+              <h3 className="font-bold text-gray-900 mb-8 uppercase tracking-widest text-sm">{t("provenance timeline")}</h3>
               <div className="relative border-l-2 border-emerald-100 ml-5 space-y-10">
                 {data.timeline.map((step, idx) => (
                   <div key={idx} className="relative pl-8">
@@ -134,7 +134,7 @@ const TrackOrder = () => {
               </div>
             </div>
             
-            <div className="bg-gray-900 text-gray-400 p-4 text-center text-xs font-medium">{t("secured_by_dr_agri_a")}</div>
+            <div className="bg-gray-900 text-gray-400 p-4 text-center text-xs font-medium">{t("secured by dr agri ai")}</div>
           </motion.div>
         )}
       </div>

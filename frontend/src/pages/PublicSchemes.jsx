@@ -43,7 +43,7 @@ const PublicSchemes = () => {
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">{t("government")}<span className="text-emerald-600">{t("schemes")}</span>
         </h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t("explore_the_latest_a")}</p>
+        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t("explore the latest Schemes")}</p>
       </div>
 
       {loading ? (
@@ -53,8 +53,8 @@ const PublicSchemes = () => {
       ) : schemes.length === 0 ? (
         <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-3xl p-16 border border-gray-200 dark:border-gray-700">
           <FileText size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t("no_active_schemes_fo")}</h3>
-          <p className="text-gray-500 dark:text-gray-400">{t("please_check_back_la")}</p>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t("No Active Schemes")}</h3>
+          <p className="text-gray-500 dark:text-gray-400">{t("please check back")}</p>
         </div>
       ) : (
         <div className="grid gap-8">
@@ -102,7 +102,7 @@ const PublicSchemes = () => {
                     className="text-emerald-600 dark:text-emerald-400 font-bold hover:text-emerald-700 flex items-center gap-2 transition"
                   >{t("read_full_details")}<ArrowRight size={16} />
                   </button>
-                  <button className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition">{t("check_eligibility")}</button>
+                  <button className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition">{t("check eligibility")}</button>
                 </div>
 
                 {/* Expanded Content View (Optional) */}

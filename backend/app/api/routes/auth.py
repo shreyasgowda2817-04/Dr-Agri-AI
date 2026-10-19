@@ -200,14 +200,22 @@ async def refresh_session(
 ) -> Any:
     """
     Restore or refresh authentication session.
-    Checks HttpOnly cookie first, then request body, then X-Refresh-Token header.
+    Checks HttpOnly cookie first, then request body/payload, then X-Refresh-Token header.
     Rotates refresh token and returns fresh access token + user profile.
+    Supports a 30s grace window for concurrent requests on recently rotated tokens.
     """
     token = request.cookies.get("refresh_token")
     if not token and payload and payload.refresh_token:
         token = payload.refresh_token
     if not token:
         token = request.headers.get("X-Refresh-Token")
+    if not token:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                token = body.get("refresh_token")
+        except Exception:
+            pass
         
     if not token:
         raise HTTPException(
@@ -238,13 +246,39 @@ async def refresh_session(
         )
         
     t_hash = hash_token(token)
-    session_record = await db["refresh_tokens"].find_one({"token_hash": t_hash, "revoked": False})
+    session_record = await db["refresh_tokens"].find_one({"token_hash": t_hash})
     if not session_record:
         clear_refresh_cookie(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session has been revoked or is invalid."
         )
+
+    # Check if explicitly logged out
+    if session_record.get("revoked_at"):
+        clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been logged out. Please log in again."
+        )
+
+    # Grace window check for concurrent requests within 30s of token rotation
+    if session_record.get("revoked"):
+        rotated_at = session_record.get("rotated_at")
+        is_grace_valid = False
+        if rotated_at:
+            if rotated_at.tzinfo is None:
+                rotated_at = rotated_at.replace(tzinfo=timezone.utc)
+            time_since_rotation = (datetime.now(timezone.utc) - rotated_at).total_seconds()
+            if time_since_rotation <= 30:
+                is_grace_valid = True
+        
+        if not is_grace_valid:
+            clear_refresh_cookie(response)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired after token rotation. Please log in again."
+            )
         
     user_dict = await db["users"].find_one({"id": user_id})
     if not user_dict:
@@ -304,6 +338,13 @@ async def logout(
         token = payload.refresh_token
     if not token:
         token = request.headers.get("X-Refresh-Token")
+    if not token:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                token = body.get("refresh_token")
+        except Exception:
+            pass
         
     if token:
         t_hash = hash_token(token)

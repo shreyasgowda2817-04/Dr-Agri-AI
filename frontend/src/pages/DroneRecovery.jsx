@@ -166,9 +166,9 @@ const DroneRecovery = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 flex items-center gap-2 sm:gap-3">
             <Camera className="w-7 h-7 sm:w-8 h-8 text-teal-600 shrink-0" />
-            <span className="truncate">{t("drone_recovery_monit")}</span>
+            <span className="truncate">{t("drone recovery monitor")}</span>
           </h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1 font-medium">{t("track_field_health_a")}</p>
+          <p className="text-sm sm:text-base text-gray-500 mt-1 font-medium">{t("Track Field Health")}</p>
         </div>
         
         <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">

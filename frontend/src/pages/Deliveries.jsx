@@ -432,7 +432,7 @@ const Deliveries = () => {
           
           {isOffline && (
             <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>{t("working_from_cached_")}</div>
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>{t("working from cached ")}</div>
           )}
         </div>
 
@@ -449,7 +449,7 @@ const Deliveries = () => {
             >
               <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-extrabold text-gray-900">{t("proof_of_delivery")}</h2>
+                  <h2 className="text-xl font-extrabold text-gray-900">{t("proof of delivery")}</h2>
                   <p className="text-sm text-gray-500 font-medium">{podModal.order?.farmer_name} • {podModal.order?.order_ref}</p>
                 </div>
                 <button onClick={closePODModal} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200 hover:bg-gray-50 transition text-gray-500"><X size={18}/></button>
@@ -478,11 +478,11 @@ const Deliveries = () => {
                         style={{ touchAction: 'none' }}
                       />
                       {!hasSignature && (
-                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-gray-400 font-medium">{t("sign_here___")}</div>
+                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-gray-400 font-medium">{t("sign here")}</div>
                       )}
                     </div>
                     {hasSignature && (
-                      <button onClick={clearSignature} className="text-xs font-bold text-red-500 mt-2 hover:underline">{t("clear_signature")}</button>
+                      <button onClick={clearSignature} className="text-xs font-bold text-red-500 mt-2 hover:underline">{t("clear signature")}</button>
                     )}
                   </div>
                 ) : (
@@ -511,7 +511,7 @@ const Deliveries = () => {
                   disabled={signatureMode ? !hasSignature : !podImage}
                   className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <CheckCircle size={20} />{t("confirm___sync_deliv")}</button>
+                  <CheckCircle size={20} />{t("confirm sync delivery")}</button>
               </div>
             </motion.div>
           </motion.div>

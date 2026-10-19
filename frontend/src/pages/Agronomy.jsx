@@ -17,7 +17,7 @@ const SUGGESTIONS = [
 const WELCOME_MSG = { 
   id: 'welcome',
   sender: 'ai', 
-  text: "Hello! I am **Dr Agri Copilot**, your elite AI Agronomist.\n\nI have access to your saved farm profile, crops, and live local weather data. How can I help you optimize your yield today?" 
+  text: "Hello! I am  Dr Agri  Ai, your elite AI Agronomist.\n\nI have access to your saved farm profile, crops, and live local weather data. How can I help you optimize your yield today?" 
 };
 
 const Agronomy = () => {
@@ -316,7 +316,7 @@ const Agronomy = () => {
               <Sparkles size={16} className="sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-black text-gray-900 dark:text-white leading-tight truncate">{t("dr_agri_ai")}</h1>
+              <h1 className="text-base sm:text-xl font-black text-gray-900 dark:text-white leading-tight truncate">{t("dr agri ai")}</h1>
               <p className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden sm:block truncate">{t("context_aware_agrono")}</p>
             </div>
           </div>
@@ -328,8 +328,8 @@ const Agronomy = () => {
               className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-bold py-1.5 sm:py-2 pl-2.5 sm:pl-4 pr-7 sm:pr-10 rounded-xl border border-gray-200 dark:border-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition"
             >
               <option value="en-US">{t("english")}</option>
-              <option value="hi-IN">{t("________hindi_")}</option>
-              <option value="kn-IN">{t("_______kannada_")}</option>
+              <option value="hi-IN">{t("hindi")}</option>
+              <option value="kn-IN">{t("kannada")}</option>
               <option value="te-IN">{t("telugu")}</option>
               <option value="ta-IN">{t("tamil")}</option>
             </select>
@@ -416,7 +416,7 @@ const Agronomy = () => {
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </div>
-                  <span className="text-sm font-medium text-gray-500 ml-2">{t("analyzing_farm_conte")}</span>
+                  <span className="text-sm font-medium text-gray-500 ml-2">{t("analyzing farm conter")}</span>
                 </div>
               </motion.div>
             )}
@@ -472,7 +472,7 @@ const Agronomy = () => {
                   if (isListening) setTranscript(e.target.value);
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder={isListening ? "Listening..." : "Ask Copilot about crop diseases, fertilizers..."}
+                placeholder={isListening ? "Listening..." : "Ask Agri AI about crop diseases, fertilizers..."}
                 className="w-full bg-transparent text-gray-900 dark:text-white placeholder-gray-500 text-[15px] outline-none py-2.5 px-3"
               />
               <button
@@ -486,7 +486,7 @@ const Agronomy = () => {
                 <Send size={18} className={input.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
               </button>
             </div>
-            <p className="text-center text-[10px] font-bold text-gray-400 dark:text-gray-600 mt-3 uppercase tracking-wider">{t("dr_agri_ai_can_make_")}</p>
+            <p className="text-center text-[10px] font-bold text-gray-400 dark:text-gray-600 mt-3 uppercase tracking-wider">{t("dr agri ai can make mistake")}</p>
           </div>
         </div>
       </div>

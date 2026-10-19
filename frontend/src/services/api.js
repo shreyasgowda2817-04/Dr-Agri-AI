@@ -66,17 +66,34 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+
       try {
-        // Call refresh endpoint with withCredentials to send HttpOnly cookie
+        const refreshHeaders = {};
+        if (storedRefreshToken) {
+          refreshHeaders['X-Refresh-Token'] = storedRefreshToken;
+        }
+
+        // Call refresh endpoint with stored refresh token (body + header) AND HttpOnly cookie
         const refreshResponse = await axios.post(
           `${API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
+          { refresh_token: storedRefreshToken || undefined },
+          {
+            headers: refreshHeaders,
+            withCredentials: true,
+          }
         );
 
-        const { access_token } = refreshResponse.data;
+        const { access_token, refresh_token: newRefreshToken, user } = refreshResponse.data;
         if (access_token) {
           localStorage.setItem('token', access_token);
+          if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken);
+          }
+          if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+
           api.defaults.headers.common.Authorization = `Bearer ${access_token}`;
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
 
@@ -87,9 +104,18 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         processQueue(refreshError, null);
-        console.warn('Session expired or revoked. Logging out...');
-        localStorage.removeItem('token');
-        window.dispatchEvent(new Event('auth:unauthorized'));
+
+        // Only log out if server explicitly returned 401/403 (invalid or revoked session)
+        if (refreshError.response && (refreshError.response.status === 401 || refreshError.response.status === 403)) {
+          console.warn('Session expired or revoked. Logging out...');
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.dispatchEvent(new Event('auth:unauthorized'));
+        } else {
+          console.warn('Refresh request failed due to network or server timeout. Retaining session.');
+        }
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

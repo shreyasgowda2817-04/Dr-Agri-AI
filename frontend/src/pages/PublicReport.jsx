@@ -71,12 +71,12 @@ const PublicReport = () => {
             
             className="bg-white border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold shadow-sm"
           >
-            <option value="en">{t("_____english")}</option>
-            <option value="hi">{t("_____hindi________")}</option>
-            <option value="kn">{t("_____kannada________")}</option>
-            <option value="te">{t("_____telugu_________")}</option>
-            <option value="ta">{t("_____tamil________")}</option>
-            <option value="mr">{t("_____marathi________")}</option>
+            <option value="en">{t("english")}</option>
+            <option value="hi">{t("hindi")}</option>
+            <option value="kn">{t("kannada")}</option>
+            <option value="te">{t("telugu")}</option>
+            <option value="ta">{t("tamil")}</option>
+            <option value="mr">{t("marathi")}</option>
           </select>
         </div>
 
@@ -95,8 +95,8 @@ const PublicReport = () => {
         )}
         
         <div className="mt-12 text-center">
-          <p className="text-gray-500 font-medium mb-4">{t("want_to_scan_your_ow")}</p>
-          <Link to="/" className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-sm transition-all">{t("join_dr_agri_free")}</Link>
+          <p className="text-gray-500 font-medium mb-4">{t("want to scan your own crops")}</p>
+          <Link to="/" className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-sm transition-all">{t("join dr.agri for free scans")}</Link>
         </div>
       </div>
     </div>

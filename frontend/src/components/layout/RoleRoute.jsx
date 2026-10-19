@@ -4,13 +4,30 @@ import { Navigate } from 'react-router-dom';
 
 const RoleRoute = ({ allowedRoles, children }) => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
+  const { user, isRestoring } = useSelector((state) => state.auth);
 
-  if (!user) {
+  // Attempt fallback to cached user if state hasn't populated yet
+  let effectiveUser = user;
+  if (!effectiveUser) {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) effectiveUser = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  if (!effectiveUser && isRestoring) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!effectiveUser) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = user.role?.toUpperCase() || 'FARMER';
+  const userRole = effectiveUser.role?.toUpperCase() || 'FARMER';
 
   // SUPER_ADMIN has access to everything
   if (userRole === 'SUPER_ADMIN') {

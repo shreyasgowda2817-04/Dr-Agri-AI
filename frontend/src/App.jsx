@@ -65,9 +65,10 @@ function App() {
     // Check for OAuth token in URL
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const refreshToken = params.get('refresh_token');
     if (token) {
-      dispatch(setTokenFromOAuth(token));
-      // Remove token from URL for security
+      dispatch(setTokenFromOAuth({ token, refreshToken }));
+      // Remove tokens from URL for security
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 

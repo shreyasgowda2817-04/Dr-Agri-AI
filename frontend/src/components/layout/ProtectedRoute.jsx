@@ -5,9 +5,10 @@ const ProtectedRoute = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const location = useLocation();
   const token = localStorage.getItem('token');
+  const refreshToken = localStorage.getItem('refreshToken');
 
-  // If not authenticated and no token found, redirect to login with return path
-  if (!isAuthenticated && !token) {
+  // If not authenticated and no token or refresh token found, redirect to login with return path
+  if (!isAuthenticated && !token && !refreshToken) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
