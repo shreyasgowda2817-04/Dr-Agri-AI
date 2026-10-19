@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logoutUser } from '../../store/slices/authSlice';
+import { LogoIcon } from '../common/AppLogo';
 import { 
   Leaf, 
   Home, 
@@ -123,11 +124,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <Link 
             to="/dashboard" 
             onClick={handleNavClick}
-            className="flex items-center space-x-3 hover:opacity-80 transition cursor-pointer min-w-0"
+            className="flex items-center space-x-3 hover:opacity-90 transition cursor-pointer min-w-0 group"
           >
-            <div className="bg-green-100 dark:bg-green-900/40 p-2 rounded-xl flex-shrink-0">
-              <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
+            <LogoIcon size={38} className="drop-shadow-sm" />
             <div className={`flex items-center gap-1.5 ${!isOpen ? 'lg:hidden' : 'flex'}`}>
               <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white truncate">{t("dr_agri_ai")}</span>
               {(user?.is_premium || user?.tier === 'pro') && (

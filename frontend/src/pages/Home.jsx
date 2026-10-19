@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Leaf, ShieldCheck, Sprout, Store, Zap, ArrowRight, Activity, TrendingUp, CheckCircle, Smartphone } from 'lucide-react';
 import Footer from '../components/layout/Footer';
+import { LogoIcon } from '../components/common/AppLogo';
 
 const Home = () => {
   const { t } = useTranslation();
@@ -46,12 +47,13 @@ const Home = () => {
       <nav className="fixed w-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg z-50 border-b border-gray-100 dark:border-gray-800 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-green-400 to-emerald-600 p-2.5 rounded-xl shadow-lg shadow-green-200 dark:shadow-none">
-                <Leaf className="w-6 h-6 text-white" />
+            <Link to="/" className="flex items-center gap-3 group">
+              <LogoIcon size={44} className="shadow-lg shadow-emerald-500/20 rounded-2xl" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">{t("dr_agri")}</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-sm">AI</span>
               </div>
-              <span className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">{t("dr_agri")}</span>
-            </div>
+            </Link>
             <div className="hidden md:flex space-x-8 text-sm font-bold text-gray-600 dark:text-gray-400">
               <a  href="#features" className="hover:text-green-600 dark:hover:text-green-400 transition">{t("platform")}</a>
               <a href="" className="hover:text-green-600 dark:hover:text-green-400 transition"></a>

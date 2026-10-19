@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from 'react-router-dom';
 import { Sprout, Mail, Phone, MapPin } from 'lucide-react';
+import { LogoIcon } from '../common/AppLogo';
 
 const Footer = ({ className = '' }) => {
   const { t } = useTranslation();
@@ -93,8 +94,8 @@ const Footer = ({ className = '' }) => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8 sm:mb-10">
           {/* Brand */}
           <div className="space-y-3 lg:col-span-1">
-            <Link to="/" className="inline-flex items-center gap-2 text-white group">
-              <Sprout size={24} className="text-emerald-500 group-hover:scale-105 transition-transform shrink-0" />
+            <Link to="/" className="inline-flex items-center gap-2.5 text-white group">
+              <LogoIcon size={32} />
               <span className="text-xl font-black tracking-tight">{t("dr_agri_ai")}</span>
             </Link>
             <p className="text-gray-400 text-xs sm:text-sm leading-relaxed max-w-sm break-words">
