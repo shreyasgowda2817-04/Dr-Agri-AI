@@ -59,26 +59,6 @@ export const restoreSession = createAsyncThunk(
     const token = getStoredItem('token');
     const refreshToken = getStoredItem('refreshToken');
 
-    // If neither token nor refreshToken exists, attempt HttpOnly cookie restore
-    if (!token && !refreshToken) {
-      try {
-        const refreshResponse = await axios.post(
-          `${API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true, timeout: 10000 }
-        );
-        const { access_token, refresh_token: newRefreshToken, user } = refreshResponse.data;
-        if (access_token) {
-          setStoredItem('token', access_token);
-          if (newRefreshToken) setStoredItem('refreshToken', newRefreshToken);
-          if (user) setStoredItem('user', JSON.stringify(user));
-          return { user, token: access_token, refreshToken: newRefreshToken };
-        }
-      } catch (e) {
-        return rejectWithValue('No active session found');
-      }
-    }
-
     // Step 1: If an unexpired access token exists in storage, verify/refresh user profile via /auth/me
     if (token && !isTokenExpired(token)) {
       try {
@@ -141,7 +121,9 @@ export const restoreSession = createAsyncThunk(
         try {
           cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
         } catch (e) {}
-        return { user: cachedUser, token, refreshToken, isOffline: true };
+        if (cachedUser || token || refreshToken) {
+          return { user: cachedUser, token, refreshToken, isOffline: true };
+        }
       }
 
       // Explicit 401/403: Server confirmed session is revoked or expired
@@ -149,6 +131,14 @@ export const restoreSession = createAsyncThunk(
       removeStoredItem('refreshToken');
       removeStoredItem('user');
       return rejectWithValue('Session revoked or expired');
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { auth } = getState();
+      if (auth && auth.isRestoring) {
+        return false;
+      }
     }
   }
 );
@@ -209,7 +199,9 @@ const initialState = {
   token: savedToken,
   refreshToken: savedRefreshToken,
   isAuthenticated: !!(savedToken || savedRefreshToken),
-  loading: false, // Non-blocking: background session restoration
+  isInitializing: true, // Application starts in initializing state until session check finishes
+  authLoading: true,    // Alias for isInitializing as required by prompt
+  loading: false,       // Non-blocking: background session restoration
   isRestoring: false,
   error: null,
 };
@@ -239,6 +231,8 @@ const authSlice = createSlice({
         }
         state.isAuthenticated = true;
       }
+      state.isInitializing = false;
+      state.authLoading = false;
       state.loading = false;
       state.error = null;
     },
@@ -250,6 +244,8 @@ const authSlice = createSlice({
       state.token = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
+      state.isInitializing = false;
+      state.authLoading = false;
       state.loading = false;
       state.error = null;
     },
@@ -267,6 +263,8 @@ const authSlice = createSlice({
         }
       }
       state.isAuthenticated = true;
+      state.isInitializing = false;
+      state.authLoading = false;
       state.loading = false;
     },
     setUser: (state, action) => {
@@ -278,9 +276,11 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // restoreSession runs seamlessly in background without locking screen
+      // restoreSession runs seamlessly with explicit initialization tracking
       .addCase(restoreSession.pending, (state) => {
         state.isRestoring = true;
+        state.isInitializing = true;
+        state.authLoading = true;
       })
       .addCase(restoreSession.fulfilled, (state, action) => {
         state.user = action.payload.user;
@@ -293,6 +293,8 @@ const authSlice = createSlice({
         }
         state.isAuthenticated = true;
         state.isRestoring = false;
+        state.isInitializing = false;
+        state.authLoading = false;
         state.loading = false;
         state.error = null;
       })
@@ -302,6 +304,8 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
         state.isRestoring = false;
+        state.isInitializing = false;
+        state.authLoading = false;
         state.loading = false;
         removeStoredItem('token');
         removeStoredItem('refreshToken');
@@ -314,9 +318,13 @@ const authSlice = createSlice({
           setStoredItem('user', JSON.stringify(action.payload));
         }
         state.isAuthenticated = true;
+        state.isInitializing = false;
+        state.authLoading = false;
         state.loading = false;
       })
       .addCase(fetchUser.rejected, (state) => {
+        state.isInitializing = false;
+        state.authLoading = false;
         state.loading = false;
       });
   },

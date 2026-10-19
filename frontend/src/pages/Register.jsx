@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import api from '../services/api';
 import { motion } from 'framer-motion';
@@ -9,7 +9,6 @@ import { User, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-reac
 
 const Register = () => {
   const { t } = useTranslation();
-  
 
   const [formData, setFormData] = useState({
     name: '',
@@ -23,6 +22,23 @@ const Register = () => {
   const [error, setError] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isAuthenticated, isInitializing, authLoading } = useSelector((state) => state.auth);
+
+  // Do not show register form while checking if an existing persistent session exists
+  if (isInitializing || authLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-500"></div>
+          <p className="text-sm font-medium text-gray-500">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});

@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 
 const RoleRoute = ({ allowedRoles, children }) => {
   const { t } = useTranslation();
-  const { user, isRestoring } = useSelector((state) => state.auth);
+  const { user, isRestoring, isInitializing, authLoading } = useSelector((state) => state.auth);
 
   // Attempt fallback to cached user if state hasn't populated yet
   let effectiveUser = user;
@@ -15,10 +15,13 @@ const RoleRoute = ({ allowedRoles, children }) => {
     } catch (e) {}
   }
 
-  if (!effectiveUser && isRestoring) {
+  if (!effectiveUser && (isRestoring || isInitializing || authLoading)) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Verifying permissions...</p>
+        </div>
       </div>
     );
   }

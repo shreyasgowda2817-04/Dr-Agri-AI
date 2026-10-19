@@ -13,6 +13,56 @@ describe('authSlice reducer and persistence', () => {
     expect(state.token).toBeNull();
     expect(state.refreshToken).toBeNull();
     expect(state.loading).toBe(false);
+    expect(state.isInitializing).toBe(true);
+    expect(state.authLoading).toBe(true);
+  });
+
+  it('should handle restoreSession.pending', () => {
+    const state = authReducer(undefined, { type: 'auth/restoreSession/pending' });
+    expect(state.isRestoring).toBe(true);
+    expect(state.isInitializing).toBe(true);
+    expect(state.authLoading).toBe(true);
+  });
+
+  it('should handle restoreSession.fulfilled', () => {
+    const payload = {
+      token: 'restored-jwt-token',
+      refreshToken: 'restored-refresh-token',
+      user: { id: 'user-99', name: 'Sita Devi', role: 'FARMER' }
+    };
+    const state = authReducer(undefined, {
+      type: 'auth/restoreSession/fulfilled',
+      payload
+    });
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.isRestoring).toBe(false);
+    expect(state.isInitializing).toBe(false);
+    expect(state.authLoading).toBe(false);
+    expect(state.token).toBe('restored-jwt-token');
+    expect(state.refreshToken).toBe('restored-refresh-token');
+    expect(state.user).toEqual(payload.user);
+  });
+
+  it('should handle restoreSession.rejected by clearing session and ending initialization', () => {
+    const previousState = {
+      user: { name: 'Old User' },
+      token: 'expired-token',
+      refreshToken: 'expired-refresh',
+      isAuthenticated: true,
+      isInitializing: true,
+      authLoading: true,
+      isRestoring: true,
+      loading: false,
+      error: null
+    };
+    const state = authReducer(previousState, { type: 'auth/restoreSession/rejected' });
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.user).toBeNull();
+    expect(state.token).toBeNull();
+    expect(state.refreshToken).toBeNull();
+    expect(state.isRestoring).toBe(false);
+    expect(state.isInitializing).toBe(false);
+    expect(state.authLoading).toBe(false);
   });
 
   it('should handle loginSuccess with token string', () => {

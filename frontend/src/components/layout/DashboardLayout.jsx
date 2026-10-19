@@ -12,6 +12,7 @@ import api from '../../services/api';
 import Footer from './Footer';
 import GlobalSearch from './GlobalSearch';
 import NotificationDropdown from './NotificationDropdown';
+import BottomNav from './BottomNav';
 
 const DashboardLayout = () => {
   const { t } = useTranslation();
@@ -145,13 +146,14 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        <main className={`flex-grow flex flex-col min-w-0 w-full max-w-full ${isAiAssistant ? 'p-0 overflow-hidden' : 'pt-2 sm:pt-4'}`}>
+        <main className={`flex-grow flex flex-col min-w-0 w-full max-w-full ${isAiAssistant ? 'p-0 overflow-hidden pb-20 md:pb-0' : 'pt-2 sm:pt-4 pb-20 md:pb-0'}`}>
           <div className={`w-full flex-grow min-w-0 ${isAiAssistant ? 'p-0 max-w-full h-full' : 'max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'}`}>
             <Outlet />
           </div>
         </main>
         {!isAiAssistant && <Footer />}
       </div>
+      <BottomNav />
     </div>
   );
 };

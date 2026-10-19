@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
@@ -9,7 +9,6 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const { t } = useTranslation();
-  
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +19,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, isInitializing, authLoading } = useSelector((state) => state.auth);
 
   // Restore remembered email on initial mount
   useEffect(() => {
@@ -33,6 +32,18 @@ const Login = () => {
       }
     } catch (e) {}
   }, []);
+
+  // Do not show login form while checking if an existing persistent session exists
+  if (isInitializing || authLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-500"></div>
+          <p className="text-sm font-medium text-gray-500">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     const from = location.state?.from?.pathname || '/dashboard';

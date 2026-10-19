@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Leaf, ShieldCheck, Sprout, Store, Zap, ArrowRight, Activity, TrendingUp, CheckCircle, Smartphone } from 'lucide-react';
@@ -7,9 +7,37 @@ import Footer from '../components/layout/Footer';
 
 const Home = () => {
   const { t } = useTranslation();
-  
+  const { user, isAuthenticated, isInitializing, authLoading } = useSelector((state) => state.auth);
 
-  const { user } = useSelector((state) => state.auth);
+  // If session is still being initialized on app startup, show loader instead of flashing landing page
+  if (isInitializing || authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading Dr Agri AI...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, redirect directly to their role-appropriate dashboard
+  if (isAuthenticated) {
+    const role = user?.role?.toUpperCase() || 'FARMER';
+    if (role === 'AGRONOMY_EXPERT') {
+      return <Navigate to="/expert-dashboard" replace />;
+    }
+    if (role === 'ADVERTISER') {
+      return <Navigate to="/advertiser" replace />;
+    }
+    if (role === 'DELIVERY_PARTNER') {
+      return <Navigate to="/deliveries" replace />;
+    }
+    if (role === 'WAREHOUSE_MANAGER') {
+      return <Navigate to="/inventory" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans selection:bg-green-200 selection:text-green-900 dark:selection:bg-green-900 dark:selection:text-green-100 transition-colors duration-300">

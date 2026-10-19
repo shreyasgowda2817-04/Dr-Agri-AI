@@ -8,7 +8,7 @@ import {
   CloudRain, Activity, IndianRupee, Target, Bell, ArrowRight,
   Zap, Calendar, Package, TrendingUp, AlertTriangle, ShieldCheck, HeartPulse, CheckCircle,
   Sun, CloudSun, Cloud, CloudLightning, Snowflake, CloudFog, CloudDrizzle, Droplets, Wind, MapPin, Thermometer, Umbrella, CloudOff,
-  Scan, Store, Video, Landmark, Sprout, Sparkles
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SmartFarmAlerts from '../components/dashboard/SmartFarmAlerts';
@@ -120,59 +120,8 @@ const Dashboard = () => {
     return <Cloud size={size} className="text-gray-300 shrink-0" />;
   };
 
-  const mobileQuickActions = [
-    {
-      label: 'AI Scan',
-      path: '/scan',
-      icon: <Scan size={20} className="text-emerald-600 dark:text-emerald-400" />,
-      bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
-      iconBorder: 'border-emerald-200/70 dark:border-emerald-800/50',
-      borderColor: 'border-emerald-100/90 dark:border-gray-700/80',
-    },
-    {
-      label: 'Add Expense',
-      path: '/finance',
-      icon: <IndianRupee size={20} className="text-purple-600 dark:text-purple-400" />,
-      bgColor: 'bg-purple-50 dark:bg-purple-950/60',
-      iconBorder: 'border-purple-200/70 dark:border-purple-800/50',
-      borderColor: 'border-purple-100/90 dark:border-gray-700/80',
-    },
-    {
-      label: 'Buy Products',
-      path: '/marketplace',
-      icon: <Store size={20} className="text-amber-600 dark:text-amber-400" />,
-      bgColor: 'bg-amber-50 dark:bg-amber-950/60',
-      iconBorder: 'border-amber-200/70 dark:border-amber-800/50',
-      borderColor: 'border-amber-100/90 dark:border-gray-700/80',
-    },
-    {
-      label: 'Consult Expert',
-      path: '/consult',
-      icon: <Video size={20} className="text-blue-600 dark:text-blue-400" />,
-      bgColor: 'bg-blue-50 dark:bg-blue-950/60',
-      iconBorder: 'border-blue-200/70 dark:border-blue-800/50',
-      borderColor: 'border-blue-100/90 dark:border-gray-700/80',
-    },
-    {
-      label: 'Govt Schemes',
-      path: '/schemes',
-      icon: <Landmark size={20} className="text-rose-600 dark:text-rose-400" />,
-      bgColor: 'bg-rose-50 dark:bg-rose-950/60',
-      iconBorder: 'border-rose-200/70 dark:border-rose-800/50',
-      borderColor: 'border-rose-100/90 dark:border-gray-700/80',
-    },
-    {
-      label: 'My Farm',
-      path: '/farm',
-      icon: <Sprout size={20} className="text-teal-600 dark:text-teal-400" />,
-      bgColor: 'bg-teal-50 dark:bg-teal-950/60',
-      iconBorder: 'border-teal-200/70 dark:border-teal-800/50',
-      borderColor: 'border-teal-100/90 dark:border-gray-700/80',
-    },
-  ];
-
   return (
-    <div className="w-full max-w-7xl mx-auto py-2 sm:py-6 overflow-hidden">
+    <div className="w-full max-w-7xl mx-auto py-2 sm:py-6 pb-24 md:pb-6 overflow-hidden">
 
       {/* ─── MOBILE-ONLY ILLUSTRATIVE HERO BANNER (< 768px) ─── */}
       <div className="block md:hidden mb-4 sm:mb-6 w-full rounded-2xl sm:rounded-3xl overflow-hidden relative shadow-lg border border-emerald-900/20 dark:border-emerald-800/40 bg-gray-950">
@@ -251,35 +200,6 @@ const Dashboard = () => {
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ─── MOBILE-ONLY QUICK ACTION BUTTONS (< 768px) ─── */}
-      <div className="block md:hidden mb-5 sm:mb-6">
-        <div className="flex items-center justify-between mb-2.5 px-0.5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-emerald-500" />
-            <span>{t('quick_actions') || 'Quick Actions'}</span>
-          </h3>
-          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Fast Access</span>
-        </div>
-
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 xs:gap-2.5">
-          {mobileQuickActions.map((action) => (
-            <Link
-              key={action.label}
-              to={action.path}
-              className={`group relative flex flex-col items-center justify-center p-2 xs:p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-gray-800/95 border ${action.borderColor} shadow-xs hover:shadow-md active:scale-95 transition-all duration-150 text-center min-h-[82px] xs:min-h-[88px] overflow-hidden`}
-              aria-label={action.label}
-            >
-              <div className={`w-9 h-9 xs:w-10 xs:h-10 rounded-xl ${action.bgColor} ${action.iconBorder} border flex items-center justify-center mb-1.5 transition-transform group-hover:scale-105 shrink-0 shadow-2xs`}>
-                {action.icon}
-              </div>
-              <span className="text-[11px] xs:text-xs font-bold text-gray-800 dark:text-gray-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight text-center truncate w-full px-0.5">
-                {action.label}
-              </span>
-            </Link>
-          ))}
         </div>
       </div>
 
@@ -368,34 +288,34 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         
         {/* Farm {t('health_score')} Gauge */}
-        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm flex flex-col min-w-0">
-          <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-            <HeartPulse size={18} className="text-rose-500" />{t("health_score")}</h2>
+        <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-6 shadow-sm flex flex-col min-w-0">
+          <h2 className="text-xs sm:text-base font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+            <HeartPulse size={16} className="text-rose-500 sm:w-[18px] sm:h-[18px]" />{t("health_score")}</h2>
           
           <div className="flex-1 flex flex-col items-center justify-center">
             {loadingHealth ? (
               <div className="animate-pulse flex flex-col items-center w-full">
-                <div className="w-36 h-36 sm:w-40 sm:h-40 border-[10px] sm:border-[12px] border-gray-200 dark:border-gray-700 rounded-full mb-4"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
+                <div className="w-40 h-40 sm:w-44 sm:h-44 border-[10px] sm:border-[12px] border-gray-200 dark:border-gray-700 rounded-full mb-2 sm:mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2 sm:mb-4"></div>
               </div>
             ) : healthScore ? (
               <>
-                <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center rounded-full border-[10px] sm:border-[12px] shadow-inner dark:shadow-black/20 mb-4"
+                <div className="relative w-40 h-40 sm:w-44 sm:h-44 flex items-center justify-center rounded-full border-[10px] sm:border-[12px] shadow-inner dark:shadow-black/20 mb-2 sm:mb-4"
                      style={{ borderColor: healthScore.score >= 750 ? '#10B981' : healthScore.score >= 600 ? '#F59E0B' : '#EF4444' }}>
                   <div className="text-center">
                     <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">{healthScore.score}</span>
-                    <span className="block text-[10px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wider">{t("out_of_1000")}</span>
+                    <span className="block text-[10px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1 uppercase tracking-wider">{t("out_of_1000")}</span>
                   </div>
                 </div>
                 
-                <div className="w-full mt-2 sm:mt-4 space-y-2">
-                  <p className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("score_factors")}</p>
+                <div className="w-full mt-1 sm:mt-4 space-y-1.5 sm:space-y-2">
+                  <p className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 sm:mb-2">{t("score_factors")}</p>
                   {healthScore.details.map((detail, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
+                    <div key={idx} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm">
                       {detail.includes('+') ? (
-                        <CheckCircle size={15} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                        <CheckCircle size={14} className="text-emerald-500 flex-shrink-0 mt-0.5 sm:w-[15px] sm:h-[15px]" />
                       ) : (
-                        <AlertTriangle size={15} className="text-rose-500 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle size={14} className="text-rose-500 flex-shrink-0 mt-0.5 sm:w-[15px] sm:h-[15px]" />
                       )}
                       <span className="text-gray-700 dark:text-gray-300 leading-tight">{detail}</span>
                     </div>
@@ -403,29 +323,29 @@ const Dashboard = () => {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center text-gray-500 py-10">
-                <HeartPulse size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">{t("no_health_data_avail")}</p>
+              <div className="flex flex-col items-center text-gray-500 py-6 sm:py-10">
+                <HeartPulse size={28} className="mb-2 opacity-50 sm:w-8 sm:h-8" />
+                <p className="text-xs sm:text-sm">{t("no_health_data_avail")}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Main Analytics Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm min-w-0">
-          <div className="flex justify-between items-center mb-4 sm:mb-6 gap-2">
-            <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">{t('crop_health_index')}</h2>
-            <select className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg py-1 px-2.5 sm:py-1.5 sm:px-3 outline-none shrink-0">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-6 shadow-sm min-w-0">
+          <div className="flex justify-between items-center mb-2 sm:mb-6 gap-2">
+            <h2 className="text-xs sm:text-base font-semibold text-gray-900 dark:text-white truncate">{t('crop_health_index')}</h2>
+            <select className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11px] sm:text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg py-1 px-2 sm:py-1.5 sm:px-3 outline-none shrink-0">
               <option>{t("last_7_days")}</option>
               <option>{t("last_30_days")}</option>
             </select>
           </div>
-          <div className="h-64 sm:h-72 w-full min-w-0">
+          <div className="h-[210px] sm:h-72 w-full min-w-0">
             {loadingHistory ? (
               <div className="w-full h-full bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dynamicChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={dynamicChart} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorHealth" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#059669" stopOpacity={0.1}/>
@@ -437,11 +357,11 @@ const Dashboard = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-gray-700" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 11}} dy={6} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 11}} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'rgba(31, 41, 55, 0.9)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}
-                    itemStyle={{ color: '#F9FAFB', fontSize: '14px', fontWeight: '500' }}
+                    itemStyle={{ color: '#F9FAFB', fontSize: '13px', fontWeight: '500' }}
                   />
                   <Area type="monotone" dataKey="health" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorHealth)" name="Health %" />
                   <Area type="monotone" dataKey="risk" stroke="#EF4444" strokeWidth={2} fillOpacity={1} fill="url(#colorRisk)" name="Risk %" />
