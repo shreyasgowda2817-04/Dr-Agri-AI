@@ -170,6 +170,7 @@ function App() {
               </RoleRoute>
             } />
             <Route path="settings" element={<Settings />} />
+            <Route path="settings/:section" element={<Settings />} />
             <Route path="subscription/plans" element={<Navigate to="/settings?tab=billing" replace />} />
             <Route path="subscription/manage" element={<Navigate to="/settings?tab=billing" replace />} />
             <Route path="advertiser" element={
