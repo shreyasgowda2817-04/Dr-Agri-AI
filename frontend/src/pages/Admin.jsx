@@ -455,19 +455,19 @@ const Admin = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-2 sm:px-4 lg:px-6 w-full min-w-0 overflow-hidden">
+    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-3 sm:px-4 lg:px-6 w-full min-w-0 overflow-x-hidden pb-28 md:pb-8">
       {/* ─── Header ─── */}
-      <div className="bg-gradient-to-r from-gray-900 to-indigo-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white mb-6 sm:mb-8 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-3 mb-2">
-            <ShieldCheck className="w-7 h-7 sm:w-8 h-8 text-indigo-400 shrink-0" />
-            <span className="truncate">{t("admin_command_center")}</span>
+      <div className="bg-gradient-to-r from-gray-900 to-indigo-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white mb-6 sm:mb-8 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 min-w-0 max-w-full">
+        <div className="min-w-0 w-full lg:w-auto">
+          <h1 className="text-xl sm:text-3xl font-extrabold flex items-center gap-2.5 sm:gap-3 mb-1.5 sm:mb-2 min-w-0 break-words">
+            <ShieldCheck className="w-6 h-6 sm:w-8 h-8 text-indigo-400 shrink-0" />
+            <span className="break-words sm:truncate">{t("admin_command_center")}</span>
           </h1>
-          <p className="text-sm sm:text-base text-indigo-200">{t("system_overview___in")}</p>
+          <p className="text-xs sm:text-base text-indigo-200 break-words leading-relaxed">{t("system_overview___in")}</p>
         </div>
         
         {/* Tabs */}
-        <div className="w-full lg:w-auto flex overflow-x-auto lg:flex-wrap scrollbar-none bg-white/10 rounded-xl sm:rounded-2xl p-1 gap-1 backdrop-blur-md">
+        <div className="w-full lg:w-auto min-w-0 max-w-full flex overflow-x-auto lg:flex-wrap scrollbar-none bg-white/10 rounded-xl sm:rounded-2xl p-1 gap-1 sm:gap-1.5 backdrop-blur-md touch-pan-x">
           <button 
             onClick={() => setActiveTab('users')}
             className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${activeTab === 'users' ? 'bg-white text-indigo-900 shadow' : 'text-white/80 hover:text-white'}`}
@@ -523,12 +523,19 @@ const Admin = () => {
 
       {/* ─── Users Tab ─── */}
       {activeTab === 'users' && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Users size={20} className="text-indigo-600" />{t("registered_users")}</h2>
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Users size={20} className="text-indigo-600 shrink-0" />
+              <span>{t("registered_users")}</span>
+            </h2>
+            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+              {users.length} {t("users")}
+            </span>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Desktop & Tablet Table (md and up) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
@@ -548,10 +555,10 @@ const Admin = () => {
                     <tr key={u.id} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                            {u.name.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+                            {u.name?.charAt(0).toUpperCase() || 'U'}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="font-bold text-gray-900">{u.name}</p>
                             <p className="text-sm text-gray-500">{u.email}</p>
                           </div>
@@ -597,6 +604,95 @@ const Admin = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Responsive User Cards (below md / 768px) */}
+          <div className="block md:hidden divide-y divide-gray-100">
+            {loading ? (
+              <div className="p-8 text-center text-gray-500 text-sm">{t("loading_directory___")}</div>
+            ) : users.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">{t("no_users_found_")}</div>
+            ) : (
+              users.map(u => (
+                <div key={u.id} className="p-4 space-y-3 bg-white hover:bg-gray-50/50 transition">
+                  {/* User Identity & Avatar */}
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
+                      {u.name?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-gray-900 text-sm truncate">{u.name}</p>
+                        {u.is_active === false && (
+                          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Blocked
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 truncate break-all mt-0.5">{u.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Badges: Role and Tier */}
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 ${
+                      (u.role === 'ADMIN' || u.role === 'SUPER_ADMIN')
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}>
+                      {(u.role === 'ADMIN' || u.role === 'SUPER_ADMIN') ? <ShieldCheck size={12} className="shrink-0" /> : <Users size={12} className="shrink-0" />}
+                      <span className="truncate max-w-[140px]">{u.role}</span>
+                    </span>
+
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                      {u.tier || 'basic'}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons Row */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                    <button 
+                      onClick={() => openRoleModal(u)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 active:scale-95 px-3 py-2 rounded-xl border border-indigo-200/60 transition"
+                    >
+                      <ShieldCheck size={14} className="shrink-0" />
+                      <span>{t("role")}</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => openUserEditModal(u)}
+                      className="p-2 text-indigo-600 hover:text-indigo-800 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-200 active:scale-95 transition"
+                      title="Edit Profile"
+                      aria-label="Edit Profile"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+
+                    <button 
+                      onClick={() => handleToggleUserStatus(u.id, u.is_active)}
+                      className={`p-2 rounded-xl border active:scale-95 transition ${
+                        u.is_active === false 
+                          ? 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' 
+                          : 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100'
+                      }`} 
+                      title={u.is_active === false ? 'Unblock User' : 'Block User'}
+                      aria-label={u.is_active === false ? 'Unblock User' : 'Block User'}
+                    >
+                      <AlertCircle size={16} />
+                    </button>
+
+                    <button 
+                      onClick={() => setDeleteConfirmId(u.id)}
+                      className="p-2 text-red-600 hover:text-red-800 bg-red-50/50 hover:bg-red-50 rounded-xl border border-red-200 active:scale-95 transition"
+                      title="Delete User"
+                      aria-label="Delete User"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

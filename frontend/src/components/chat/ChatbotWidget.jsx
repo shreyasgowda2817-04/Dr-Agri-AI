@@ -223,14 +223,14 @@ const ChatbotWidget = () => {
   }
 
   return (
-    <div className="fixed bottom-24 md:bottom-6 right-4 sm:right-6 z-50 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2rem)]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="bg-white w-[calc(100vw-2rem)] max-w-sm sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden mb-3 sm:mb-4 flex flex-col h-[75vh] max-h-[500px]"
+            className="bg-white w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden mb-2 sm:mb-4 flex flex-col h-[75vh] max-h-[500px]"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-600 to-green-700 p-3.5 sm:p-4 text-white flex justify-between items-center shadow-md">
@@ -323,28 +323,28 @@ const ChatbotWidget = () => {
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="mb-4 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 max-w-xs relative cursor-pointer"
+                className="mb-2 sm:mb-4 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-w-[260px] xs:max-w-[280px] sm:max-w-xs relative cursor-pointer text-left"
                 onClick={() => { 
-              if (sessionStorage.getItem('chat_session_active') !== 'true') {
-                // Starting a fresh chat session
-                if (proactiveGreeting) setMessages([{ text: proactiveGreeting, sender: 'bot' }]);
-                else setMessages([]);
-              }
-              sessionStorage.setItem('chat_session_active', 'true');
-              setIsOpen(true); 
-              setShowProactiveBubble(false); 
-            }}
+                  if (sessionStorage.getItem('chat_session_active') !== 'true') {
+                    // Starting a fresh chat session
+                    if (proactiveGreeting) setMessages([{ text: proactiveGreeting, sender: 'bot' }]);
+                    else setMessages([]);
+                  }
+                  sessionStorage.setItem('chat_session_active', 'true');
+                  setIsOpen(true); 
+                  setShowProactiveBubble(false); 
+                }}
               >
-                <div className="absolute right-2 top-2" onClick={(e) => { e.stopPropagation(); setShowProactiveBubble(false); }}>
-                  <X size={14} className="text-gray-400 hover:text-gray-600" />
+                <div className="absolute right-2 top-2 p-1" onClick={(e) => { e.stopPropagation(); setShowProactiveBubble(false); }}>
+                  <X size={14} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-100 p-2 rounded-full text-green-600">
+                <div className="flex items-start gap-2.5 sm:gap-3">
+                  <div className="bg-green-100 dark:bg-green-900/50 p-1.5 sm:p-2 rounded-full text-green-600 dark:text-green-400 shrink-0 mt-0.5">
                     <Sparkles size={16} />
                   </div>
-                  <p className="text-sm font-medium text-gray-800 line-clamp-3">
+                  <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2 sm:line-clamp-3 pr-4">
                     {proactiveGreeting.split('\n')[0]}<br/>
-                    <span className="text-xs text-gray-500">{t("click_to_chat___")}</span>
+                    <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">{t("click_to_chat___")}</span>
                   </p>
                 </div>
               </motion.div>
@@ -364,9 +364,10 @@ const ChatbotWidget = () => {
               setIsOpen(true); 
               setShowProactiveBubble(false); 
             }}
-            className="bg-gradient-to-r from-emerald-600 to-green-600 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/50 transition flex items-center justify-center border-4 border-green-50"
+            className="bg-gradient-to-r from-emerald-600 to-green-600 text-white p-3 sm:p-4 rounded-full shadow-2xl hover:shadow-green-500/50 transition flex items-center justify-center border-2 sm:border-4 border-green-50 dark:border-gray-800"
+            aria-label="Open AI Assistant"
           >
-            <MessageCircle size={28} />
+            <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7" />
           </motion.button>
         </div>
       )}
