@@ -10,7 +10,6 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import RoleRoute from './components/layout/RoleRoute';
 import { lazy, Suspense } from 'react';
 import ChatbotWidget from './components/chat/ChatbotWidget';
-import SplashScreen from './components/common/SplashScreen';
 
 
 // Lazy loaded pages for performance
@@ -61,24 +60,6 @@ import PublicReport from './pages/PublicReport';
 function App() {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
-
-  const [showSplash, setShowSplash] = useState(() => {
-    try {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        return window.sessionStorage.getItem('dr_agri_splash_shown') !== 'true';
-      }
-    } catch (e) {}
-    return true;
-  });
-
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-    try {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.setItem('dr_agri_splash_shown', 'true');
-      }
-    } catch (e) {}
-  };
 
   useEffect(() => {
     // Check for OAuth token in URL
@@ -131,7 +112,6 @@ function App() {
 
   return (
     <>
-      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
       <Suspense fallback={<PageLoader />}><Routes>
         {/* Public Marketing Route */}
