@@ -26,10 +26,9 @@ async def ai_global_search(q: str = Query(..., min_length=1)):
     AI Global Search Bar endpoint.
     Takes a query and uses Gemini to suggest navigation or provide quick info.
     """
-    api_key = settings.GEMINI_API_KEY
-    if api_key and genai:
+    # Attempt to use Gemini via Fallback Service
+    if settings.GEMINI_API_KEY:
         try:
-            client = genai.Client(api_key=api_key)
             prompt = f"""You are the Dr Agri AI search suggestion engine.
 The user typed: "{q}"
 
@@ -60,22 +59,16 @@ Respond ONLY with a valid JSON object matching this schema, no markdown blocks, 
   ]
 }}
 """
-            response = client.models.generate_content(
-                model='gemini-3.5-flash-lite',
-                contents=prompt,
+            from app.services.gemini_service import gemini_fallback_service
+            data, model_used = gemini_fallback_service.generate_text(
+                prompt=prompt,
+                response_mime_type="application/json",
+                feature_name="search"
             )
-            # Clean up the response in case the LLM returned markdown code blocks
-            text = response.text.strip()
-            if text.startswith("```json"):
-                text = text[7:]
-            if text.endswith("```"):
-                text = text[:-3]
-            
-            data = json.loads(text.strip())
-            return data
+            if isinstance(data, dict) and "suggestions" in data and isinstance(data["suggestions"], list):
+                return data
         except Exception as e:
-            print(f"Search AI Error: {e}")
-            # Fallback below
+            print(f"Search AI Fallback Error: {e}")
             pass
 
     # Fallback offline logic

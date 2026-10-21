@@ -202,3 +202,30 @@ async def bulk_action_products(
         
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
+
+@router.get("/ai-health")
+async def get_ai_health(
+    current_admin: UserResponse = Depends(get_current_admin)
+):
+    """
+    Returns AI model health, active cooldowns, fallbacks, and diagnostics.
+    Safe for admin inspection - secrets are never leaked.
+    """
+    from app.services.gemini_service import model_health_tracker
+    from app.core.config import settings
+    return {
+        "status": "ok",
+        "primaryModel": settings.GEMINI_PRIMARY_MODEL,
+        "fallbackModels": settings.get_gemini_fallback_models(),
+        "configuredModelChain": settings.get_gemini_model_chain(),
+        "diagnostics": model_health_tracker.get_diagnostics()
+    }
+
+@router.post("/ai-health/reset")
+async def reset_ai_health(
+    current_admin: UserResponse = Depends(get_current_admin)
+):
+    """Admin resets AI model health tracker and clears cooldown states."""
+    from app.services.gemini_service import model_health_tracker
+    model_health_tracker.reset_all()
+    return {"message": "AI health tracker state reset successfully"}

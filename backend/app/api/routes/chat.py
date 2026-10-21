@@ -73,11 +73,9 @@ async def chat_with_agri_bot(
     else:
         context_str += "User is an anonymous visitor to the platform."
 
-    # Attempt to use Gemini if API key is present
-    api_key = settings.GEMINI_API_KEY
-    if api_key and genai:
+    # Attempt to use Gemini via Fallback Service
+    if settings.GEMINI_API_KEY:
         try:
-            client = genai.Client(api_key=api_key)
             prompt = f"""You are Dr Agri AI, an elite, highly intelligent Agronomist AI Assistant.
 You specialize in crop disease detection, fertilizer recommendations, yield optimization, and farming economics.
 
@@ -143,12 +141,14 @@ RESPONSE PRIORITY:
 
 The goal is to make every response feel like a helpful conversation with an agricultural expert sitting beside the farmer — concise, personalized, practical, and easy to act on.
 """
-            
-            response = client.models.generate_content(
-                model='gemini-3.5-flash-lite',
-                contents=prompt,
+            from app.services.gemini_service import gemini_fallback_service
+            reply_text, model_used = gemini_fallback_service.generate_text(
+                prompt=prompt,
+                response_mime_type="text/plain",
+                feature_name="chat"
             )
-            return ChatResponse(reply=response.text)
+            if reply_text and isinstance(reply_text, str) and reply_text.strip():
+                return ChatResponse(reply=reply_text.strip())
         except Exception as e:
             print(f"Gemini API Error: {e}, falling back to mock rules.")
 

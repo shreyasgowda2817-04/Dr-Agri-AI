@@ -19,7 +19,47 @@ class Settings(BaseSettings):
 
     # AI Integration
     GEMINI_API_KEY: str | None = None
+    GEMINI_PRIMARY_MODEL: str = "gemini-2.5-flash"
+    GEMINI_FALLBACK_MODELS: str = "gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-flash-8b"
+    GEMINI_MAX_ATTEMPTS: int = 3
+    GEMINI_PER_ATTEMPT_TIMEOUT: float = 20.0
+    GEMINI_TOTAL_TIMEOUT: float = 45.0
+    GEMINI_COOLDOWN_SECONDS: int = 60
+    GEMINI_TRANSIENT_COOLDOWN_SECONDS: int = 15
     ML_SERVICE_URL: str | None = None
+
+    def get_gemini_model_chain(self) -> list[str]:
+        """
+        Returns a deduplicated, ordered chain of Gemini models starting with
+        the primary model followed by configured fallback models.
+        """
+        chain: list[str] = []
+        
+        def clean_model_name(name: str | None) -> str | None:
+            if not name:
+                return None
+            m = name.strip()
+            if m.startswith("models/"):
+                m = m[7:].strip()
+            return m if m else None
+
+        primary = clean_model_name(self.GEMINI_PRIMARY_MODEL)
+        if primary:
+            chain.append(primary)
+
+        if self.GEMINI_FALLBACK_MODELS:
+            raw_fallbacks = self.GEMINI_FALLBACK_MODELS.split(",")
+            for raw in raw_fallbacks:
+                cleaned = clean_model_name(raw)
+                if cleaned and cleaned not in chain:
+                    chain.append(cleaned)
+                    
+        return chain if chain else ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+
+    def get_gemini_fallback_models(self) -> list[str]:
+        """Returns the fallback models in order (excluding primary)."""
+        chain = self.get_gemini_model_chain()
+        return chain[1:] if len(chain) > 1 else []
 
     # Cloud Storage (Cloudinary)
     CLOUDINARY_CLOUD_NAME: str | None = None
