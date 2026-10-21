@@ -1,7 +1,11 @@
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const apiKey = "AIzaSyBOtvBpDMmWs9S6_FwTVQs8r2CndK3A_oI";
+const apiKey = process.env.GEMINI_API_KEY || "";
+if (!apiKey) {
+    console.error("GEMINI_API_KEY environment variable is required.");
+    process.exit(1);
+}
 const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 

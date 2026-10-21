@@ -264,6 +264,7 @@ class ModelHealthTracker:
         self._models: Dict[str, Dict[str, Any]] = {}
         self._global_auth_failed: bool = False
         self._total_fallback_events: int = 0
+        self._last_seen_api_key: Optional[str] = getattr(settings, "GEMINI_API_KEY", None)
 
     def _get_or_init_model_state(self, model: str) -> Dict[str, Any]:
         if model not in self._models:
@@ -284,9 +285,16 @@ class ModelHealthTracker:
     def is_model_eligible(self, model: str) -> Tuple[bool, str]:
         """
         Determines whether a model is eligible to receive requests.
-        Automatically clears expired cooldowns.
+        Automatically clears expired cooldowns and resets if a new API key is detected.
         """
         with self._lock:
+            current_key = getattr(settings, "GEMINI_API_KEY", None)
+            if current_key != self._last_seen_api_key:
+                self._models.clear()
+                self._global_auth_failed = False
+                self._total_fallback_events = 0
+                self._last_seen_api_key = current_key
+
             if self._global_auth_failed:
                 return False, "GLOBAL_AUTH_FAILED: API key reported invalid/leaked"
 
