@@ -5,7 +5,7 @@ import uuid
 import random
 import logging
 import threading
-from typing import List, Dict, Any, Optional, Tuple, Callable
+from typing import List, Dict, Any, Optional, Tuple, Callable, Union
 from app.core.config import settings
 
 # Structured logging setup
@@ -615,21 +615,28 @@ class GeminiFallbackService:
 
     def generate_text(
         self,
-        prompt: str,
+        prompt: Union[str, List[Any]],
         response_mime_type: str = "text/plain",
         feature_name: str = "text_generation",
-        request_id: Optional[str] = None
+        request_id: Optional[str] = None,
+        system_instruction: Optional[str] = None
     ) -> Tuple[Any, str]:
         """
         Text generation (chatbot, search navigation, translations).
+        Supports single prompt string or multi-turn contents list,
+        with optional system instruction.
         """
-        if not prompt or not prompt.strip():
-            raise GeminiValidationError("Prompt cannot be empty.", request_id=request_id)
+        if prompt is None or (isinstance(prompt, str) and not prompt.strip()) or (isinstance(prompt, list) and len(prompt) == 0):
+            raise GeminiValidationError("Prompt/contents cannot be empty.", request_id=request_id)
 
         def call_fn(client: Any, model: str):
-            config = types.GenerateContentConfig(
-                response_mime_type=response_mime_type,
-            ) if response_mime_type != "text/plain" else None
+            config_kwargs = {}
+            if response_mime_type and response_mime_type != "text/plain":
+                config_kwargs["response_mime_type"] = response_mime_type
+            if system_instruction and system_instruction.strip():
+                config_kwargs["system_instruction"] = system_instruction.strip()
+
+            config = types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
 
             kwargs = {"model": model, "contents": prompt}
             if config:

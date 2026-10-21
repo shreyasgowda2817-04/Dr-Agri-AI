@@ -1,11 +1,17 @@
-const CACHE_NAME = 'agrivision-v2';
+const CACHE_NAME = 'dr-agri-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/logo.png',
+  '/logo-192.png',
+  '/logo-512.png',
+  '/logo-maskable-512.png'
 ];
 
 self.addEventListener('install', event => {
+  // Activate immediately without waiting for existing clients to close
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
@@ -13,12 +19,13 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  // Clean up old caches
+  // Clean up all legacy caches (agrivision-v1, agrivision-v2, etc.)
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Deleting legacy cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -41,26 +48,55 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Network-first for manifest.json and page navigation (HTML)
+  // Ensures updated branding, splash screen, and theme color are never trapped by stale cache
+  const isNav = event.request.mode === 'navigate';
+  const isManifest = event.request.url.includes('manifest.json');
+
+  if (isNav || isManifest) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          // If offline, fall back to cached version
+          const cache = await caches.open(CACHE_NAME);
+          const cachedResponse = await cache.match(isNav ? '/index.html' : '/manifest.json');
+          if (cachedResponse) return cachedResponse;
+          return new Response('Network error occurred. Please check your internet connection.', { 
+            status: 408, 
+            headers: { 'Content-Type': 'text/plain' } 
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache-first with background revalidation for static assets
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit
         if (response) {
           return response;
         }
 
-        // Network request
-        return fetch(event.request).catch(async () => {
-          // If the network fetch fails (e.g. offline) and it's a page navigation,
-          // return the cached index.html so React Router can handle it.
-          if (event.request.mode === 'navigate') {
-            const cache = await caches.open(CACHE_NAME);
-            const cachedResponse = await cache.match('/index.html');
-            if (cachedResponse) {
-              return cachedResponse;
-            }
+        return fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const respClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, respClone);
+            });
           }
-          return new Response('Network error occurred. Please check your internet connection.', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+          return networkResponse;
+        }).catch(async () => {
+          return new Response('Offline asset unavailable.', { status: 404 });
         });
       })
   );

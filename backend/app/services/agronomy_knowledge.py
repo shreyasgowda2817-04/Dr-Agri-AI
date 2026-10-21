@@ -188,6 +188,110 @@ CROP_DATABASE = {
 }
 
 
+EDUCATIONAL_TOPICS = {
+    "crop": {
+        "keywords": [
+            "what is crops", "what is a crop", "what are crops", "define crop", "definition of crop", 
+            "crops meaning", "what crops", "what is crop", "ಬೆಳೆ ಅಂದರೆ ಏನು", "ಬೆಳೆ ಎಂದರೇನು", "ಫಸಲು ಎಂದರೇನು", 
+            "फसल क्या है", "फसल किसे कहते हैं", "फसल क्या होती है"
+        ],
+        "en": (
+            "A **crop** is a cultivated plant grown intentionally on a large scale for food, fodder, fiber, fuel, or other commercial purposes.\n\n"
+            "**Major Classifications:**\n"
+            "• **Food Crops:** Cereals (Wheat, Rice, Maize, Millets) and Pulses (Chickpea, Pigeon pea, Lentil).\n"
+            "• **Cash / Commercial Crops:** Cotton, Sugarcane, Jute, Oilseeds (Mustard, Groundnut, Soybean).\n"
+            "• **Horticultural Crops:** Vegetables (Tomato, Chilli, Potato, Onion), Fruits, and Spices.\n"
+            "• **Seasonal Crops (India):** Kharif (monsoon: Rice, Maize, Cotton), Rabi (winter: Wheat, Mustard), and Zaid (summer: Watermelon, Cucumber).\n\n"
+            "If you are growing a specific crop, let me know its name and current stage for tailored fertilizer, irrigation, and pest management advice!"
+        ),
+        "hi": (
+            "**फसल (Crop)** उस पौधे को कहा जाता है जिसे मनुष्य अपने भोजन, पशुओं के चारे, वस्त्र (फाइबर), या व्यावसायिक लाभ के लिए बड़े पैमाने पर एक निश्चित क्षेत्र में उगाता है।\n\n"
+            "**फसलों के मुख्य प्रकार:**\n"
+            "• **खाद्यान्न फसलें:** अनाज (गेहूं, धान, मक्का) और दालें (चना, अरहर, मसूर)।\n"
+            "• **नकदी/व्यावसायिक फसलें:** कपास, गन्ना, तिलहन (सरसों, मूंगफली, सोयाबीन)।\n"
+            "• **बागवानी फसलें:** सब्जियां (टमाटर, मिर्च, आलू), फल और मसाले।\n"
+            "• **ऋतुओं के अनुसार:** खरीफ (मानसून), रबी (सर्दियां), और जायद (गर्मी)।\n\n"
+            "यदि आप किसी विशेष फसल के बारे में जानना चाहते हैं, तो कृपया उसका नाम और विकास अवस्था बताएं!"
+        ),
+        "kn": (
+            "**ಬೆಳೆ (Crop)** ಎಂದರೆ ಮಾನವನು ತನ್ನ ಆಹಾರ, ಜಾನುವಾರುಗಳ ಮೇವು, ನಾರು ಅಥವಾ ಆರ್ಥಿಕ ಆದಾಯಕ್ಕಾಗಿ ಒಂದು ನಿರ್ದಿಷ್ಟ ಜಮೀನಿನಲ್ಲಿ ವ್ಯವಸ್ಥಿತವಾಗಿ ದೊಡ್ಡ ಪ್ರಮಾಣದಲ್ಲಿ ಬೆಳೆಯುವ ಸಸ್ಯವಾಗಿದೆ.\n\n"
+            "**ಬೆಳೆಗಳ ಮುಖ್ಯ ವರ್ಗೀಕರಣ:**\n"
+            "• **ಆಹಾರ ಬೆಳೆಗಳು:** ಧಾನ್ಯಗಳು (ಭತ್ತ, ಗೋಧಿ, ಜೋಳ, ರಾಗಿ) ಮತ್ತು ಬೇಳೆಕಾಳುಗಳು (ತೊಗರಿ, ಕಡಲೆ).\n"
+            "• **ವಾಣಿಜ್ಯ ಬೆಳೆಗಳು:** ಹತ್ತಿ, ಕಬ್ಬು, ಎಣ್ಣೆಕಾಳುಗಳು (ಶೇಂಗಾ, ಸೂರ್ಯಕಾಂತಿ).\n"
+            "• **ತೋಟಗಾರಿಕಾ ಬೆಳೆಗಳು:** ತರಕಾರಿಗಳು (ಟೊಮೆಟೊ, ಮೆಣಸಿನಕಾಯಿ, ಈರುಳ್ಳಿ, ಆಲೂಗಡ್ಡೆ), ಹಣ್ಣುಗಳು ಮತ್ತು ಸಾಂಬಾರ ಪದಾರ್ಥಗಳು.\n"
+            "• **ಋತುಮಾನಗಳು:** ಮುಂಗಾರು (ಖಾರೀಫ್), ಹಿಂಗಾರು (ರಬಿ) ಮತ್ತು ಬೇಸಿಗೆ (ಜಾಯಿದ್) ಬೆಳೆಗಳು.\n\n"
+            "ನೀವು ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಬೆಳೆಯನ್ನು ಬೆಳೆಯುತ್ತಿದ್ದರೆ, ಅದರ ಹೆಸರು ತಿಳಿಸಿ ಸೂಕ್ತ ಕೃಷಿ ಸಲಹೆ ಪಡೆಯಿರಿ!"
+        )
+    },
+    "photosynthesis": {
+        "keywords": [
+            "photosynthesis", "photo synthesis", "how plants make food", "प्रकाश संश्लेषण", "ದ್ಯುತಿಸಂಶ್ಲೇಷಣೆ"
+        ],
+        "en": (
+            "**Photosynthesis** is the biochemical process by which green plants synthesize glucose (energy) from carbon dioxide (CO₂) and water (H₂O) using sunlight trapped by chlorophyll pigments.\n\n"
+            "• **Chemical Equation:** 6CO₂ + 6H₂O + Sunlight → C₆H₁₂O₆ + 6O₂\n"
+            "• **Why it matters to farmers:** Foliar canopy health directly drives photosynthesis rate. Balanced magnesium, iron, and adequate sunlight directly maximize crop yield and fruit fill."
+        ),
+        "hi": (
+            "**प्रकाश संश्लेषण (Photosynthesis)** वह प्रक्रिया है जिसके माध्यम से हरे पौधे सूर्य के प्रकाश और क्लोरोफिल की उपस्थिति में कार्बन डाइऑक्साइड (CO₂) और पानी (H₂O) से ग्लूकोज और ऑक्सीजन का निर्माण करते हैं।\n\n"
+            "• स्वस्थ पत्तियां और सूक्ष्म पोषक तत्व (मैग्नीशियम, आयरन) प्रकाश संश्लेषण को तेज करके पैदावार बढ़ाते हैं।"
+        ),
+        "kn": (
+            "**ದ್ಯುತಿಸಂಶ್ಲೇಷಣೆ (Photosynthesis)** ಎಂದರೆ ಹಸಿರು ಸಸ್ಯಗಳು ಸೂರ್ಯನ ಬೆಳಕಿನ ಶಕ್ತಿಯನ್ನು ಬಳಸಿ ನೀರು ಮತ್ತು ಇಂಗಾಲದ ಡೈಆಕ್ಸೈಡ್‌ನಿಂದ ಆಹಾರವನ್ನು (ಗ್ಲೂಕೋಸ್) ತಯಾರಿಸಿ ಆಮ್ಲಜನಕವನ್ನು ಬಿಡುಗಡೆ ಮಾಡುವ ಪ್ರಕ್ರಿಯೆ.\n\n"
+            "• ಎಲೆಗಳು ಆರೋಗ್ಯವಾಗಿದ್ದರೆ ದ್ಯುತಿಸಂಶ್ಲೇಷಣೆ ಹೆಚ್ಚಾಗಿ ಉತ್ತಮ ಇಳುವರಿ ದೊರೆಯುತ್ತದೆ."
+        )
+    },
+    "agriculture": {
+        "keywords": [
+            "what is agriculture", "define agriculture", "meaning of agriculture", "कृषि क्या है", "कೃಷಿ ಅಂದರೆ ಏನು"
+        ],
+        "en": (
+            "**Agriculture** is the science, art, and business of cultivating soil, growing crops, and raising livestock to provide food, fiber, and other essential products for society."
+        ),
+        "hi": (
+            "**कृषि (Agriculture)** मिट्टी की जुताई, फसल उत्पादन और पशुपालन का विज्ञान और कला है, जिससे भोजन, वस्त्र और आवश्यक संसाधन प्राप्त होते हैं।"
+        ),
+        "kn": (
+            "**ಕೃಷಿ (Agriculture)** ಎಂದರೆ ಮಣ್ಣನ್ನು ಹದಗೊಳಿಸಿ ಬೆಳೆ ಬೆಳೆಯುವ ಮತ್ತು ಜಾನುವಾರುಗಳನ್ನು ಸಾಕುವ ಮೂಲಕ ಮಾನವನಿಗೆ ಅಗತ್ಯವಾದ ಆಹಾರ ಮತ್ತು ಕಚ್ಚಾ ವಸ್ತುಗಳನ್ನು ಉತ್ಪಾದಿಸುವ ವಿಜ್ಞಾನ ಮತ್ತು ಕಲೆಯಾಗಿದೆ."
+        )
+    }
+}
+
+NO_CROP_FERTILIZER_GUIDE = {
+    "en": (
+        "🌱 **Fertilizer Selection Requires Your Crop & Growth Stage**\n\n"
+        "Fertilizer cannot be safely prescribed without knowing the specific crop and its development stage. A blanket recommendation (such as applying NPK 19:19:19 blindly) can lead to nutrient burn, excessive leafy growth without fruiting, or wasted expense.\n\n"
+        "**To give you the exact dosage, please tell me:**\n"
+        "1. **Which crop are you growing?** (e.g., Tomato, Paddy/Rice, Wheat, Chilli, Cotton, Maize, Onion)\n"
+        "2. **What is its current growth stage?** (e.g., Nursery/Seedling, Vegetative, Flowering, or Fruit/Grain filling)\n"
+        "3. **What is your soil type?** (e.g., Black soil, Red loamy, Sandy, Clay)\n\n"
+        "**General Scientific Guidelines:**\n"
+        "• **Early / Vegetative Stage:** Requires higher Nitrogen (N) and Phosphorus (P) for root system and canopy frame establishment.\n"
+        "• **Flowering & Fruiting Stage:** Requires higher Potassium (K) and micronutrients (Boron, Calcium) for flower retention, fruit size, and disease resistance.\n"
+        "• **Soil Testing:** A soil health test helps avoid unnecessary excess fertilizer expenses."
+    ),
+    "hi": (
+        "🌱 **उर्वरक की सही मात्रा के लिए फसल और अवस्था आवश्यक है**\n\n"
+        "बिना फसल और उसकी वृद्धि अवस्था जाने कोई भी उर्वरक सीधे इस्तेमाल नहीं करना चाहिए। किसी भी फसल पर बिना सोचे-समझे NPK या DAP डालने से फसल को नुकसान हो सकता है।\n\n"
+        "**सटीक मात्रा जानने के लिए कृपया बताएं:**\n"
+        "1. **आप कौन सी फसल उगा रहे हैं?** (जैसे टमाटर, धान, गेहूं, मिर्च, कपास, मक्का)\n"
+        "2. **फसल की वर्तमान अवस्था क्या है?** (जैसे बुवाई/रोपाई, वानस्पतिक बढ़वार, फूल आने का समय, या फल/दाना भरने का समय)\n\n"
+        "**सामान्य नियम:**\n"
+        "• शुरुआती अवस्था में नाइट्रोजन और फास्फोरस (जड़ों के विकास के लिए) जरूरी होता है।\n"
+        "• फूल और फल बनते समय पोटाश (K) और बोरॉन की अधिक आवश्यकता होती है।"
+    ),
+    "kn": (
+        "🌱 **ಸೂಕ್ತ ಗೊಬ್ಬರ ಶಿಫಾರಸಿಗೆ ಬೆಳೆಯ ಹೆಸರು ಮತ್ತು ಹಂತ ಅಗತ್ಯವಾಗಿದೆ**\n\n"
+        "ಬೆಳೆಯ ಹೆಸರು ಮತ್ತು ಬೆಳವಣಿಗೆಯ ಹಂತ ತಿಳಿಯದೆ ಯಾವುದೇ ರಸಗೊಬ್ಬರವನ್ನು ಅಂಧವಾಗಿ ಶಿಫಾರಸು ಮಾಡುವುದು ಸರಿಯಲ್ಲ. ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೂ ಒಂದೇ ರೀತಿಯ ಗೊಬ್ಬರ (ಉದಾ. 19:19:19) ಸೂಕ್ತವಲ್ಲ.\n\n"
+        "**ನಿಖರವಾದ ಪ್ರಮಾಣ ತಿಳಿಯಲು ದಯವಿಟ್ಟು ತಿಳಿಸಿ:**\n"
+        "1. **ನೀವು ಯಾವ ಬೆಳೆ ಬೆಳೆಯುತ್ತಿದ್ದೀರಿ?** (ಉದಾ. ಟೊಮೆಟೊ, ಭತ್ತ, ಗೋಧಿ, ಮೆಣಸಿನಕಾಯಿ, ಹತ್ತಿ, ಜೋಳ)\n"
+        "2. **ಬೆಳೆ ಯಾವ ಹಂತದಲ್ಲಿದೆ?** (ಉದಾ. ಸಸಿ ಹಂತ, ಬೆಳವಣಿಗೆಯ ಹಂತ, ಹೂವಾಡುವ ಹಂತ, ಅಥವಾ ಕಾಯಿ/ಕಾಳು ಕಟ್ಟುವ ಹಂತ)\n\n"
+        "**ಸಾಮಾನ್ಯ ನಿಯಮ:**\n"
+        "• ಆರಂಭಿಕ ಹಂತದಲ್ಲಿ ಸಾರಜನಕ ಮತ್ತು ರಂಜಕ (ಬೇರು ಮತ್ತು ರೆಂಬೆಗಳ ಬೆಳವಣಿಗೆಗೆ) ಅಗತ್ಯ.\n"
+        "• ಹೂ ಮತ್ತು ಕಾಯಿ ಕಟ್ಟುವ ಹಂತದಲ್ಲಿ ಪೊಟ್ಯಾಷ್ (K) ಮತ್ತು ಬೋರಾನ್ ಅತ್ಯಗತ್ಯ."
+    )
+}
+
 GENERAL_TOPICS = {
     "fertilizer": {
         "title": "Comprehensive Plant Nutrition & Soil Fertility",
@@ -255,21 +359,52 @@ def build_agronomy_expert_response(
     query: str,
     language: str = "en-US",
     user_context: str = "",
-    weather_info: Optional[Dict[str, Any]] = None
+    weather_info: Optional[Dict[str, Any]] = None,
+    history: Optional[List[Any]] = None
 ) -> str:
     """
     Generates a high-quality, structured agronomy answer based on agricultural science rules,
-    context parsing, and language localization.
+    context parsing, multi-turn history, and language localization.
     """
-    q_low = query.lower()
+    q_low = query.lower().strip()
     lang_code = language[:2].lower()
 
-    # Detect crop
+    # 0. Check for Educational / Definition Queries (e.g. "what is crops", "photosynthesis")
+    for topic_id, topic_data in EDUCATIONAL_TOPICS.items():
+        if any(kw in q_low for kw in topic_data["keywords"]):
+            if lang_code == "hi":
+                return topic_data.get("hi", topic_data["en"])
+            elif lang_code == "kn":
+                return topic_data.get("kn", topic_data["en"])
+            return topic_data["en"]
+
+    # Detect crop in current query
     detected_crop_key = None
     for crop_key in CROP_DATABASE.keys():
         if crop_key in q_low or (crop_key == "rice" and "paddy" in q_low) or (crop_key == "maize" and "corn" in q_low) or (crop_key == "chilli" and ("chili" in q_low or "pepper" in q_low)):
             detected_crop_key = crop_key
             break
+
+    # If crop is not in current query, search in multi-turn conversation history
+    if not detected_crop_key and history:
+        for item in reversed(history):
+            text = getattr(item, "content", None) or (item.get("content") if isinstance(item, dict) else (item.get("text") if isinstance(item, dict) else str(item)))
+            if text:
+                t_low = text.lower()
+                for crop_key in CROP_DATABASE.keys():
+                    if crop_key in t_low or (crop_key == "rice" and "paddy" in t_low) or (crop_key == "maize" and "corn" in t_low) or (crop_key == "chilli" and ("chili" in t_low or "pepper" in t_low)):
+                        detected_crop_key = crop_key
+                        break
+            if detected_crop_key:
+                break
+
+    # If still not found, check if a crop is mentioned in user profile context
+    if not detected_crop_key and user_context:
+        u_low = user_context.lower()
+        for crop_key in CROP_DATABASE.keys():
+            if crop_key in u_low or (crop_key == "rice" and "paddy" in u_low) or (crop_key == "maize" and "corn" in u_low) or (crop_key == "chilli" and ("chili" in u_low or "pepper" in u_low)):
+                detected_crop_key = crop_key
+                break
 
     # Intent flags
     is_fertilizer_query = any(w in q_low for w in ["fertilizer", "fertiliser", "nutrition", "npk", "urea", "dap", "potash", "yield", "dose", "dosage", "feed", "खाद", "उर्वरक", "ಗೊಬ್ಬರ"])
@@ -301,9 +436,18 @@ def build_agronomy_expert_response(
         # General inquiry about this crop
         return format_crop_general_response(crop_data, lang_code, weather_info)
 
+    # 2. Fertilizer Query WITHOUT any crop details:
+    # Explicitly explain that fertilizer depends on crop & stage and ask for the crop
+    if is_fertilizer_query:
+        if lang_code == "hi":
+            return NO_CROP_FERTILIZER_GUIDE["hi"]
+        elif lang_code == "kn":
+            return NO_CROP_FERTILIZER_GUIDE["kn"]
+        return NO_CROP_FERTILIZER_GUIDE["en"]
+
     # General Topic Detection
     for topic_key, topic_data in GENERAL_TOPICS.items():
-        if topic_key in q_low or (topic_key == "pesticide" and any(w in q_low for w in ["spray", "fungicide", "insecticide", "pest", "chemical", "कीटनाशक", "ಔಷಧಿ"])) or (topic_key == "fertilizer" and any(w in q_low for w in ["fertilizer", "dap", "npk", "urea", "nutrition", "उर्वरक", "खाद", "ಗೊಬ್ಬರ"])) or (topic_key == "weather" and any(w in q_low for w in ["weather", "rain", "wind", "temp", "मौसम", "ಮಳೆ", "ಹವಾಮಾನ"])) or (topic_key == "irrigation" and any(w in q_low for w in ["water", "irrigation", "drip", "सिंचाई", "ನೀರು"])):
+        if topic_key in q_low or (topic_key == "pesticide" and any(w in q_low for w in ["spray", "fungicide", "insecticide", "pest", "chemical", "कीटनाशक", "ಔಷಧಿ"])) or (topic_key == "weather" and any(w in q_low for w in ["weather", "rain", "wind", "temp", "मौसम", "ಮಳೆ", "ಹವಾಮಾನ"])) or (topic_key == "irrigation" and any(w in q_low for w in ["water", "irrigation", "drip", "सिंचाई", "ನೀರು"])):
             return localize_text(topic_data["advice"], lang_code)
 
     # Fallback to smart diagnostic inquiry

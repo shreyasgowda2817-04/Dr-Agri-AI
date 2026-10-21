@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import random
 import os
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from app.core.database import get_mongo_db
 from app.api.dependencies import get_optional_current_user
@@ -15,15 +15,59 @@ logger = logging.getLogger("dr_agri.chat")
 
 router = APIRouter()
 
+class ChatMessage(BaseModel):
+    role: str # "user" or "model" / "assistant" / "ai"
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
-    language: str = "en-US" # en-US, hi-IN, kn-IN
+    language: Optional[str] = "en-US" # en-US, hi-IN, kn-IN
+    history: Optional[List[ChatMessage]] = []
 
 class ChatResponse(BaseModel):
     reply: str
     source: Optional[str] = "gemini"
     model_used: Optional[str] = None
     warning: Optional[str] = None
+
+AGRONOMIST_SYSTEM_INSTRUCTION = """You are Dr Agri AI, an elite, friendly, and highly knowledgeable Agronomist AI Assistant.
+You serve farmers, agronomists, and agricultural students with clear, scientifically grounded agricultural intelligence.
+
+INTENT-AWARE GUIDELINES:
+
+1. GENERAL AGRICULTURAL EDUCATION & DEFINITIONS:
+   - When the user asks a conceptual, educational, or general question (e.g., "what is crops", "what is photosynthesis", "what is agriculture", "what is drip irrigation", "explain crop rotation", "what is kharif"):
+   - Give a direct, clear, educational answer explaining the concept simply and accurately.
+   - Do NOT ask for crop details or force an action checklist for purely educational definitions. Conclude with an open, friendly offer to help if they are growing a specific crop.
+
+2. FERTILIZER & NUTRIENT RECOMMENDATIONS:
+   - If the user asks for fertilizer recommendations (e.g., "What fertilizer is best for my crops?") WITHOUT specifying a crop (and no crop is present in the conversation history or user profile):
+   - DO NOT prescribe a blanket or arbitrary chemical/fertilizer (never default to NPK 19:19:19 or DAP without knowing the crop).
+   - Explain politely that fertilizer requirements depend directly on the specific crop, growth stage (vegetative vs. flowering/fruiting), and soil conditions.
+   - Ask the farmer to specify their crop and current growth stage so you can provide an exact dosage and schedule.
+
+3. CROP CULTIVATION & FIELD MANAGEMENT:
+   - When a specific crop is known (e.g., Wheat, Rice, Tomato):
+   - Provide concrete, actionable advice: basal fertilizers, top dressing, spacing, seed rate, irrigation intervals, and critical stages.
+
+4. CROP DISEASE & PEST DIAGNOSTICS:
+   - When symptoms are described:
+   - Identify potential pathogens (fungal, bacterial, viral, or pest damage) with realistic confidence.
+   - Provide integrated pest management (IPM): cultural practices, organic biological options (e.g., Neem oil, Trichoderma), and verified chemical controls with standard dosage (e.g. g/L or ml/L).
+   - Include safety warnings (PPE, spray timing, rainfastness, pre-harvest interval).
+   - Suggest uploading a clear leaf photo to the 'Crop Scan' feature for automated computer vision pathology.
+
+5. MICROCLIMATE & REAL-TIME WEATHER:
+   - If real-time weather information is provided in the context, utilize it to give weather-aware spray and irrigation recommendations (e.g., high humidity triggers fungal advisory, avoid spraying before rain or in high winds).
+   - If weather data is not available, provide general meteorological guidelines. Never hallucinate fake live weather.
+
+6. CASUAL CHAT & GREETINGS:
+   - Respond warmly and courteously as Dr Agri AI. Keep introductory greetings concise and ready to assist.
+
+7. LANGUAGE & STYLE:
+   - Respond in the requested language ({lang}) or the language used by the user.
+   - Formatting: Use clean markdown, bold headers, and concise bullet points. Avoid overwhelming blocks of text.
+"""
 
 @router.get("/status")
 async def get_chat_ai_status():
@@ -119,57 +163,36 @@ async def chat_with_agri_bot(
     # 2. Attempt to use Gemini via Multi-Model Fallback Service
     if settings.GEMINI_API_KEY:
         try:
-            prompt = f"""You are Dr Agri AI, an elite, highly intelligent Agronomist AI Assistant.
-You specialize in crop disease detection, fertilizer recommendations, yield optimization, and farming economics.
+            from google.genai import types
 
-CONTEXT ABOUT THE USER:
-{context_str}
+            contents = []
+            if request.history:
+                recent_history = request.history[-8:]
+                for h in recent_history:
+                    role = "user" if h.role.lower() in ("user", "human") else "model"
+                    if h.content and h.content.strip():
+                        contents.append(
+                            types.Content(
+                                role=role,
+                                parts=[types.Part.from_text(text=h.content.strip())]
+                            )
+                        )
 
-USER QUERY:
-'{msg}'
+            # Format current user query with context if available
+            current_prompt = f"CONTEXT ABOUT THE USER & FARM:\n{context_str}\n\nUSER QUERY:\n{msg}" if context_str else msg
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=current_prompt)]
+                )
+            )
 
-INSTRUCTIONS:
-1. Respond in the requested language code: '{lang}'.
-
-IMPORTANT RESPONSE STYLE:
-Do NOT generate long report-style answers unless the user explicitly asks for a detailed explanation.
-
-Your normal responses must be:
-* Short, Conversational, Easy for farmers to understand, Action-oriented, Visually scannable.
-* Specific to the farmer's crop, farm, soil, growth stage, and available weather data.
-
-RESPONSE STRUCTURE:
-Start with the direct answer in 1-2 sentences.
-Then provide only the most important recommendations using short bullet points.
-Use this structure when appropriate:
-
-🌱 **Quick Recommendation**
-[1-2 sentence answer]
-
-**What to do now**
-• Action 1
-• Action 2
-
-**Watch for**
-• Important warning/sign
-
-**Next step**
-[One concise recommendation]
-
-LENGTH RULES:
-* Normal question: 60-120 words (max ~150).
-* Simple question: 20-60 words.
-
-AVOID REPETITION:
-Do not repeat information that the user already knows unless it materially affects the recommendation.
-
-The goal is to make every response feel like a helpful conversation with an agricultural expert sitting beside the farmer — concise, practical, and easy to act on.
-"""
             from app.services.gemini_service import gemini_fallback_service
             reply_text, model_used = gemini_fallback_service.generate_text(
-                prompt=prompt,
+                prompt=contents,
                 response_mime_type="text/plain",
-                feature_name="chat"
+                feature_name="chat",
+                system_instruction=AGRONOMIST_SYSTEM_INSTRUCTION.format(lang=lang)
             )
             if reply_text and isinstance(reply_text, str) and reply_text.strip():
                 return ChatResponse(
@@ -185,11 +208,16 @@ The goal is to make every response feel like a helpful conversation with an agri
 
     # 3. Resilient Agronomy Knowledge Engine Fallback
     # Fires seamlessly if Gemini key is invalid, leaked, rate-limited, or unavailable
+    fallback_history = [
+        {"role": h.role, "content": h.content}
+        for h in (request.history or [])
+    ]
     fallback_reply = build_agronomy_expert_response(
         query=msg,
         language=lang,
         user_context=context_str,
-        weather_info=weather_dict
+        weather_info=weather_dict,
+        history=fallback_history
     )
 
     return ChatResponse(

@@ -4,7 +4,7 @@ import api from '../services/api';
 import useFetchWithCache from '../hooks/useFetchWithCache';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { motion, AnimatePresence, prefersReducedMotion } from 'framer-motion';
-import { Send, Bot, User, Sparkles, Sprout, CloudRain, Tractor, ChevronDown, Plus, MessageSquare, Trash2, Menu, Edit2, Check, X, ChartArea, RadioTower, Thermometer, Wind, Droplets, Umbrella, MapPin, Clock, Mic, MicOff } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Sprout, CloudRain, Tractor, ChevronDown, Plus, MessageSquare, Trash2, Menu, Edit2, Check, X, ChartArea, RadioTower, Thermometer, Wind, Droplets, Umbrella, MapPin, Clock, Mic, MicOff, RotateCcw } from 'lucide-react';
 
 const SUGGESTIONS = [
   { icon: Sprout, text: "What fertilizer is best for my crops?" },
@@ -151,12 +151,21 @@ const Agronomy = () => {
   };
 
   const handleSend = async (textOverride = null) => {
-    
-
     const textToSend = typeof textOverride === 'string' ? textOverride : input;
-    if (!textToSend.trim()) return;
+    if (!textToSend || !textToSend.trim() || loading) return;
 
-    const userMsg = { id: Date.now().toString(), sender: 'user', text: textToSend };
+    const trimmedText = textToSend.trim();
+
+    // Prepare multi-turn history from current session messages
+    const historyPayload = messages
+      .filter(m => m.id !== 'welcome' && m.text && !m.isError)
+      .slice(-8)
+      .map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        content: m.text
+      }));
+
+    const userMsg = { id: Date.now().toString(), sender: 'user', text: trimmedText };
     const newMessages = [...messages, userMsg];
     updateActiveSession(newMessages);
     setInput('');
@@ -164,14 +173,29 @@ const Agronomy = () => {
 
     try {
       const response = await api.post('/chat/message', {
-        message: textToSend,
-        language: language
+        message: trimmedText,
+        language: language,
+        history: historyPayload
       });
       
-      const aiMsg = { id: (Date.now() + 1).toString(), sender: 'ai', text: response.data.reply };
+      const aiMsg = { 
+        id: (Date.now() + 1).toString(), 
+        sender: 'ai', 
+        text: response.data.reply,
+        source: response.data?.source,
+        model_used: response.data?.model_used,
+        warning: response.data?.warning
+      };
       updateActiveSession([...newMessages, aiMsg]);
     } catch (error) {
-      const errorMsg = { id: (Date.now() + 1).toString(), sender: 'ai', text: "I'm sorry, I'm having trouble connecting to the agronomy engine right now. Please try again later." };
+      console.error("Agronomy chat error:", error);
+      const errorMsg = { 
+        id: (Date.now() + 1).toString(), 
+        sender: 'ai', 
+        text: "I'm sorry, I'm having trouble connecting to the agronomy engine right now. Please tap Retry to try again.",
+        isError: true,
+        failedText: trimmedText
+      };
       updateActiveSession([...newMessages, errorMsg]);
     } finally {
       setLoading(false);
@@ -395,11 +419,22 @@ const Agronomy = () => {
                   <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 ${
                     msg.sender === 'user'
                       ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-tr-sm'
+                      : msg.isError
+                      ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-tl-sm shadow-sm'
                       : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-sm shadow-sm'
                   }`}>
                     <div className="whitespace-pre-wrap break-words leading-relaxed text-[15px]">
                       {renderText(msg.text)}
                     </div>
+                    {msg.isError && msg.failedText && (
+                      <button
+                        onClick={() => handleSend(msg.failedText)}
+                        disabled={loading}
+                        className="mt-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shadow-xs disabled:opacity-50"
+                      >
+                        <RotateCcw size={13} /> Retry
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}

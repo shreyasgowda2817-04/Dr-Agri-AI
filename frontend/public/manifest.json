@@ -1,25 +1,35 @@
 {
   "short_name": "Dr Agri AI",
-  "name": "Dr Agri AI Ecosystem",
+  "name": "Dr Agri AI — Smarter Farming",
   "icons": [
     {
       "src": "/favicon.png",
       "type": "image/png",
-      "sizes": "64x64"
+      "sizes": "64x64",
+      "purpose": "any"
     },
     {
       "src": "/logo-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "/logo-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#09291F",
   "background_color": "#09291F"
 }

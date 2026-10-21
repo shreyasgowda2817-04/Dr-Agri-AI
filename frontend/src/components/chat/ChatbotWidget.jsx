@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import useSpeechRecognition from '../../hooks/useSpeechRecognition';
 import api from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Mic, Send, Volume2, VolumeX, Sparkles, MicOff } from 'lucide-react';
+import { MessageCircle, X, Mic, Send, Volume2, VolumeX, Sparkles, MicOff, RotateCcw } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 
@@ -33,6 +33,7 @@ const ChatbotWidget = () => {
   const [language, setLanguage] = useState('en-US');
   const [isListening, setIsListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showProactiveBubble, setShowProactiveBubble] = useState(false);
   const [proactiveGreeting, setProactiveGreeting] = useState('');
   const handleClose = () => {
@@ -107,7 +108,12 @@ const ChatbotWidget = () => {
         }
 
         setProactiveGreeting(greeting);
-        setMessages([{ text: greeting, sender: 'bot' }]);
+        setMessages(prev => {
+          if (prev.some(m => m.sender === 'user') || prev.length > 1) {
+            return prev;
+          }
+          return [{ text: greeting, sender: 'bot' }];
+        });
         
         // Show proactive bubble after 2 seconds if not open
         setTimeout(() => setShowProactiveBubble(true), 2000);
@@ -124,13 +130,23 @@ const ChatbotWidget = () => {
   }, [messages]);
 
   const handleSend = async (text = input) => {
-    
+    if (!text || !text.trim() || isLoading) return;
 
-    if (!text.trim()) return;
+    const trimmedText = text.trim();
+
+    // Prepare multi-turn history from existing messages
+    const historyPayload = messages
+      .filter(m => !m.isTyping && m.text && m.text !== '...' && !m.isError)
+      .slice(-8)
+      .map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        content: m.text
+      }));
 
     // Add user message to chat
-    setMessages(prev => [...prev, { text, sender: 'user' }]);
+    setMessages(prev => [...prev, { text: trimmedText, sender: 'user' }]);
     setInput('');
+    setIsLoading(true);
 
     // Add typing indicator
     setMessages(prev => [...prev, { text: "...", sender: 'bot', isTyping: true }]);
@@ -138,8 +154,9 @@ const ChatbotWidget = () => {
     try {
       // Fetch AI response
       const res = await api.post('/chat/message', {
-        message: text,
-        language: language
+        message: trimmedText,
+        language: language,
+        history: historyPayload
       });
       
       const reply = res.data.reply;
@@ -147,10 +164,10 @@ const ChatbotWidget = () => {
       // Replace typing indicator with actual reply
       setMessages(prev => {
         const newMsgs = [...prev];
-        if (newMsgs[newMsgs.length - 1].isTyping) {
+        if (newMsgs[newMsgs.length - 1]?.isTyping) {
           newMsgs.pop();
         }
-        return [...newMsgs, { text: reply, sender: 'bot' }];
+        return [...newMsgs, { text: reply, sender: 'bot', source: res.data?.source }];
       });
       
       // Speak the response if voice is enabled
@@ -161,11 +178,21 @@ const ChatbotWidget = () => {
       console.error("Chat error:", error);
       setMessages(prev => {
         const newMsgs = [...prev];
-        if (newMsgs[newMsgs.length - 1].isTyping) {
+        if (newMsgs[newMsgs.length - 1]?.isTyping) {
           newMsgs.pop();
         }
-        return [...newMsgs, { text: "Sorry, I am having trouble connecting to my AI brain right now.", sender: 'bot' }];
+        return [
+          ...newMsgs, 
+          { 
+            text: "Sorry, I am having trouble connecting to my AI brain right now. Please tap retry to try again.", 
+            sender: 'bot',
+            isError: true,
+            failedText: trimmedText
+          }
+        ];
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -202,19 +229,21 @@ const ChatbotWidget = () => {
   };
 
   const speak = (text, lang) => {
-    
+    if (typeof window === 'undefined' || !window.speechSynthesis || typeof window.SpeechSynthesisUtterance === 'undefined') return;
+    try {
+      window.speechSynthesis.cancel(); // cancel any ongoing speech
+      const utterance = new window.SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
 
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel(); // cancel any ongoing speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
+      // Optionally find a specific voice (especially for Hindi/Kannada if available)
+      const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+      const specificVoice = voices.find(v => v.lang.includes(lang.split('-')[0]));
+      if (specificVoice) utterance.voice = specificVoice;
 
-    // Optionally find a specific voice (especially for Hindi/Kannada if available)
-    const voices = window.speechSynthesis.getVoices();
-    const specificVoice = voices.find(v => v.lang.includes(lang.split('-')[0]));
-    if (specificVoice) utterance.voice = specificVoice;
-
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis error", e);
+    }
   };
 
   // Hide widget entirely if on the Agronomy page (which is the full-screen Copilot)
@@ -279,9 +308,19 @@ const ChatbotWidget = () => {
                 <div key={idx} className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${
                   msg.sender === 'user' 
                     ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white self-end rounded-br-none' 
+                    : msg.isError
+                    ? 'bg-red-50 text-red-800 border border-red-200 self-start rounded-bl-none'
                     : 'bg-white text-gray-800 border border-gray-100 self-start rounded-bl-none'
                 }`}>
                   {msg.text}
+                  {msg.isError && msg.failedText && (
+                    <button 
+                      onClick={() => handleSend(msg.failedText)}
+                      className="mt-2 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shadow-xs"
+                    >
+                      <RotateCcw size={12} /> Retry
+                    </button>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -291,21 +330,24 @@ const ChatbotWidget = () => {
             <div className="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
               <button 
                 onClick={startListening}
-                className={`p-3 rounded-full transition ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                disabled={isLoading}
+                className={`p-3 rounded-full transition ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-green-50 text-green-600 hover:bg-green-100'} disabled:opacity-50`}
               >
                 <Mic size={20} />
               </button>
               <input 
                 type="text" 
-                className="flex-1 bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
-                placeholder="Type or speak..."
+                className="flex-1 bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none disabled:opacity-60"
+                placeholder={isLoading ? "AI is thinking..." : "Type or speak..."}
                 value={input}
+                disabled={isLoading}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSend()}
               />
               <button 
                 onClick={() => handleSend()}
-                className="p-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition shadow-sm"
+                disabled={!input.trim() || isLoading}
+                className="p-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send size={18} />
               </button>
