@@ -8,6 +8,8 @@ from app.services.gemini_service import gemini_fallback_service, GeminiServiceEr
 
 logger = logging.getLogger("dr_agri.ml_service")
 
+__all__ = ["predict_image", "fallback_agronomy_inference", "call_ml_microservice"]
+
 
 def call_ml_microservice(image_bytes: bytes) -> dict:
     """
@@ -158,13 +160,25 @@ def predict_image(image_bytes: bytes, language: str = "en") -> dict:
             lang_map = {"en": "English", "hi": "Hindi", "kn": "Kannada"}
             target_lang = lang_map.get((language or "en")[:2].lower(), "English")
             
-            # Resolve prompt file path safely
-            prompt_path = os.path.join(os.path.dirname(__file__), "../prompts/dr_agri_prompt.txt")
-            if not os.path.exists(prompt_path):
-                prompt_path = "app/prompts/dr_agri_prompt.txt"
-
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                base_prompt = f.read()
+            # Resolve prompt file path safely across local, Docker, and Render environments
+            base_prompt = (
+                "You are Dr Agri AI, an agricultural AI assistant that analyzes crop images "
+                "and produces a complete agricultural diagnosis with organic and chemical treatments."
+            )
+            candidates = [
+                os.path.join(os.path.dirname(__file__), "../prompts/dr_agri_prompt.txt"),
+                "app/prompts/dr_agri_prompt.txt",
+                "/app/app/prompts/dr_agri_prompt.txt",
+                "/app/prompts/dr_agri_prompt.txt",
+            ]
+            for p_cand in candidates:
+                if os.path.exists(p_cand):
+                    try:
+                        with open(p_cand, "r", encoding="utf-8") as f:
+                            base_prompt = f.read()
+                            break
+                    except Exception:
+                        pass
 
             prompt = (
                 f"{base_prompt}\n\n"

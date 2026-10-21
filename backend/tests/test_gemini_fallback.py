@@ -322,3 +322,23 @@ def test_predict_image_full_fallback_chain():
         assert result["is_fallback"] is True
         assert "crop" in result
         assert "diagnosis" in result
+
+
+# ============================================================================
+# 15. Emergency Route Fallback Test
+# ============================================================================
+def test_emergency_fallback_diagnosis():
+    from app.api.routes.predict import get_emergency_fallback_diagnosis, fallback_agronomy_inference
+    assert fallback_agronomy_inference is not None
+
+    res_en = get_emergency_fallback_diagnosis(language="en")
+    assert res_en["is_fallback"] is True
+    assert "Crop Plant" in res_en["crop"]["name"]
+
+    res_hi = get_emergency_fallback_diagnosis(language="hi")
+    assert res_hi["is_fallback"] is True
+    assert "पहचानी गई फसल" in res_hi["crop"]["name"]
+
+    res_kn = get_emergency_fallback_diagnosis(language="kn")
+    assert res_kn["is_fallback"] is True
+    assert "ಗುರುತಿಸಲಾದ ಬೆಳೆ" in res_kn["crop"]["name"]
