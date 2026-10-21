@@ -13,10 +13,10 @@ const Home = () => {
   // If session is still being initialized on app startup, show loader instead of flashing landing page
   if (isInitializing || authLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-950">
+      <div className="flex h-screen items-center justify-center bg-[#09291F] text-white select-none">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading Dr Agri AI...</p>
+          <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin"></div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200/70">Loading Dr Agri AI...</p>
         </div>
       </div>
     );

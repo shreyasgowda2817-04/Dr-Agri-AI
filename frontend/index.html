@@ -6,25 +6,126 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo-192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#030712" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09291F" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#09291F" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#04150F" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="google-site-verification" content="CuACPC2CKmaDwKrrc2vUgJcB0sz8ATDRN1B4sVD9AGg" />
-    <title>Dr AgriTech AI </title>
+    <title>Dr Agri AI — Smarter Farming. Healthier Harvests.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <style>
+      /* Prevent white flash during bundle parse and initial HTML paint */
+      html, body {
+        background-color: #09291F;
+        margin: 0;
+        padding: 0;
+        color: #F8FAFC;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      }
+      #pre-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #09291F;
+        background-image: radial-gradient(circle at 50% 38%, rgba(16, 185, 129, 0.18) 0%, rgba(9, 41, 31, 0.85) 55%, #04150F 100%);
+        z-index: 99998;
+        text-align: center;
+        padding: 1.5rem;
+      }
+      .pre-emblem {
+        width: 7.5rem;
+        height: 7.5rem;
+        border-radius: 1.75rem;
+        background: linear-gradient(180deg, #1E2E28 0%, #0E231C 50%, #081813 100%);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        box-shadow: 0 20px 40px rgba(4, 21, 15, 0.8), 0 0 30px rgba(16, 185, 129, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        padding: 0.875rem;
+        box-sizing: border-box;
+      }
+      .pre-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: #FFFFFF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 0 0 0.5rem 0;
+      }
+      .pre-badge {
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: linear-gradient(90deg, #34D399, #10B981);
+        color: #09291F;
+        padding: 0.15rem 0.5rem;
+        border-radius: 0.5rem;
+      }
+      .pre-tagline {
+        font-size: 0.875rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: rgba(167, 243, 208, 0.8);
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- High-performance zero-latency pre-hydration splash (replaced upon React mount) -->
+      <div id="pre-splash">
+        <div class="pre-emblem">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+            <defs>
+              <linearGradient id="pWheat" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FEF08A" />
+                <stop offset="35%" stopColor="#F59E0B" />
+                <stop offset="100%" stopColor="#D97706" />
+              </linearGradient>
+              <linearGradient id="pLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#4ADE80" />
+                <stop offset="50%" stopColor="#10B981" />
+                <stop offset="100%" stopColor="#047857" />
+              </linearGradient>
+              <linearGradient id="pFurrow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#B45309" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#F59E0B" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#B45309" stopOpacity="0.4" />
+              </linearGradient>
+            </defs>
+            <path d="M50 70 C 48 52 44 34 58 18" stroke="url(#pWheat)" stroke-width="3.2" stroke-linecap="round" />
+            <path d="M48 24 C 44 22 43 28 47 30 C 51 28 52 22 48 24 Z" fill="url(#pWheat)" />
+            <path d="M56 26 C 60 24 61 30 57 32 C 53 30 52 24 56 26 Z" fill="url(#pWheat)" />
+            <path d="M46 32 C 40 30 40 36 45 38 C 50 36 50 30 46 32 Z" fill="url(#pWheat)" />
+            <path d="M54 35 C 60 33 60 39 55 41 C 50 39 49 33 54 35 Z" fill="url(#pWheat)" />
+            <path d="M44 42 C 38 40 38 46 43 48 C 48 46 48 40 44 42 Z" fill="url(#pWheat)" />
+            <path d="M52 45 C 58 43 58 49 53 51 C 48 49 47 43 52 45 Z" fill="url(#pWheat)" />
+            <path d="M48 70 C 54 54 68 44 74 34 C 77 28 72 24 64 26 C 54 28 50 40 48 56 Z" fill="url(#pLeaf)" />
+            <path d="M48 70 C 40 58 30 50 26 38 C 24 30 32 26 38 30 C 44 36 46 50 48 70 Z" fill="url(#pLeaf)" opacity="0.92" />
+            <path d="M24 70 C 34 78 46 80 50 80 C 54 80 66 78 76 70" stroke="url(#pFurrow)" stroke-width="2.5" stroke-linecap="round" />
+            <path d="M28 76 C 36 84 46 86 50 86 C 54 86 64 84 72 76" stroke="url(#pFurrow)" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h1 class="pre-title">
+          Dr Agri <span class="pre-badge">AI</span>
+        </h1>
+        <p class="pre-tagline">Smarter Farming. Healthier Harvests.</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
-        });
-      }
-    </script> -->
-
-    </body>
-
+  </body>
 </html>
