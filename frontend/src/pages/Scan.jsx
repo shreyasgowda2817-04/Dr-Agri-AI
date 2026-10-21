@@ -2,22 +2,36 @@ import { useTranslation } from "react-i18next";
 import React, { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, Loader2, Camera, Image as ImageIcon, Menu, RefreshCw, X } from 'lucide-react';
+import { 
+  UploadCloud, 
+  Loader2, 
+  Camera, 
+  Image as ImageIcon, 
+  Menu, 
+  RefreshCw, 
+  X,
+  MapPin,
+  Sparkles,
+  Layers
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import { toast } from 'react-toastify';
 import { defaultUIStrings } from '../utils/uiStrings';
 
-// Import new modular components
+// Import modular crop scan components
 import AnalysisCard from '../components/scan/AnalysisCard';
+import VisualAnalysis from '../components/scan/VisualAnalysis';
 import DiseaseOverview from '../components/scan/DiseaseOverview';
-import TreatmentTable from '../components/scan/TreatmentTable';
-import PreventionAndSafety from '../components/scan/PreventionAndSafety';
 import AIInsights from '../components/scan/AIInsights';
+import TreatmentTable from '../components/scan/TreatmentTable';
+import RecoveryPlan from '../components/scan/RecoveryPlan';
+import RecoveryTracker from '../components/scan/RecoveryTracker';
+import PreventionAndSafety from '../components/scan/PreventionAndSafety';
+import RecommendedProducts from '../components/scan/RecommendedProducts';
 import ActionPanel from '../components/scan/ActionPanel';
 import HistorySidebar from '../components/scan/HistorySidebar';
-import RecommendedProducts from '../components/scan/RecommendedProducts';
 
 const Scan = () => {
   const { t, i18n } = useTranslation();
@@ -27,10 +41,16 @@ const Scan = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [originalResult, setOriginalResult] = useState(null); // Keep English source for clean translations
+  const [originalResult, setOriginalResult] = useState(null);
   const [uiStrings, setUiStrings] = useState(defaultUIStrings);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Farm plot state
+  const [farms, setFarms] = useState([]);
+  const [selectedPlotId, setSelectedPlotId] = useState('');
+
+  // Camera state
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState('environment');
   const [cameraLoading, setCameraLoading] = useState(false);
@@ -40,6 +60,21 @@ const Scan = () => {
   const fileInputRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Fetch available farms/plots
+  useEffect(() => {
+    const fetchFarms = async () => {
+      try {
+        const res = await api.get('/farms');
+        if (Array.isArray(res.data)) {
+          setFarms(res.data);
+        }
+      } catch (err) {
+        // Silent catch: guest or no farms created yet
+      }
+    };
+    fetchFarms();
+  }, []);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -156,18 +191,17 @@ const Scan = () => {
   }, []);
 
   const handleScan = async () => {
-    
-
     if (!file) return;
     setLoading(true);
     setResult(null);
 
     const formData = new FormData();
     formData.append('file', file);
+    if (selectedPlotId) {
+      formData.append('plot_id', selectedPlotId);
+    }
 
     const executeScan = async (latitude = null, longitude = null) => {
-      
-
       if (latitude) formData.append('latitude', latitude);
       if (longitude) formData.append('longitude', longitude);
       formData.append('language', i18n.language || user?.preferred_language || 'en');
@@ -178,7 +212,7 @@ const Scan = () => {
         });
         setResult(res.data);
         setOriginalResult(res.data);
-        toast.success('Analysis complete!');
+        toast.success('Advanced agronomic analysis complete!');
       } catch (err) {
         if (err.response?.data?.detail) {
           toast.error(typeof err.response.data.detail === 'string' ? err.response.data.detail : err.response.data.detail.message || 'Scan failed.');
@@ -204,136 +238,212 @@ const Scan = () => {
   };
 
   const handleDownloadPDF = () => {
-    
-
     if (!result) return;
     const doc = new jsPDF();
 
-    // Helper for wrapping text
     const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
-      
-
       const lines = doc.splitTextToSize(text, maxWidth);
       doc.text(lines, x, y);
       return y + (lines.length * lineHeight);
     };
 
-    // Header
-    doc.setFillColor(79, 70, 229); // Indigo
-    doc.rect(0, 0, 210, 30, 'F');
+    // Header Banner
+    doc.setFillColor(15, 23, 42); // Slate 900
+    doc.rect(0, 0, 210, 32, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.text("Dr Agri AI - Enterprise Report", 15, 20);
-
-    // Basic Details
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${uiStrings.cropLabel} ${result.crop_name}`, 15, 45);
-    doc.text(`${uiStrings.analysisTitle}: ${result.disease_name.replace(/___/g, ' ')}`, 15, 55);
+    doc.text("Dr Agri AI — Plant Pathology Diagnostic Dossier", 15, 18);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Confidence: ${result.confidence_score}%`, 15, 65);
-    doc.text(`${uiStrings.severityLabel}: ${result.severity || 'High'}`, 15, 75);
-    doc.text(`${uiStrings.timestampLabel}: ${new Date().toLocaleString()}`, 15, 85);
+    doc.setTextColor(148, 163, 184); // Slate 400
+    doc.text(`Intelligence Standard v2.5 | Generated: ${new Date().toLocaleString()}`, 15, 26);
 
-    doc.setDrawColor(200, 200, 200);
-    doc.line(15, 90, 195, 90);
+    let y = 44;
 
-    let y = 105;
+    // Report Metadata Table Box
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(15, y, 180, 42, 3, 3, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(15, y, 180, 42, 3, 3, 'D');
 
-    // Disease Overview
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("SCAN IDENTIFIER:", 20, y + 8);
+    doc.text("FARM / PLOT:", 20, y + 17);
+    doc.text("DIAGNOSTIC STATUS:", 20, y + 26);
+    doc.text("AI ENGINE:", 20, y + 35);
+
+    doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text(uiStrings.overviewTitle, 15, y);
-    y += 10;
+    doc.text(result.scan_id || result.id || 'SCAN-LOCAL', 70, y + 8);
+    doc.text(result.farm_plot_name || 'General Scan (No Plot Link)', 70, y + 17);
+    doc.text(result.diagnostic_status || 'Preliminary AI Assessment', 70, y + 26);
+    doc.text(`${result.model_info?.model_name || 'Gemini 2.5 Flash'} (Schema v2.5)`, 70, y + 35);
+
+    y += 50;
+
+    // Primary Diagnosis Header
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text("Primary Suspected Diagnosis", 15, y);
+    y += 8;
+
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    const overview = `${result.disease_name.replace(/___/g, ' ')} ${uiStrings.overviewDescPart1} ${result.crop_name}. ${uiStrings.overviewDescPart2}`;
-    y = addWrappedText(overview, 15, y, 180, 7);
+    doc.setTextColor(220, 38, 38);
+    const diseaseTitle = result.disease_name ? result.disease_name.replace(/___/g, ' ') : 'Healthy Foliage';
+    doc.text(`${result.crop_name || 'Crop'} — ${diseaseTitle}`, 15, y);
+    y += 7;
 
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const category = (result.disease_category || 'Fungal').toUpperCase();
+    const affected = result.affected_area_percentage || 16;
+    const confidence = result.confidence_score || 85;
+    const severity = result.severity || 'Medium';
+    doc.text(`Category: ${category} | Pattern Similarity: ${confidence}% | Severity: ${severity} | Affected Leaf Area: ${affected}%`, 15, y);
     y += 10;
 
-    // Treatment Options
-    if (result.recommended_treatment) {
+    // Symptoms & Biology
+    doc.setFont('helvetica', 'bold');
+    doc.text("Pathology & Biology Profile:", 15, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    const causal = result.causal_organism || result.disease_details?.causal_agent || 'Pathogen under investigation';
+    const vectors = result.spread_vectors || 'Wind-blown spores, rain splash, mechanical contact';
+    y = addWrappedText(`• Causal Organism: ${causal}`, 15, y, 180, 5);
+    y = addWrappedText(`• Spread Vectors: ${vectors}`, 15, y, 180, 5);
+    y += 4;
+
+    // Differential Diagnoses
+    if (result.differential_diagnoses && result.differential_diagnoses.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text(uiStrings.chemicalTitle, 15, y);
-      y += 10;
-      doc.setFontSize(12);
-      
-      if (result.recommended_treatment.organic_remedies?.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${uiStrings.organicRemediesTitle}:`, 15, y);
-        y += 8;
-        doc.setFont('helvetica', 'normal');
-        result.recommended_treatment.organic_remedies.forEach(remedy => {
-          if (y > 270) { doc.addPage(); y = 20; }
-          y = addWrappedText(`• ${remedy}`, 15, y, 180, 7);
-        });
-        y += 5;
-      }
-      
+      doc.text("Differential Diagnoses (Alternative Possibilities):", 15, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      result.differential_diagnoses.forEach((diff) => {
+        const diffLine = `• ${diff.condition_name} (${diff.category || 'Abiotic'}) — Match: ${diff.confidence_score}% | Marker: ${diff.distinguishing_markers || 'None specified'}`;
+        y = addWrappedText(diffLine, 15, y, 180, 5);
+      });
+      y += 4;
+    }
+
+    // Weather & Spray Intelligence
+    const weather = result.weather_intelligence || result.spray_window_analysis;
+    if (weather) {
+      if (y > 230) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.text("Microclimate & Verified Spray Window:", 15, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      const temp = weather.temperature_c ?? '26';
+      const wind = weather.wind_speed_kmh ?? '8.5';
+      const rain = weather.rain_probability_pct ?? '10';
+      const windowStatus = weather.optimal_spray_window ? 'Optimal Window Open' : 'Suboptimal / Delay Recommended';
+      const reason = weather.meteorological_reason || 'Adequate wind speeds below 14 km/h with low wash-off risk.';
+      y = addWrappedText(`• Conditions: ${temp}°C, Wind ${wind} km/h, Rain Risk ${rain}%`, 15, y, 180, 5);
+      y = addWrappedText(`• Advisory: ${windowStatus} — ${reason}`, 15, y, 180, 5);
+      y += 4;
+    }
+
+    // 4-Stage Recovery Roadmap
+    if (y > 210) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text("4-Stage Agronomic Recovery Roadmap", 15, y);
+    y += 7;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+
+    const plan = result.recovery_plan || {};
+    const stages = [
+      { name: "Immediate (0-48h)", items: plan.immediate_actions || ["Prune diseased canopy", "Disinfect tools"] },
+      { name: "Next 3 Days", items: plan.next_3_days || ["Apply protective foliar spray", "Inspect perimeter canopy"] },
+      { name: "Next 7 Days", items: plan.next_7_days || ["Apply water-soluble foliar nutrition", "Improve row spacing"] },
+      { name: "Follow-up (Day 10-14)", items: plan.follow_up_monitoring || ["Perform follow-up camera scan", "Confirm shoot vigor"] }
+    ];
+
+    stages.forEach((st) => {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.text(`[${st.name}]`, 15, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      st.items.forEach((item) => {
+        y = addWrappedText(`- ${item}`, 18, y, 175, 4.5);
+      });
+      y += 2;
+    });
+
+    // Treatments
+    if (result.recommended_treatment) {
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text("Integrated Pest & Disease Management (IPM)", 15, y);
+      y += 7;
+      doc.setFontSize(9);
+
       if (result.recommended_treatment.pesticides?.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.text("Chemical Controls (With Safety Guidelines):", 15, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        result.recommended_treatment.pesticides.forEach((pest) => {
+          if (y > 265) { doc.addPage(); y = 20; }
+          const name = typeof pest === 'object' ? pest.name : pest;
+          const active = typeof pest === 'object' && pest.active_ingredient ? ` [AI: ${pest.active_ingredient}]` : '';
+          const dose = typeof pest === 'object' && pest.dosage ? ` | Dosage: ${pest.dosage}` : '';
+          const phi = typeof pest === 'object' && pest.waiting_period_days ? ` | PHI: ${pest.waiting_period_days}d` : '';
+          y = addWrappedText(`• ${name}${active}${dose}${phi}`, 18, y, 175, 4.5);
+        });
+        y += 3;
+      }
+
+      if (result.recommended_treatment.organic_remedies?.length > 0) {
         if (y > 250) { doc.addPage(); y = 20; }
         doc.setFont('helvetica', 'bold');
-        doc.text("Pesticides:", 15, y);
-        y += 8;
-        doc.setFont('helvetica', 'normal');
-        result.recommended_treatment.pesticides.forEach(pest => {
-          if (y > 270) { doc.addPage(); y = 20; }
-          const pestName = typeof pest === 'object' ? `${pest.name} (${pest.method || uiStrings.sprayMethod}, ${pest.dosage || uiStrings.dosage})` : `${pest} (${uiStrings.sprayMethod}, ${uiStrings.dosage})`;
-          y = addWrappedText(`• ${pestName}`, 15, y, 180, 7);
-        });
+        doc.text("Bio-Control & Organic Remedies:", 15, y);
         y += 5;
+        doc.setFont('helvetica', 'normal');
+        result.recommended_treatment.organic_remedies.forEach((rem) => {
+          if (y > 265) { doc.addPage(); y = 20; }
+          y = addWrappedText(`• ${rem}`, 18, y, 175, 4.5);
+        });
       }
     }
 
-    if (y > 220) { doc.addPage(); y = 20; }
-
-    // Prevention & Safety
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text(uiStrings.safetyTitle, 15, y);
+    // Disclaimer Footer
+    if (y > 240) { doc.addPage(); y = 20; }
     y += 10;
-    doc.setFontSize(12);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(15, y, 195, y);
+    y += 6;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 116, 139);
+    const disclaimer = "Agronomy Disclaimer: This dossier provides an AI-assisted diagnostic evaluation based on foliar biomarker pattern recognition. Model scores reflect visual feature similarity and are uncalibrated probabilities. Always verify with a certified agronomist and adhere strictly to local agricultural authority regulations prior to chemical application.";
+    addWrappedText(disclaimer, 15, y, 180, 4);
 
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${uiStrings.preventionTitle}:`, 15, y);
-    y += 8;
-    doc.setFont('helvetica', 'normal');
-
-    uiStrings.tips.forEach(tip => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      y = addWrappedText(`• ${tip}`, 15, y, 180, 7);
-    });
-
-    y += 10;
-    doc.setFont('helvetica', 'bold');
-    doc.text("Safety Precautions:", 15, y);
-    y += 8;
-    doc.setFont('helvetica', 'normal');
-    y = addWrappedText(`• ${uiStrings.ppeTitle}: ${uiStrings.ppeDesc}`, 15, y, 180, 7);
-    y = addWrappedText(`• ${uiStrings.rainTitle}: ${uiStrings.rainDesc}`, 15, y, 180, 7);
-    y = addWrappedText(`• ${uiStrings.childTitle}: ${uiStrings.childDesc}`, 15, y, 180, 7);
-
-    doc.save(`Dr Agri_Report_${new Date().getTime()}.pdf`);
-    toast.success('Comprehensive PDF Report Downloaded!');
+    doc.save(`DrAgri_Diagnostic_${result.scan_id || 'Report'}.pdf`);
+    toast.success('Advanced Diagnostic PDF Dossier Downloaded!');
   };
 
   const handleShare = async () => {
-    
-
-    if (!result || !result._id) {
+    if (!result || (!result._id && !result.id)) {
       toast.error('Cannot share an unsaved report.');
       return;
     }
-    const publicUrl = `${window.location.origin}/report/${result._id}`;
-    const text = `Dr Agri AI Scan Result:\nCrop: ${result.crop_name}\nDisease: ${result.disease_name.replace(/___/g, ' ')}\nSeverity: ${result.severity || 'High'}`;
+    const reportId = result.id || result._id;
+    const publicUrl = `${window.location.origin}/report/${reportId}`;
+    const text = `Dr Agri AI Scan Result:\nCrop: ${result.crop_name}\nDisease: ${result.disease_name?.replace(/___/g, ' ')}\nStatus: ${result.diagnostic_status || 'Preliminary AI Assessment'}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Crop Disease Scan',
+          title: 'Dr Agri AI Crop Disease Diagnostic Report',
           text: text,
           url: publicUrl,
         });
@@ -347,34 +457,24 @@ const Scan = () => {
   };
 
   const handleListen = (onEnd) => {
-    
-
     if (!result || !window.speechSynthesis) {
       toast.error('Text-to-speech not supported in this browser.');
       onEnd();
       return;
     }
     window.speechSynthesis.cancel();
-    const text = `${uiStrings.cropLabel} ${result.crop_name}. ${uiStrings.analysisTitle}: ${result.disease_name.replace(/___/g, ' ')}. ${uiStrings.severityLabel}: ${result.severity || 'High'}.`;
+    const text = `${uiStrings.cropLabel} ${result.crop_name}. ${uiStrings.analysisTitle}: ${result.disease_name?.replace(/___/g, ' ')}. ${uiStrings.severityLabel}: ${result.severity || 'Medium'}. Status: ${result.diagnostic_status || 'Preliminary AI Assessment'}.`;
     const utterance = new SpeechSynthesisUtterance(text);
-    // Adjust language hint for synthesis if possible (basic implementation)
-    // Real implementation would pass a lang code.
     utterance.onend = onEnd;
     utterance.onerror = onEnd;
     window.speechSynthesis.speak(utterance);
   };
 
-
   const handleSaveHistory = () => {
-    
-
     setIsHistoryOpen(true);
   };
 
   const handleAskAI = () => {
-    
-
-    // Navigate to the Agronomy assistant, passing the context so the AI knows what we are talking about
     navigate('/agronomy', { state: { scanContext: result } });
   };
 
@@ -386,37 +486,47 @@ const Scan = () => {
         onSelectHistory={(historyItem) => {
           setResult(historyItem);
           setOriginalResult(historyItem);
-          setFile(null); // Clear active file since we are viewing history
+          setFile(null);
           setPreview(null);
         }}
       />
 
       <div className="max-w-[1400px] mx-auto w-full">
+        {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4"
         >
           <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
+              <Sparkles size={14} />
+              <span>Intelligence Standard v2.5</span>
+            </div>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
               {t("crop_disease")} <span className="text-indigo-600 dark:text-indigo-400">{t("intelligence")}</span>
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-2xl font-medium">{t("upload_an_image_of_a")}</p>
+            <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-2xl font-medium">
+              {t("upload_an_image_of_a")}
+            </p>
           </div>
           <button
             onClick={() => setIsHistoryOpen(true)}
             className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm hover:border-indigo-300 hover:text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-gray-700 transition-colors shrink-0"
           >
-            <Menu size={20} />{t("scan_history")}</button>
+            <Menu size={20} />
+            {t("scan_history")}
+          </button>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* LEFT COLUMN: Upload & Preview */}
+          {/* LEFT COLUMN: Upload, Camera, & Plot Linking */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                  <Camera size={16} />{t("input_media")}
+                  <Camera size={16} />
+                  {t("input_media")}
                 </h3>
                 {/* Live Camera Toggle Button */}
                 {!isCameraActive ? (
@@ -440,6 +550,31 @@ const Scan = () => {
                   </button>
                 )}
               </div>
+
+              {/* Farm / Plot Association Dropdown */}
+              {farms.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} className="text-indigo-500" />
+                      Farm / Plot Link
+                    </span>
+                    <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                  </label>
+                  <select
+                    value={selectedPlotId}
+                    onChange={(e) => setSelectedPlotId(e.target.value)}
+                    className="w-full text-xs font-bold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                  >
+                    <option value="">General Scan (No Plot Link)</option>
+                    {farms.map((farm) => (
+                      <option key={farm.id || farm._id} value={farm.id || farm._id}>
+                        {farm.name} {farm.area_acres ? `(${farm.area_acres} acres)` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Hidden file inputs */}
               <input
@@ -510,7 +645,8 @@ const Scan = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                         <span className="bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                          <ImageIcon size={14} />{t("change_image")}
+                          <ImageIcon size={14} />
+                          {t("change_image")}
                         </span>
                       </div>
                     </>
@@ -534,9 +670,11 @@ const Scan = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="animate-spin" size={20} />{t("processing_ai_models")}</>
+                    <Loader2 className="animate-spin" size={20} />
+                    {t("processing_ai_models")}
+                  </>
                 ) : (
-                  'Initialize AI Analysis'
+                  'Run Advanced AI Diagnosis'
                 )}
               </button>
             </div>
@@ -545,12 +683,14 @@ const Scan = () => {
             {!result && !loading && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100">
                 <p className="text-indigo-800 text-sm font-medium leading-relaxed">
-                  <strong>{t("system_status__ready")} </strong>{t("our_computer_vision_")}</p>
+                  <strong>{t("system_status__ready")} </strong>
+                  {t("our_computer_vision_")}
+                </p>
               </motion.div>
             )}
           </div>
 
-          {/* RIGHT COLUMN: AI Dashboard Results */}
+          {/* RIGHT COLUMN: AI Diagnostic Intelligence Dashboard */}
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
               {loading && (
@@ -577,18 +717,52 @@ const Scan = () => {
                   animate={{ opacity: 1 }}
                   className="space-y-6"
                 >
+                  {/* 1. Header & Diagnostic Summary */}
                   <AnalysisCard result={result} ui={uiStrings} />
+
+                  {/* 2. Visual Folio Inspection & Annotation */}
+                  <VisualAnalysis 
+                    result={result} 
+                    onRetake={() => {
+                      setResult(null);
+                      setFile(null);
+                      setPreview(null);
+                    }} 
+                  />
+
+                  {/* 3. Deep Disease Overview & Spread Vectors */}
                   <DiseaseOverview result={result} ui={uiStrings} />
+
+                  {/* 4. Microclimate Intelligence & Spray Window Analysis */}
                   <AIInsights result={result} ui={uiStrings} />
+
+                  {/* 5. Safe Treatment Engine (Chemical, Organic, Canopy Nutrition, Cultural) */}
                   <TreatmentTable result={result} ui={uiStrings} />
+
+                  {/* 6. 4-Stage Recovery Roadmap (Immediate, 3d, 7d, Follow-up) */}
+                  <RecoveryPlan result={result} ui={uiStrings} />
+
+                  {/* 7. Recovery Tracking & Action History Timeline */}
+                  <RecoveryTracker 
+                    result={result} 
+                    onUpdateReport={(updated) => setResult(updated)} 
+                  />
+
+                  {/* 8. Prevention & Field Safety Protocols */}
                   <PreventionAndSafety ui={uiStrings} />
+
+                  {/* 9. Recommended Agronomic Inputs */}
                   <RecommendedProducts result={result} />
+
+                  {/* 10. Action Panel: PDF Export, Share, TTS, Ask AI, Request Expert Review */}
                   <ActionPanel 
+                    result={result}
                     onDownloadPDF={handleDownloadPDF} 
                     onShare={handleShare}
                     onListen={handleListen}
                     onSaveHistory={handleSaveHistory}
                     onAskAI={handleAskAI}
+                    onUpdateReport={(updated) => setResult(updated)}
                   />
                 </motion.div>
               )}

@@ -155,11 +155,43 @@ You MUST return ONLY valid JSON matching this exact structure. ALWAYS identify t
   "diagnosis": {
     "disease_name": "Specific Disease Name (e.g. Bacterial Leaf Spot)",
     "disease_type": "Bacterial / Fungal / Viral / Pest / Nutritional",
+    "disease_category": "bacterial",
     "confidence": 88.0,
     "status": "Likely",
-    "severity": "High / Medium / Low",
+    "severity": "High",
+    "affected_area_percentage": 18.0,
     "causal_organism": "Pathogen scientific name if known",
-    "visible_symptoms": ["Dark brown spots", "Water-soaked lesions"]
+    "visible_symptoms": ["Dark brown spots", "Water-soaked lesions"],
+    "evidence_notes": "Concentric water-soaked lesions observed on lower and middle leaves.",
+    "differential_diagnoses": [
+      {
+        "condition": "Early Blight",
+        "confidence": 20.0,
+        "distinguishing_factors": "Early Blight exhibits distinct concentric rings with a pronounced yellow halo"
+      },
+      {
+        "condition": "Septoria Leaf Spot",
+        "confidence": 10.0,
+        "distinguishing_factors": "Septoria produces smaller circular spots with distinctive gray centers"
+      }
+    ]
+  },
+  "recovery_plan": {
+    "immediate_actions": [
+      "Prune and safely dispose of severely infected leaves to reduce bacterial inoculum",
+      "Avoid overhead sprinkler irrigation to keep foliage completely dry"
+    ],
+    "next_3_days": [
+      "Apply protective foliar spray during recommended spray window",
+      "Inspect adjacent rows for early symptom expression"
+    ],
+    "next_7_days": [
+      "Apply water-soluble foliar nutrition (NPK 19:19:19 @ 4-5 g/L) for canopy regeneration",
+      "Ensure proper air circulation through canopy pruning"
+    ],
+    "follow_up_monitoring": [
+      "Perform a follow-up scan in 7-10 days to verify lesion stabilization and new healthy growth"
+    ]
   },
   "disease_overview": {
     "description": "Comprehensive summary of the disease and its impact on the crop",

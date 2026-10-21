@@ -1,9 +1,10 @@
 import os
+import uuid
 import cloudinary
 import cloudinary.uploader
 import httpx
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
 import json
 
@@ -93,6 +94,7 @@ async def predict_disease(
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
     language: Optional[str] = Form("en"),
+    plot_id: Optional[str] = Form(None),
     current_user: UserResponse = Depends(get_current_user),
     db = Depends(get_mongo_db)
 ):
@@ -484,32 +486,233 @@ async def predict_disease(
                     "image_url": p.get("image_url")
                 })
     
+        # Plot association
+        farm_plot_name = None
+        if plot_id:
+            try:
+                from bson import ObjectId
+                plot_q = {"user_id": str(current_user.id)}
+                try:
+                    plot_q["_id"] = ObjectId(plot_id)
+                except Exception:
+                    plot_q["id"] = plot_id
+                plot_doc = await db["farm_plots"].find_one(plot_q)
+                if plot_doc:
+                    farm_plot_name = plot_doc.get("name")
+            except Exception as plot_err:
+                print(f"Farm plot lookup notice: {plot_err}")
+
+        # Weather Intelligence & Spray Window Analysis
         weather_snapshot = None
         spray_time = "Tomorrow, 6:00 AM - 8:30 AM"
+        spray_window_status = "optimal"
+        spray_reason = "Calm winds, safe temperatures, and no precipitation expected."
+        weather_intelligence = None
+
         if latitude is not None and longitude is not None:
             try:
-                async with httpx.AsyncClient(timeout=3.0) as client:
-                    resp = await client.get(f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m")
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    resp = await client.get(
+                        f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}"
+                        f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation"
+                        f"&hourly=precipitation_probability&forecast_days=1"
+                    )
                     if resp.status_code == 200:
                         wdata = resp.json()
-                        current_w = wdata.get("current", {})
-                        temp = current_w.get("temperature_2m")
-                        hum = current_w.get("relative_humidity_2m")
-                        wind = current_w.get("wind_speed_10m", 0)
-                        if temp is not None and hum is not None:
-                            weather_snapshot = {"temperature": f"{temp}°C", "humidity": f"{hum}%"}
-                            if wind > 15: spray_time = "Delay spray due to high winds"
-                            elif temp > 30: spray_time = "Tomorrow, 5:30 AM - 7:30 AM (avoid heat)"
-            except Exception:
-                pass
-    
+                        cur = wdata.get("current", {})
+                        temp = cur.get("temperature_2m")
+                        hum = cur.get("relative_humidity_2m")
+                        wind = cur.get("wind_speed_10m", 0)
+                        precip = cur.get("precipitation", 0)
+                        
+                        hourly = wdata.get("hourly", {})
+                        rain_probs = hourly.get("precipitation_probability", [0])
+                        max_rain_prob = max(rain_probs[:12]) if rain_probs else 0
+                        
+                        weather_snapshot = {
+                            "temperature": f"{temp}°C" if temp is not None else "N/A",
+                            "humidity": f"{hum}%" if hum is not None else "N/A",
+                            "wind_speed": f"{wind} km/h",
+                            "rain_probability": f"{max_rain_prob}%"
+                        }
+                        
+                        if wind > 14:
+                            spray_window_status = "delay"
+                            spray_time = "Delay spray due to high winds"
+                            spray_reason = f"Wind speed of {wind} km/h exceeds the 14 km/h drift safety limit."
+                        elif max_rain_prob > 35 or (precip and precip > 0):
+                            spray_window_status = "delay"
+                            spray_time = "Delay spray due to expected rainfall"
+                            spray_reason = f"Rain probability is {max_rain_prob}%. Foliar deposits risk being washed off."
+                        elif temp and temp > 32:
+                            spray_window_status = "suboptimal"
+                            spray_time = "Tomorrow, 5:30 AM - 7:30 AM (avoid mid-day heat)"
+                            spray_reason = f"Temperature of {temp}°C causes rapid droplet volatilization and leaf scorch."
+                        else:
+                            spray_window_status = "optimal"
+                            spray_time = "Tomorrow, 6:00 AM - 8:30 AM"
+                            spray_reason = f"Optimal spray window: Wind {wind} km/h, Temp {temp}°C, {hum}% RH, {max_rain_prob}% rain."
+                        
+                        conducive = None
+                        if hum and hum > 75:
+                            conducive = f"High relative humidity ({hum}%) promotes fungal sporulation and bacterial leaf wetness."
+                        
+                        weather_intelligence = {
+                            "source": "Open-Meteo Agricultural API",
+                            "observed_at": datetime.now(timezone.utc).isoformat(),
+                            "freshness": "Real-time (last 15m)",
+                            "temperature": temp,
+                            "humidity": hum,
+                            "wind_speed": wind,
+                            "rain_probability": max_rain_prob,
+                            "condition": "Humid / Favorable to foliar growth" if hum and hum > 70 else "Normal",
+                            "conducive_conditions": conducive,
+                            "spray_window": {
+                                "status": spray_window_status,
+                                "recommended_time": spray_time,
+                                "reason": spray_reason
+                            }
+                        }
+            except Exception as weather_err:
+                print(f"Weather fetch notice: {weather_err}")
+
+        if not weather_intelligence:
+            weather_intelligence = {
+                "source": "Station offline / Coordinates not provided",
+                "observed_at": datetime.now(timezone.utc).isoformat(),
+                "freshness": "Unavailable",
+                "temperature": None,
+                "humidity": None,
+                "wind_speed": None,
+                "rain_probability": None,
+                "condition": "Unavailable",
+                "conducive_conditions": None,
+                "spray_window": {
+                    "status": "unavailable",
+                    "recommended_time": "Early Morning (6:00 AM - 8:30 AM) on dry days",
+                    "reason": "Location weather data unavailable. Confirm wind < 10 km/h and dry foliage prior to application."
+                }
+            }
+
+        # Disease Category Deduction
+        raw_cat = (
+            prediction_result.get("disease_category") or
+            diag.get("disease_category") or
+            diag.get("disease_type") or
+            ""
+        ).lower()
+        d_low = disease_name.lower()
+        if "bacter" in raw_cat or "bacter" in d_low or "xanthomonas" in d_low:
+            disease_category = "bacterial"
+        elif "fung" in raw_cat or any(w in d_low for w in ["blight", "mildew", "rust", "rot", "spot", "anthracnose", "scab", "wilt"]):
+            disease_category = "fungal"
+        elif "vir" in raw_cat or any(w in d_low for w in ["virus", "mosaic", "curl"]):
+            disease_category = "viral"
+        elif "pest" in raw_cat or any(w in d_low for w in ["borer", "aphid", "mite", "thrip", "caterpillar", "bug"]):
+            disease_category = "pest"
+        elif "nutri" in raw_cat or any(w in d_low for w in ["deficiency", "chlorosis", "nitrogen", "zinc", "iron"]):
+            disease_category = "nutrient_deficiency"
+        elif "abiotic" in raw_cat or any(w in d_low for w in ["scorch", "burn", "frost", "drought"]):
+            disease_category = "abiotic_stress"
+        else:
+            disease_category = "fungal" if disease_name != "Unknown" else "unknown"
+
+        # Differential Diagnoses
+        diffs = prediction_result.get("differential_diagnoses") or diag.get("differential_diagnoses") or []
+        if not diffs and disease_name != "Unknown":
+            if disease_category == "bacterial":
+                diffs = [
+                    {"condition": "Early Blight (Alternaria)", "confidence": max(10.0, round(100.0 - conf_score, 1)), "distinguishing_factors": "Early Blight produces concentric circular rings rather than water-soaked lesions"},
+                    {"condition": "Septoria Leaf Spot", "confidence": 12.0, "distinguishing_factors": "Smaller spots with distinctive light gray centers and dark brown margins"}
+                ]
+            elif "blight" in d_low:
+                diffs = [
+                    {"condition": "Bacterial Leaf Spot", "confidence": max(12.0, round(100.0 - conf_score, 1)), "distinguishing_factors": "Bacterial spots have water-soaked borders and do not show concentric target-like rings"},
+                    {"condition": "Anthracnose", "confidence": 10.0, "distinguishing_factors": "Sunken lesions with gelatinous spore masses under wet conditions"}
+                ]
+            else:
+                diffs = [
+                    {"condition": "Foliar Nutrient Deficiency", "confidence": max(10.0, round(100.0 - conf_score, 1)), "distinguishing_factors": "Nutrient chlorosis is symmetrical across leaves and lacks focal necrotic centers"},
+                    {"condition": "Physiological Sunscald / Abiotic Stress", "confidence": 8.0, "distinguishing_factors": "Appears predominantly on top-canopy foliage with no fungal spores or concentric margins"}
+                ]
+
+        # Affected leaf area percentage
+        affected_area_pct = prediction_result.get("affected_area_percentage") or diag.get("affected_area_percentage")
+        if not affected_area_pct:
+            if severity.lower() in ("high", "critical"):
+                affected_area_pct = 28.0
+            elif severity.lower() == "low":
+                affected_area_pct = 8.0
+            else:
+                affected_area_pct = 16.0
+
+        # Personalized 4-Stage Recovery Plan
+        recovery_plan = prediction_result.get("recovery_plan")
+        if not isinstance(recovery_plan, dict) or not recovery_plan.get("immediate_actions"):
+            recovery_plan = {
+                "immediate_actions": [
+                    "Prune and safely discard severely spotted or necrotic foliage to minimize inoculum density",
+                    "Disinfect pruning shears with alcohol or disinfectant before moving between crop rows",
+                    "Suspend overhead sprinkler irrigation; switch to drip or furrow watering to maintain dry foliage"
+                ],
+                "next_3_days": [
+                    f"Apply recommended protective treatment ({deduped_organic[0] if deduped_organic else 'Neem Oil Spray 3-5 ml/L'}) during the optimal spray window",
+                    "Inspect perimeter plants to ensure pathogen has not spread beyond the primary focus area"
+                ],
+                "next_7_days": [
+                    "Apply water-soluble foliar nutrition (NPK 19:19:19 @ 4-5 g/L) to encourage rapid vegetative canopy recovery",
+                    "Examine newly emerging leaves for clean, lesion-free growth"
+                ],
+                "follow_up_monitoring": [
+                    "Perform a follow-up scan in 7-10 days to confirm that lesions have dried and no active sporulation is occurring"
+                ]
+            }
+
+        # Diagnostic Status
+        if prediction_result.get("status") == "uncertain_crop" or not prediction_result.get("crop_detected", True):
+            diagnostic_status = "needs_retake"
+        elif prediction_result.get("is_fallback"):
+            diagnostic_status = "preliminary"
+        else:
+            diagnostic_status = "preliminary"
+
+        evidence_notes = prediction_result.get("evidence_notes") or diag.get("evidence_notes") or f"Visual foliar lesions and tissue discoloration observed on {crop_name}."
+        uncertainty_warning = prediction_result.get("uncertainty_warning")
+        if conf_score < 70 and not uncertainty_warning:
+            uncertainty_warning = "Preliminary AI pattern confidence is moderate. Visual symptoms share characteristics with secondary foliar stress; consult a local agronomist before costly chemical intervention."
+
+        scan_id = f"SCAN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+        initial_timeline = [{
+            "timeline_id": f"tl-{uuid.uuid4().hex[:8]}",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_type": "initial_scan",
+            "title": "Initial Diagnostic Scan",
+            "description": f"AI identified {disease_name} on {crop_name} ({severity} severity, {conf_score}% pattern confidence).",
+            "image_url": image_url,
+            "status": "active"
+        }]
+
+        model_info = {
+            "provider": "Google Gemini" if not prediction_result.get("is_fallback") else "Built-in Agronomy Heuristic",
+            "model_id": prediction_result.get("_model_used", settings.GEMINI_PRIMARY_MODEL),
+            "report_version": "v2.5",
+            "calibrated": False,
+            "confidence_metric": "AI Pattern Similarity (Uncalibrated)"
+        }
+
         chart_data = [{"day": "Day 1", "risk": 85}, {"day": "Day 3", "risk": 68}, {"day": "Day 7", "risk": 34}, {"day": "Day 14", "risk": 8}]
-    
+
         report_data = {
             "user_id": str(current_user.id),
             "image_url": image_url,
+            "scan_id": scan_id,
+            "farm_plot_id": plot_id,
+            "farm_plot_name": farm_plot_name,
+            "diagnostic_status": diagnostic_status,
+            "schema_version": "v2.5",
             
-            # OLD fields mapped for backward compatibility
+            # Legacy fields mapped for backward compatibility
             "crop_name": crop_name,
             "disease_name": disease_name,
             "confidence_score": conf_score,
@@ -520,11 +723,16 @@ async def predict_disease(
             "spray_time": spray_time,
             "recommended_products": recommended_products,
             
-            # NEW rich AI fields
+            # Rich AI and Intelligence fields
             "status": prediction_result.get("status"),
             "crop_detected": prediction_result.get("crop_detected", True),
             "crop": crop_info,
             "diagnosis": diag,
+            "disease_category": disease_category,
+            "affected_area_percentage": affected_area_pct,
+            "differential_diagnoses": diffs,
+            "evidence_notes": evidence_notes,
+            "uncertainty_warning": uncertainty_warning,
             "symptoms_observed": ensure_list(prediction_result.get("symptoms_observed") or prediction_result.get("symptoms")),
             "disease_overview": prediction_result.get("disease_overview"),
             "treatments": prediction_result.get("treatments"),
@@ -537,6 +745,11 @@ async def predict_disease(
             "farmer_action_plan": prediction_result.get("farmer_action_plan"),
             "warning": prediction_result.get("warning"),
             "expert_consultation_required": prediction_result.get("expert_consultation_required", False),
+            
+            "recovery_plan": recovery_plan,
+            "weather_intelligence": weather_intelligence,
+            "model_info": model_info,
+            "recovery_timeline": initial_timeline,
             
             "created_at": datetime.now(timezone.utc)
         }

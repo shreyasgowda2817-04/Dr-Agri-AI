@@ -142,6 +142,31 @@ def fallback_agronomy_inference(image_bytes: bytes, language: str = "en") -> dic
             "disease_confidence": 60.0,
             "uncertainty_reasons": ["Automated offline agronomy fallback activated due to AI service load"]
         },
+        "disease_category": "fungal",
+        "affected_area_percentage": 15.0,
+        "differential_diagnoses": [
+            {"condition": "Early Blight (Alternaria)", "confidence": 35.0, "distinguishing_factors": "Concentric rings with chlorotic margin"},
+            {"condition": "Bacterial Spot (Xanthomonas)", "confidence": 20.0, "distinguishing_factors": "Small water-soaked dark lesions"}
+        ],
+        "evidence_notes": "Visual foliar lesions observed with localized chlorosis around leaf margins.",
+        "uncertainty_warning": "Automated offline agronomy assessment activated due to AI service load. Field confirmation recommended before chemical application.",
+        "recovery_plan": {
+            "immediate_actions": [
+                "Prune and safely dispose of severely spotted leaves to reduce inoculum",
+                "Disinfect pruning tools with 70% alcohol before working on healthy rows"
+            ],
+            "next_3_days": [
+                "Apply cold-pressed Neem Oil (3-5 ml/L water) as a protective foliar spray early in the morning",
+                "Adjust irrigation to avoid leaf wetness and ensure good soil drainage"
+            ],
+            "next_7_days": [
+                "Apply water-soluble NPK 19:19:19 (4-5 g/L) foliar spray to stimulate fresh canopy recovery",
+                "Inspect emerging shoots for clean growth and absence of spreading lesions"
+            ],
+            "follow_up_monitoring": [
+                "Conduct a follow-up scan in 7-10 days to evaluate lesion drying and canopy recovery"
+            ]
+        },
         "is_fallback": True,
         "fallback_reason": "AI models temporarily unavailable"
     }
